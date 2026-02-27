@@ -4,23 +4,39 @@ import { localizeNum } from '../../utils/formatters';
 /**
  * SchemeTimeline — vertical timeline of scheme enrollments.
  */
-const timelineData = [
-    { year: 1, month: 1, scheme: 'PM Ujjwala', schemeHindi: 'पीएम उज्ज्वला', impactHi: '+₹800/माह बचत (गैस सब्सिडी)', impactEn: '+₹800/mo savings (gas subsidy)', category: 'women' },
-    { year: 1, month: 3, scheme: 'Widow Pension', schemeHindi: 'विधवा पेंशन', impactHi: '+₹1,000/माह पेंशन', impactEn: '+₹1,000/mo pension', category: 'women' },
-    { year: 1, month: 6, scheme: 'Ayushman Bharat', schemeHindi: 'आयुष्मान भारत', impactHi: '₹5L स्वास्थ्य बीमा', impactEn: '₹5L health insurance', category: 'health' },
-    { year: 1, month: 12, scheme: 'MGNREGS', schemeHindi: 'मनरेगा', impactHi: '+₹3,000/माह रोजगार', impactEn: '+₹3,000/mo employment', category: 'employment' },
-    { year: 2, month: 6, scheme: 'PMAY-G', schemeHindi: 'प्रधानमंत्री आवास', impactHi: '₹1.2L (पक्का मकान)', impactEn: '₹1.2L (pucca house)', category: 'housing' },
-    { year: 3, month: 1, scheme: 'Skill Training', schemeHindi: 'कौशल प्रशिक्षण', impactHi: '+₹2,000/माह (आय वृद्धि)', impactEn: '+₹2,000/mo (income boost)', category: 'employment' },
-];
-
 const categoryColors = {
     agriculture: '#4CAF50', housing: '#FF9800', health: '#F44336',
-    education: '#2196F3', women: '#E91E63', employment: '#9C27B0',
+    education: '#2196F3', women: '#E91E63', employment: '#9C27B0', general: '#E8740C',
 };
 
-function SchemeTimeline() {
+function SchemeTimeline({ bestPathway = [] }) {
     const { language } = useLanguage();
     const isHi = language === 'hi';
+
+    // Derive timeline data dynamically from the pathway points where schemes are added
+    const timelineData = bestPathway
+        .filter((point) => point.scheme)
+        .map((point) => {
+            const y = Math.max(1, Math.ceil(point.month / 12));
+            const m = ((point.month - 1) % 12) + 1;
+            return {
+                year: y,
+                month: m,
+                scheme: point.scheme,
+                schemeHindi: point.scheme,
+                impactHi: 'अनुमानित आय वृद्धि',
+                impactEn: 'Est. income boost',
+                category: 'general'
+            };
+        });
+
+    if (timelineData.length === 0) {
+        return (
+            <div className="bg-white rounded-xl shadow-card p-4 lg:p-6 text-center">
+                <p className="font-body text-sm text-gray-500">{isHi ? 'कोई योजना अनुक्रम उपलब्ध नहीं है।' : 'No scheme sequence available.'}</p>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-white rounded-xl shadow-card p-4 lg:p-6">

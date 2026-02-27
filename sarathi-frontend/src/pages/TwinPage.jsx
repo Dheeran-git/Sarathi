@@ -172,11 +172,11 @@ function TwinPage() {
         <div className="grid grid-cols-1 lg:grid-cols-[55%_45%] gap-6">
           <div>
             <h2 className="font-body text-xl font-bold text-gray-900 mb-4">{T('twinSchemeSequence')}</h2>
-            <SchemeTimeline />
+            <SchemeTimeline bestPathway={bestPathway} />
           </div>
           <div>
             <h2 className="font-body text-xl font-bold text-gray-900 mb-4">{T('twinConflict')}</h2>
-            <ConflictResolver />
+            <ConflictResolver conflictData={conflictData} />
           </div>
         </div>
       </div>
