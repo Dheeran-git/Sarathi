@@ -118,13 +118,13 @@ function SchemeCard({ scheme, isEligible = false, isApplied = false }) {
         className="absolute bottom-0 left-0 right-0 flex items-center justify-between px-4 py-2.5 bg-gray-100 border-t border-gray-200"
       >
         <Link
-          to={`/schemes/${scheme.id}`}
+          to={`/schemes/${scheme.schemeId || scheme.id}`}
           className="font-body text-sm font-medium text-saffron hover:underline"
         >
           {isHi ? 'विवरण देखें' : 'View Details'}
         </Link>
         <Link
-          to={`/schemes/${scheme.id}`}
+          to={`/schemes/${scheme.schemeId || scheme.id}`}
           className="inline-flex items-center h-8 px-4 rounded-md bg-saffron text-white font-body text-sm font-medium hover:bg-saffron-light transition-colors duration-150"
         >
           {isHi ? 'आवेदन करें' : 'Apply'}
