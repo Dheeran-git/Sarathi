@@ -26,6 +26,22 @@ def lambda_handler(event, context):
                 'body': json.dumps({ 'error': 'schemeId is required' })
             }
 
+        if scheme_id.lower() == 'all':
+            response = table.scan()
+            items = response.get('Items', [])
+            while 'LastEvaluatedKey' in response:
+                response = table.scan(ExclusiveStartKey=response['LastEvaluatedKey'])
+                items.extend(response.get('Items', []))
+            return {
+                'statusCode': 200,
+                'headers': {
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+                    'Content-Type': 'application/json'
+                },
+                'body': json.dumps(items, cls=DecimalEncoder)
+            }
+
         response = table.get_item(Key={ 'schemeId': scheme_id })
         item = response.get('Item')
 

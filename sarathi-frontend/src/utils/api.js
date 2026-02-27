@@ -49,15 +49,13 @@ export async function fetchScheme(schemeId) {
 }
 
 /**
- * Fetch all schemes — GET /schemes (calls eligibility with broad params)
+ * Fetch all schemes — GET /scheme/all 
  * @returns {Array} all scheme objects
  */
 export async function fetchAllSchemes() {
-  const res = await api.post('/eligibility', {
-    age: 1, gender: 'any', monthlyIncome: 999999, category: 'General'
-  });
+  const res = await api.get('/scheme/all');
   const data = typeof res.data.body === 'string' ? JSON.parse(res.data.body) : res.data;
-  return data.matchedSchemes || [];
+  return Array.isArray(data) ? data : [];
 }
 
 /**
