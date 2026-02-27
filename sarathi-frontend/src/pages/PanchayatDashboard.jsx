@@ -245,7 +245,27 @@ function PanchayatDashboard() {
               >
                 <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
               </button>
-              <button className="hidden md:flex items-center gap-1.5 h-9 px-4 rounded-lg border border-saffron/40 text-saffron font-body text-xs font-medium hover:bg-saffron/10 transition-colors">
+              <button
+                onClick={() => {
+                  const reportContent = `Panchayat Dashboard Report\n\n` +
+                    `Date: ${new Date().toLocaleString()}\n` +
+                    `Location: ${stats.panchayatName}, ${stats.district}, ${stats.state}\n` +
+                    `Total Households: ${stats.totalHouseholds}\n` +
+                    `Enrolled Citizens: ${stats.enrolled} (${stats.receivingPercent || 0}%)\n` +
+                    `Eligible but Deprived: ${stats.eligibleDeprived} (${stats.deprivedPercent || 0}%)\n\n` +
+                    `Top Priority Action: ${stats.alerts?.[0] ? stats.alerts[0].title : 'None'}`;
+
+                  const blob = new Blob([reportContent], { type: 'text/plain;charset=utf-8;' });
+                  const url = URL.createObjectURL(blob);
+                  const link = document.createElement("a");
+                  link.setAttribute("href", url);
+                  link.setAttribute("download", `Panchayat_Report_${stats.panchayatName.replace(/\s+/g, '_')}.txt`);
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                }}
+                className="hidden md:flex items-center gap-1.5 h-9 px-4 rounded-lg border border-saffron/40 text-saffron font-body text-xs font-medium hover:bg-saffron/10 transition-colors"
+              >
                 <Download size={14} /> {T('panchDownload')}
               </button>
             </div>
