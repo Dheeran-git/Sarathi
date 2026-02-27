@@ -4,7 +4,7 @@ Each citizen gets a real ward assignment and pre-computed matchedSchemes using
 the eligibility logic from scheme_data.json.
 
 Prerequisites:
-  - AWS CLI configured with `aws configure` (region: ap-south-1)
+  - AWS CLI configured with `aws configure` (region: us-east-1)
   - pip install boto3
   - DynamoDB table 'SarathiCitizens' created with partition key 'citizenId' (String)
 
@@ -17,7 +17,7 @@ import random
 import json
 import os
 
-dynamodb = boto3.resource('dynamodb', region_name='ap-south-1')
+dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
 table = dynamodb.Table('SarathiCitizens')
 
 # Load scheme data for eligibility matching

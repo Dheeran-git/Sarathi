@@ -3,8 +3,8 @@ import sys, io, boto3, json, time
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
-lambda_client = boto3.client('lambda', region_name='ap-south-1')
-logs_client = boto3.client('logs', region_name='ap-south-1')
+lambda_client = boto3.client('lambda', region_name='us-east-1')
+logs_client = boto3.client('logs', region_name='us-east-1')
 
 LAMBDAS = [
     ('sarathi-eligibility-engine', 'POST', {'age': 55, 'gender': 'female', 'monthlyIncome': 2000, 'isWidow': True, 'occupation': 'any', 'category': 'SC'}),

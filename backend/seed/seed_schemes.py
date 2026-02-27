@@ -2,7 +2,7 @@
 Seed all 18 government schemes into DynamoDB SarathiSchemes table.
 
 Prerequisites:
-  - AWS CLI configured with `aws configure` (region: ap-south-1)
+  - AWS CLI configured with `aws configure` (region: us-east-1)
   - pip install boto3
   - DynamoDB table 'SarathiSchemes' created with partition key 'schemeId' (String)
 
@@ -14,7 +14,7 @@ import json
 import boto3
 import os
 
-dynamodb = boto3.resource('dynamodb', region_name='ap-south-1')
+dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
 table = dynamodb.Table('SarathiSchemes')
 
 def seed():

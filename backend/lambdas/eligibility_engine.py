@@ -3,7 +3,7 @@ import boto3
 from decimal import Decimal
 from boto3.dynamodb.conditions import Attr
 
-dynamodb = boto3.resource('dynamodb', region_name='ap-south-1')
+dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
 schemes_table = dynamodb.Table('SarathiSchemes')
 
 class DecimalEncoder(json.JSONEncoder):

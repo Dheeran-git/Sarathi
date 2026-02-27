@@ -2,7 +2,7 @@
 import sys, io, boto3, json
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
-client = boto3.client('lambda', region_name='ap-south-1')
+client = boto3.client('lambda', region_name='us-east-1')
 
 def invoke(fn_name, payload):
     print(f"\n{'='*60}")

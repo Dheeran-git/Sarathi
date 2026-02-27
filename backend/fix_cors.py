@@ -1,8 +1,8 @@
 """Fix CORS OPTIONS mock integrations on all API Gateway resources."""
 import boto3, json
 
-client = boto3.client('apigateway', region_name='ap-south-1')
-API_ID = 'k7thdbrgb4'
+client = boto3.client('apigateway', region_name='us-east-1')
+API_ID = 'mvbx0sv4n3'
 
 # Resources that have OPTIONS methods needing MOCK integration
 resources = client.get_resources(restApiId=API_ID)['items']
@@ -45,4 +45,4 @@ for res in resources:
 # Deploy
 print("\nDeploying to prod stage...")
 client.create_deployment(restApiId=API_ID, stageName='prod')
-print(f"\nAPI deployed! URL: https://{API_ID}.execute-api.ap-south-1.amazonaws.com/prod")
+print(f"\nAPI deployed! URL: https://{API_ID}.execute-api.us-east-1.amazonaws.com/prod")

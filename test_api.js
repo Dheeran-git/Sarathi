@@ -1,5 +1,5 @@
 const axios = require('axios');
-const BASE = 'https://k7thdbrgb4.execute-api.ap-south-1.amazonaws.com/prod';
+const BASE = 'https://mvbx0sv4n3.execute-api.us-east-1.amazonaws.com/prod';
 
 // Fix: API Gateway returns Lambda proxy response { statusCode, headers, body }
 // Must parse r.data.body (JSON string) to get the actual data array

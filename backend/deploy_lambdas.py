@@ -2,7 +2,7 @@
 import boto3, zipfile, os, sys, io
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
-client = boto3.client('lambda', region_name='ap-south-1')
+client = boto3.client('lambda', region_name='us-east-1')
 
 LAMBDAS = {
     'sarathi-eligibility-engine': 'eligibility_engine.py',

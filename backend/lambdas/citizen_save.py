@@ -4,7 +4,7 @@ import uuid
 from decimal import Decimal
 from datetime import datetime
 
-dynamodb = boto3.resource('dynamodb', region_name='ap-south-1')
+dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
 table = dynamodb.Table('SarathiCitizens')
 
 def convert_to_dynamodb(obj):

@@ -3,10 +3,10 @@
 
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 
-$API_ID = "k7thdbrgb4"
-$REGION = "ap-south-1"
+$API_ID = "mvbx0sv4n3"
+$REGION = "us-east-1"
 $ACCOUNT_ID = "056048976827"
-$ROOT_ID = "mv2lpr3foa"
+$ROOT_ID = "sk9mufziy6"
 
 # Helper: Create resource, POST/GET method, Lambda integration, and OPTIONS for CORS
 function Create-Route {
