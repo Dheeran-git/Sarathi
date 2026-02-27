@@ -4,7 +4,7 @@ import ChatPanel from '../components/chat/ChatPanel';
 import InputBar from '../components/chat/InputBar';
 import ResultsPanel from '../components/chat/ResultsPanel';
 import { schemes } from '../data/mockSchemes';
-import { checkEligibility } from '../utils/api';
+import { checkEligibility, notifyPanchayat } from '../utils/api';
 import { stateChips, categoryChips, occupationChips, profileSteps } from '../data/mockCitizens';
 import { useCitizen } from '../context/CitizenContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -155,6 +155,14 @@ function ChatPage() {
                   : `Great! I found ${matched.length} schemes for you. 🎉\n\nTotal estimated annual benefit: ₹${(result.totalAnnualBenefit || matched.reduce((s, sc) => s + (sc.annualBenefit || 0), 0)).toLocaleString('en-IN')}`,
                 timestamp: 'JUST_NOW',
               });
+
+              // Notify panchayat officials in background via SNS
+              notifyPanchayat({
+                citizenName: citizenProfile.name || 'Unknown',
+                panchayatId: 'rampur-barabanki-up',
+                matchedSchemes: matched,
+                totalAnnualBenefit: result.totalAnnualBenefit || matched.reduce((s, sc) => s + (sc.annualBenefit || 0), 0),
+              }).catch(() => { }); // fire-and-forget
 
               setTimeout(() => setShowResults(true), 500);
             })
