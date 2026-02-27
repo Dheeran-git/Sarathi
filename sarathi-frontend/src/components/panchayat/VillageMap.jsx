@@ -1,4 +1,6 @@
 import { useState, useMemo } from 'react';
+import { useLanguage } from '../../context/LanguageContext';
+import { localizeNum } from '../../utils/formatters';
 
 /* ── Status → color mapping ───────────────────────────────────────────── */
 const STATUS_COLOR = {
@@ -9,18 +11,23 @@ const STATUS_COLOR = {
 };
 
 const STATUS_LABEL = {
-  enrolled: 'लाभान्वित',
-  eligible: 'योग्य लेकिन वंचित',
-  none: 'शून्य लाभ',
-  unknown: 'डेटा नहीं',
+  hi: { enrolled: 'लाभान्वित', eligible: 'योग्य लेकिन वंचित', none: 'शून्य लाभ', unknown: 'डेटा नहीं' },
+  en: { enrolled: 'Enrolled', eligible: 'Eligible But Unserved', none: 'Zero Benefits', unknown: 'No Data' },
 };
 
 /* ── Filter chip definitions ──────────────────────────────────────────── */
-const FILTERS = [
-  { key: 'all', label: 'सभी' },
-  { key: 'eligible', label: 'योग्य लेकिन वंचित' },
-  { key: 'none', label: 'शून्य लाभ' },
-];
+const FILTERS = {
+  hi: [
+    { key: 'all', label: 'सभी' },
+    { key: 'eligible', label: 'योग्य लेकिन वंचित' },
+    { key: 'none', label: 'शून्य लाभ' },
+  ],
+  en: [
+    { key: 'all', label: 'All' },
+    { key: 'eligible', label: 'Eligible But Unserved' },
+    { key: 'none', label: 'Zero Benefits' },
+  ],
+};
 
 /* ── Ward layout generator ────────────────────────────────────────────── *
  * Groups households by ward, then positions each ward cluster on a
@@ -95,32 +102,50 @@ function buildLayout(households) {
 }
 
 /* ── Tooltip ──────────────────────────────────────────────────────────── */
-function Tooltip({ dot, containerRect, mapEl }) {
-  if (!dot || !containerRect || !mapEl) return null;
+function Tooltip({ dot, mapEl, language }) {
+  if (!dot || !mapEl) return null;
+  const isHi = language === 'hi';
+  const labels = STATUS_LABEL[language] || STATUS_LABEL.hi;
 
-  // Position tooltip near the dot, clamped inside the container
-  const scrollLeft = mapEl.scrollLeft;
-  const scrollTop = mapEl.scrollTop;
-  const left = dot.x - scrollLeft + 24;
-  const top = dot.y - scrollTop - 8;
+  const dotLeft = dot.x + 16; // 16px is map padding
+  const dotTop = dot.y + 16;
+
+  let left = dotLeft + 24;
+  let top = dotTop - 8;
+  let transformY = '-100%';
+  let transformX = '0';
+
+  // Prevent top edge clipping
+  const tooltipApproxHeight = 100;
+  if (top - tooltipApproxHeight < mapEl.scrollTop) {
+    top = dotTop + 24; // Show below the dot
+    transformY = '0';
+  }
+
+  // Prevent right edge clipping
+  const tooltipApproxWidth = 160;
+  if (left + tooltipApproxWidth > mapEl.scrollLeft + mapEl.clientWidth) {
+    left = dotLeft - 8;
+    transformX = '-100%';
+  }
 
   return (
     <div
-      className="absolute z-20 pointer-events-none px-3 py-2 rounded-lg bg-navy text-white shadow-lg font-body text-xs leading-relaxed whitespace-nowrap"
-      style={{ left, top, transform: 'translateY(-100%)' }}
+      className="absolute z-50 pointer-events-none px-3 py-2 rounded-lg bg-navy text-white shadow-[0_4px_16px_rgba(0,0,0,0.2)] font-body text-xs leading-relaxed whitespace-nowrap"
+      style={{ left, top, transform: `translate(${transformX}, ${transformY})` }}
     >
       <p className="font-semibold text-sm">{dot.name}</p>
       <p className="text-gray-300">
-        वार्ड: {dot.ward}
+        {isHi ? 'वार्ड:' : 'Ward:'} {localizeNum(dot.ward.replace(/\D/g, ''), language)}
       </p>
       <p>
-        स्थिति:{' '}
+        {isHi ? 'स्थिति:' : 'Status:'}{' '}
         <span style={{ color: STATUS_COLOR[dot.status] }}>
-          {STATUS_LABEL[dot.status]}
+          {labels[dot.status]}
         </span>
       </p>
       {dot.schemesCount !== undefined && (
-        <p className="text-gray-300">योजनाएं: {dot.schemesCount}</p>
+        <p className="text-gray-300">{isHi ? 'योजनाएं:' : 'Schemes:'} {dot.schemesCount}</p>
       )}
     </div>
   );
@@ -131,16 +156,17 @@ function VillageMap({ households = [] }) {
   const [filter, setFilter] = useState('all');
   const [hoveredDot, setHoveredDot] = useState(null);
   const [mapEl, setMapEl] = useState(null);
-  const [containerRect, setContainerRect] = useState(null);
+  const { language } = useLanguage();
+  const filters = FILTERS[language] || FILTERS.hi;
+  const labels = STATUS_LABEL[language] || STATUS_LABEL.hi;
 
   const { positioned, roads, width, height } = useMemo(
     () => buildLayout(households),
     [households]
   );
 
-  const handleMouseEnter = (dot, e) => {
+  const handleMouseEnter = (dot) => {
     setHoveredDot(dot);
-    if (mapEl) setContainerRect(mapEl.getBoundingClientRect());
   };
 
   const dotMatches = (status) => {
@@ -152,15 +178,14 @@ function VillageMap({ households = [] }) {
     <div className="flex flex-col gap-4">
       {/* Filter Chips */}
       <div className="flex flex-wrap gap-2">
-        {FILTERS.map((f) => (
+        {filters.map((f) => (
           <button
             key={f.key}
             onClick={() => setFilter(f.key)}
-            className={`px-3 py-1.5 rounded-full font-body text-xs font-medium transition-colors duration-200 ${
-              filter === f.key
-                ? 'bg-saffron text-white'
-                : 'bg-white text-gray-700 border border-gray-200 hover:border-saffron/40'
-            }`}
+            className={`px-3 py-1.5 rounded-full font-body text-xs font-medium transition-colors duration-200 ${filter === f.key
+              ? 'bg-saffron text-white'
+              : 'bg-white text-gray-700 border border-gray-200 hover:border-saffron/40'
+              }`}
           >
             {f.label}
           </button>
@@ -243,13 +268,12 @@ function VillageMap({ households = [] }) {
                   top: dot.y + 16,
                   backgroundColor: color,
                   opacity: matches ? 1 : 0.1,
-                  animation: `dotAppear 0.4s ${dot.idx * 5}ms both ease-out${
-                    pulseClass && matches
-                      ? `, ${dot.status === 'eligible' ? 'pulse-eligible 2s ease-in-out infinite' : 'pulse-none 1.2s ease-in-out infinite'}`
-                      : ''
-                  }`,
+                  animation: `dotAppear 0.4s ${dot.idx * 5}ms both ease-out${pulseClass && matches
+                    ? `, ${dot.status === 'eligible' ? 'pulse-eligible 2s ease-in-out infinite' : 'pulse-none 1.2s ease-in-out infinite'}`
+                    : ''
+                    }`,
                 }}
-                onMouseEnter={(e) => handleMouseEnter(dot, e)}
+                onMouseEnter={() => handleMouseEnter(dot)}
                 onMouseLeave={() => setHoveredDot(null)}
               />
             );
@@ -257,7 +281,7 @@ function VillageMap({ households = [] }) {
 
           {/* Tooltip */}
           {hoveredDot && (
-            <Tooltip dot={hoveredDot} containerRect={containerRect} mapEl={mapEl} />
+            <Tooltip dot={hoveredDot} mapEl={mapEl} language={language} />
           )}
         </div>
       </div>
@@ -271,7 +295,7 @@ function VillageMap({ households = [] }) {
               style={{ backgroundColor: color }}
             />
             <span className="font-body text-xs text-gray-700">
-              {STATUS_LABEL[status]}
+              {labels[status]}
             </span>
           </div>
         ))}

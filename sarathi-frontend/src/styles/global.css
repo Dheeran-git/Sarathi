@@ -119,3 +119,43 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* ── Accessibility — Focus Outlines (Spec §13, WCAG 2.1 AA) ─────────── */
+*:focus-visible {
+  outline: 2px solid var(--color-saffron);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Remove default outline for mouse users */
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ── Reduced Motion Preference ────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Touch Target Sizing (Spec §11 — min 44×44px) ────────────────────── */
+@media (pointer: coarse) {
+  button, a, [role="button"], input, select, textarea {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* ── Devanagari text lang attribute hint ──────────────────────────────── */
+[lang="hi"] {
+  font-family: 'Noto Sans Devanagari', 'DM Sans', sans-serif;
+}
+
+/* ── Smooth scroll ────────────────────────────────────────────────────── */
+html {
+  scroll-behavior: smooth;
+}

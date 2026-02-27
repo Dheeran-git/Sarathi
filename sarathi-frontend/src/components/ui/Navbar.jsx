@@ -6,6 +6,7 @@ const navLinks = [
   { to: '/chat', label: 'नागरिक', labelEn: 'Citizens' },
   { to: '/panchayat', label: 'पंचायत', labelEn: 'Panchayat' },
   { to: '/schemes', label: 'योजनाएं', labelEn: 'Schemes' },
+  { to: '/twin', label: 'डिजिटल ट्विन', labelEn: 'Digital Twin' },
   { to: '/about', label: 'हमारे बारे में', labelEn: 'About' },
 ];
 
@@ -13,6 +14,7 @@ function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { language, toggleLanguage } = useLanguage();
+  const isHi = language === 'hi';
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
@@ -29,11 +31,10 @@ function Navbar() {
   return (
     <>
       <nav
-        className={`fixed top-0 left-0 right-0 z-50 h-16 flex items-center justify-between px-4 lg:px-8 transition-all duration-200 ${
-          scrolled
-            ? 'bg-navy/[0.92] backdrop-blur-[12px]'
-            : 'bg-navy'
-        } border-b border-navy-light/30`}
+        className={`fixed top-0 left-0 right-0 z-50 h-16 flex items-center justify-between px-4 lg:px-8 transition-all duration-200 ${scrolled
+          ? 'bg-navy/[0.92] backdrop-blur-[12px]'
+          : 'bg-navy'
+          } border-b border-navy-light/30`}
       >
         {/* Left — Logo */}
         <Link to="/" className="flex flex-col leading-tight shrink-0">
@@ -52,14 +53,13 @@ function Navbar() {
               key={link.to}
               to={link.to}
               className={({ isActive }) =>
-                `font-body text-sm tracking-[0.5px] uppercase pb-1 transition-colors duration-200 ${
-                  isActive
-                    ? 'text-saffron border-b-2 border-saffron'
-                    : 'text-gray-300 hover:text-white border-b-2 border-transparent'
+                `font-body text-sm tracking-[0.5px] uppercase pb-1 transition-colors duration-200 ${isActive
+                  ? 'text-saffron border-b-2 border-saffron'
+                  : 'text-gray-300 hover:text-white border-b-2 border-transparent'
                 }`
               }
             >
-              {link.label}
+              {isHi ? link.label : link.labelEn}
             </NavLink>
           ))}
         </div>
@@ -73,21 +73,18 @@ function Navbar() {
             aria-label="Toggle language"
           >
             <span
-              className={`absolute top-0 h-full w-1/2 rounded-full bg-saffron transition-transform duration-200 ease-in-out ${
-                language === 'hi' ? 'translate-x-0' : 'translate-x-full'
-              }`}
+              className={`absolute top-0 h-full w-1/2 rounded-full bg-saffron transition-transform duration-200 ease-in-out ${isHi ? 'translate-x-0' : 'translate-x-full'
+                }`}
             />
             <span
-              className={`relative z-10 flex-1 text-center text-xs font-body font-medium transition-colors duration-200 ${
-                language === 'hi' ? 'text-white' : 'text-gray-500'
-              }`}
+              className={`relative z-10 flex-1 text-center text-xs font-body font-medium transition-colors duration-200 ${isHi ? 'text-white' : 'text-gray-500'
+                }`}
             >
               हिं
             </span>
             <span
-              className={`relative z-10 flex-1 text-center text-xs font-body font-medium transition-colors duration-200 ${
-                language === 'en' ? 'text-white' : 'text-gray-500'
-              }`}
+              className={`relative z-10 flex-1 text-center text-xs font-body font-medium transition-colors duration-200 ${!isHi ? 'text-white' : 'text-gray-500'
+                }`}
             >
               EN
             </span>
@@ -98,13 +95,13 @@ function Navbar() {
             to="/panchayat"
             className="hidden lg:inline-flex items-center h-9 px-4 rounded-md border border-saffron text-saffron font-body text-sm font-medium hover:bg-saffron/10 transition-colors duration-200"
           >
-            पंचायत लॉगिन
+            {isHi ? 'पंचायत लॉगिन' : 'Panchayat Login'}
           </Link>
           <Link
             to="/chat"
             className="hidden lg:inline-flex items-center h-9 px-4 rounded-md bg-saffron text-white font-body text-sm font-medium hover:bg-saffron-light transition-colors duration-200"
           >
-            शुरू करें
+            {isHi ? 'शुरू करें' : 'Get Started'}
           </Link>
 
           {/* Mobile Hamburger */}
@@ -115,19 +112,16 @@ function Navbar() {
             aria-expanded={mobileOpen}
           >
             <span
-              className={`block w-6 h-0.5 bg-white rounded transition-all duration-300 origin-center ${
-                mobileOpen ? 'rotate-45 translate-y-[4px]' : ''
-              }`}
+              className={`block w-6 h-0.5 bg-white rounded transition-all duration-300 origin-center ${mobileOpen ? 'rotate-45 translate-y-[4px]' : ''
+                }`}
             />
             <span
-              className={`block w-6 h-0.5 bg-white rounded transition-all duration-300 ${
-                mobileOpen ? 'opacity-0 scale-x-0' : ''
-              }`}
+              className={`block w-6 h-0.5 bg-white rounded transition-all duration-300 ${mobileOpen ? 'opacity-0 scale-x-0' : ''
+                }`}
             />
             <span
-              className={`block w-6 h-0.5 bg-white rounded transition-all duration-300 origin-center ${
-                mobileOpen ? '-rotate-45 -translate-y-[4px]' : ''
-              }`}
+              className={`block w-6 h-0.5 bg-white rounded transition-all duration-300 origin-center ${mobileOpen ? '-rotate-45 -translate-y-[4px]' : ''
+                }`}
             />
           </button>
         </div>
@@ -143,9 +137,8 @@ function Navbar() {
 
       {/* Mobile Drawer */}
       <div
-        className={`fixed top-16 right-0 bottom-0 z-40 w-72 bg-navy transform transition-transform duration-300 ease-in-out lg:hidden ${
-          mobileOpen ? 'translate-x-0' : 'translate-x-full'
-        }`}
+        className={`fixed top-16 right-0 bottom-0 z-40 w-72 bg-navy transform transition-transform duration-300 ease-in-out lg:hidden ${mobileOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
       >
         <div className="flex flex-col p-6 gap-2">
           {navLinks.map((link) => (
@@ -154,14 +147,13 @@ function Navbar() {
               to={link.to}
               onClick={() => setMobileOpen(false)}
               className={({ isActive }) =>
-                `flex items-center h-12 px-4 rounded-lg font-body text-base transition-colors duration-200 ${
-                  isActive
-                    ? 'text-saffron bg-navy-mid'
-                    : 'text-gray-300 hover:text-white hover:bg-navy-mid/50'
+                `flex items-center h-12 px-4 rounded-lg font-body text-base transition-colors duration-200 ${isActive
+                  ? 'text-saffron bg-navy-mid'
+                  : 'text-gray-300 hover:text-white hover:bg-navy-mid/50'
                 }`
               }
             >
-              {link.label}
+              {isHi ? link.label : link.labelEn}
             </NavLink>
           ))}
 
@@ -172,20 +164,17 @@ function Navbar() {
             onClick={() => setMobileOpen(false)}
             className="flex items-center justify-center h-12 rounded-lg border border-saffron text-saffron font-body text-sm font-medium hover:bg-saffron/10 transition-colors duration-200"
           >
-            पंचायत लॉगिन
+            {isHi ? 'पंचायत लॉगिन' : 'Panchayat Login'}
           </Link>
           <Link
             to="/chat"
             onClick={() => setMobileOpen(false)}
             className="flex items-center justify-center h-12 rounded-lg bg-saffron text-white font-body text-sm font-medium hover:bg-saffron-light transition-colors duration-200"
           >
-            शुरू करें
+            {isHi ? 'शुरू करें' : 'Get Started'}
           </Link>
         </div>
       </div>
-
-      {/* Spacer so page content sits below the fixed navbar */}
-      <div className="h-16" />
     </>
   );
 }

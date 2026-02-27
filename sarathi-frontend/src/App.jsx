@@ -1,4 +1,5 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import Navbar from './components/ui/Navbar';
 import LandingPage from './pages/LandingPage';
 import ChatPage from './pages/ChatPage';
@@ -6,19 +7,46 @@ import TwinPage from './pages/TwinPage';
 import PanchayatDashboard from './pages/PanchayatDashboard';
 import SchemesPage from './pages/SchemesPage';
 import SchemeDetailPage from './pages/SchemeDetailPage';
+import ApplyPage from './pages/ApplyPage';
+import AboutPage from './pages/AboutPage';
+
+/**
+ * Page transition wrapper — fades pages in/out on route change.
+ * Spec §12: "Fade out current page (150ms) → fade in new page (200ms)"
+ */
+function PageTransition({ children }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+    >
+      {children}
+    </motion.div>
+  );
+}
 
 function App() {
+  const location = useLocation();
+
   return (
     <>
       <Navbar />
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/chat" element={<ChatPage />} />
-        <Route path="/twin" element={<TwinPage />} />
-        <Route path="/panchayat" element={<PanchayatDashboard />} />
-        <Route path="/schemes" element={<SchemesPage />} />
-        <Route path="/schemes/:id" element={<SchemeDetailPage />} />
-      </Routes>
+      <main className="pt-16">
+        <AnimatePresence mode="wait">
+          <Routes location={location} key={location.pathname}>
+            <Route path="/" element={<PageTransition><LandingPage /></PageTransition>} />
+            <Route path="/chat" element={<PageTransition><ChatPage /></PageTransition>} />
+            <Route path="/twin" element={<PageTransition><TwinPage /></PageTransition>} />
+            <Route path="/panchayat" element={<PageTransition><PanchayatDashboard /></PageTransition>} />
+            <Route path="/schemes" element={<PageTransition><SchemesPage /></PageTransition>} />
+            <Route path="/schemes/:schemeId" element={<PageTransition><SchemeDetailPage /></PageTransition>} />
+            <Route path="/apply/:schemeId" element={<PageTransition><ApplyPage /></PageTransition>} />
+            <Route path="/about" element={<PageTransition><AboutPage /></PageTransition>} />
+          </Routes>
+        </AnimatePresence>
+      </main>
     </>
   );
 }
