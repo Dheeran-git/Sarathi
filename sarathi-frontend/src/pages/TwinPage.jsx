@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Loader2 } from 'lucide-react';
 import StatCard from '../components/ui/StatCard';
 import PathwayChart from '../components/twin/PathwayChart';
 import { useLanguage } from '../context/LanguageContext';
@@ -11,13 +11,10 @@ import { localizeNum } from '../utils/formatters';
 import SchemeTimeline from '../components/twin/SchemeTimeline';
 import ConflictResolver from '../components/twin/ConflictResolver';
 import { getDigitalTwin, detectConflicts } from '../utils/api';
-import { pathwayData as mockPathwayData, defaultCitizen } from '../data/mockCitizens';
 
 /**
  * TwinPage — Digital Twin Dashboard for a citizen's welfare pathway.
- * Spec §8 — includes breadcrumb, citizen summary pill, "change profile" link,
- * 4 stat cards, pathway chart, scheme timeline, conflict resolver.
- * Now fetches live projections from sarathi-digital-twin Lambda.
+ * All data fetched from live AWS API.
  */
 function TwinPage() {
   const { citizenProfile, eligibleSchemes } = useCitizen();
@@ -25,18 +22,12 @@ function TwinPage() {
   const T = (key) => t(key, language);
   const isHi = language === 'hi';
 
-  // Use context profile if available, otherwise defaultCitizen
+  // Use context profile if available
   const hasCitizenData = citizenProfile && citizenProfile.name;
-  const citizen = hasCitizenData
-    ? {
-      name: citizenProfile.name,
-      nameEnglish: citizenProfile.name,
-      age: citizenProfile.age || 30,
-      state: citizenProfile.state || 'UP',
-      stateEnglish: citizenProfile.state || 'UP',
-      category: citizenProfile.category || 'General',
-    }
-    : defaultCitizen;
+  const citizenName = hasCitizenData ? citizenProfile.name : (isHi ? 'नागरिक' : 'Citizen');
+  const citizenAge = hasCitizenData ? (citizenProfile.age || 30) : 30;
+  const citizenState = hasCitizenData ? (citizenProfile.state || 'UP') : 'UP';
+  const citizenCategory = hasCitizenData ? (citizenProfile.category || 'General') : 'General';
 
   const monthlyIncome = hasCitizenData ? (citizenProfile.income || 2000) : 2000;
   const matchedSchemes = eligibleSchemes.length > 0 ? eligibleSchemes : [];
@@ -45,11 +36,12 @@ function TwinPage() {
   const [twinData, setTwinData] = useState(null);
   const [conflictData, setConflictData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     setLoading(true);
+    setError(null);
 
-    // Call both APIs in parallel
     const twinPromise = getDigitalTwin({
       monthlyIncome,
       matchedSchemes,
@@ -61,32 +53,42 @@ function TwinPage() {
 
     Promise.all([twinPromise, conflictPromise])
       .then(([twin, conflicts]) => {
-        if (twin) setTwinData(twin);
+        if (twin) {
+          setTwinData(twin);
+        } else {
+          setError(isHi ? 'सर्वर से कनेक्ट नहीं हो पा रहा' : 'Could not connect to server');
+        }
         if (conflicts) setConflictData(conflicts);
       })
       .finally(() => setLoading(false));
   }, [monthlyIncome, matchedSchemes.length]);
 
-  // Compute display values
+  // Compute display values from live data
   const currentIncome = twinData?.currentMonthlyIncome || monthlyIncome;
   const povertyLine = twinData?.povertyLine || 8000;
-  const pathways = twinData?.pathways || mockPathwayData;
+  const pathways = twinData?.pathways || { best: [], medium: [], minimum: [] };
   const monthsToExit = twinData?.monthsToPovertyExit?.best || null;
 
-  // After-3-years income: last data point in best pathway
   const bestPathway = pathways?.best || [];
-  const after3YearsIncome = bestPathway.length > 0 ? bestPathway[bestPathway.length - 1]?.income : 7400;
+  const after3YearsIncome = bestPathway.length > 0 ? bestPathway[bestPathway.length - 1]?.income : currentIncome;
 
-  // Total annual benefit from matched schemes
-  const totalBenefit = matchedSchemes.reduce((s, sc) => s + (sc.annualBenefit || 0), 0) || 64800;
-  const activeSchemes = matchedSchemes.length || 8;
+  const totalBenefit = matchedSchemes.reduce((s, sc) => s + (sc.annualBenefit || 0), 0);
+  const activeSchemes = matchedSchemes.length;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-off-white flex items-center justify-center">
+        <Loader2 className="animate-spin text-saffron mr-3" size={24} />
+        <span className="font-body text-sm text-gray-500">{isHi ? 'प्रोजेक्शन लोड हो रहा है...' : 'Loading projections...'}</span>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-off-white">
-      {/* Header — spec lines 791-802 */}
+      {/* Header */}
       <div className="bg-navy py-8 lg:py-10" style={{ background: 'radial-gradient(ellipse at bottom center, rgba(232,116,12,0.08), #0F2240 70%)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Breadcrumb — spec line 796 */}
           <nav className="flex items-center gap-1 font-body text-xs text-gray-400 mb-3" aria-label="Breadcrumb">
             <Link to="/" className="hover:text-white transition-colors">{isHi ? 'होम' : 'Home'}</Link>
             <ChevronRight size={12} />
@@ -100,27 +102,21 @@ function TwinPage() {
             animate={{ opacity: 1, y: 0 }}
             className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-8"
           >
-            {/* Avatar */}
             <div className="w-16 h-16 rounded-full bg-saffron/20 flex items-center justify-center shrink-0">
-              <span className="font-display text-2xl text-saffron">{citizen.name ? citizen.name[0] : 'S'}</span>
+              <span className="font-display text-2xl text-saffron">{citizenName[0]}</span>
             </div>
 
             <div className="flex-1">
-              {/* Title — spec line 797 */}
-              <h1 className="font-display text-[28px] lg:text-[36px] text-white">
-                {T('twinTitle')}
-              </h1>
+              <h1 className="font-display text-[28px] lg:text-[36px] text-white">{T('twinTitle')}</h1>
               <p className="font-body text-sm text-gray-300 mt-1">
                 {isHi ? `अगले ${localizeNum(3, language)} वर्षों में आप गरीबी रेखा से ऊपर आ सकते हैं।` : 'In the next 3 years, you can rise above the poverty line.'}
               </p>
             </div>
 
             <div className="flex flex-col items-end gap-2">
-              {/* Citizen summary pill — spec line 801 */}
               <span className="px-4 py-1.5 rounded-full bg-navy-light text-white font-body text-xs font-medium">
-                {citizen.name || citizen.nameEnglish} | {localizeNum(citizen.age, language)} {isHi ? 'वर्ष' : 'years'} | {citizen.state || citizen.stateEnglish} | {isHi ? (citizen.category === 'SC' ? 'एससी' : citizen.category === 'ST' ? 'एसटी' : citizen.category === 'OBC' ? 'ओबीसी' : citizen.category === 'General' ? 'सामान्य' : citizen.category) : citizen.category}
+                {citizenName} | {localizeNum(citizenAge, language)} {isHi ? 'वर्ष' : 'years'} | {citizenState} | {citizenCategory}
               </span>
-              {/* Change profile link — spec line 802 */}
               <Link to="/chat" className="font-body text-xs text-saffron hover:underline" aria-label="Change profile">
                 {T('twinChangeProfile')}
               </Link>
@@ -130,16 +126,13 @@ function TwinPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Loading indicator */}
-        {loading && (
-          <div className="text-center py-4">
-            <span className="text-sm text-gray-500 font-body animate-pulse">
-              {isHi ? 'डेटा लोड हो रहा है...' : 'Loading projections...'}
-            </span>
+        {error && (
+          <div className="text-center py-4 mb-4">
+            <span className="text-sm text-red-500 font-body">🔴 {error}</span>
           </div>
         )}
 
-        {/* Stat Cards — spec lines 806-813 */}
+        {/* Stat Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-8">
           <StatCard
             icon="💰"
@@ -158,7 +151,6 @@ function TwinPage() {
             value={`₹${localizeNum(totalBenefit.toLocaleString('en-IN'), language)}`}
             label={T('twinTotalBenefit')}
             variant="primary"
-            trend={230}
           />
           <StatCard
             icon="📋"
@@ -168,13 +160,15 @@ function TwinPage() {
           />
         </div>
 
-        {/* Pathway Chart — spec lines 817-852 */}
-        <div className="mb-8">
-          <h2 className="font-body text-xl font-bold text-gray-900 mb-4">{T('twinIncomeChart')}</h2>
-          <PathwayChart pathways={pathways} />
-        </div>
+        {/* Pathway Chart */}
+        {bestPathway.length > 0 && (
+          <div className="mb-8">
+            <h2 className="font-body text-xl font-bold text-gray-900 mb-4">{T('twinIncomeChart')}</h2>
+            <PathwayChart pathways={pathways} />
+          </div>
+        )}
 
-        {/* Two column: timeline + conflict — spec lines 856-892 */}
+        {/* Two column: timeline + conflict */}
         <div className="grid grid-cols-1 lg:grid-cols-[55%_45%] gap-6">
           <div>
             <h2 className="font-body text-xl font-bold text-gray-900 mb-4">{T('twinSchemeSequence')}</h2>

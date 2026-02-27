@@ -1,4 +1,4 @@
-import { profileSteps } from '../../data/mockCitizens';
+import { profileSteps } from '../../data/citizenConfig';
 import { useLanguage } from '../../context/LanguageContext';
 import { localizeNum } from '../../utils/formatters';
 

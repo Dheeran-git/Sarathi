@@ -3,9 +3,8 @@ import ProgressSteps from '../components/chat/ProgressSteps';
 import ChatPanel from '../components/chat/ChatPanel';
 import InputBar from '../components/chat/InputBar';
 import ResultsPanel from '../components/chat/ResultsPanel';
-import { schemes } from '../data/mockSchemes';
 import { checkEligibility, saveCitizen } from '../utils/api';
-import { stateChips, categoryChips, occupationChips, profileSteps } from '../data/mockCitizens';
+import { stateChips, categoryChips, occupationChips, profileSteps } from '../data/citizenConfig';
 import { useCitizen } from '../context/CitizenContext';
 import { useLanguage } from '../context/LanguageContext';
 import { t } from '../utils/translations';
@@ -171,23 +170,17 @@ function ChatPage() {
                 matchedSchemes: matched,
               }).catch(() => { }); // silently ignore save failures
             })
-            .catch(() => {
-              // Fallback to mock data if API call fails
-              const matched = schemes.slice(0, 6);
-              setMatchedSchemes(matched);
-              setEligibleSchemes(matched);
+            .catch((err) => {
+              // Show error — no mock fallback
               setIsThinking(false);
-
               addMessage({
                 type: 'sarathi',
-                isFinal: true,
+                isFinal: false,
                 text: language === 'hi'
-                  ? `बहुत बढ़िया! मैंने आपके लिए ${matched.length} योजनाएं ढूंढी हैं। 🎉\n\nकुल अनुमानित वार्षिक लाभ: ₹${matched.reduce((s, sc) => s + sc.annualBenefit, 0).toLocaleString('en-IN')}`
-                  : `Great! I found ${matched.length} schemes for you. 🎉\n\nTotal estimated annual benefit: ₹${matched.reduce((s, sc) => s + sc.annualBenefit, 0).toLocaleString('en-IN')}`,
+                  ? '🔴 सर्वर से कनेक्ट नहीं हो पा रहा। कृपया कुछ देर बाद पुनः प्रयास करें।'
+                  : '🔴 Could not connect to server. Please try again later.',
                 timestamp: 'JUST_NOW',
               });
-
-              setTimeout(() => setShowResults(true), 500);
             });
           return; // exit early — the API callback handles the rest
         }

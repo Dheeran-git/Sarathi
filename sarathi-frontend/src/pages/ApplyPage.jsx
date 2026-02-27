@@ -1,18 +1,30 @@
 import { useParams, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, ExternalLink, FileText, Upload, CheckCircle } from 'lucide-react';
-import { schemeMap } from '../data/mockSchemes';
+import { ArrowLeft, ExternalLink, FileText, Upload, CheckCircle, Loader2 } from 'lucide-react';
+import { fetchScheme } from '../utils/api';
 import { useLanguage } from '../context/LanguageContext';
 
 /**
- * ApplyPage — mock application form for a scheme.
+ * ApplyPage — application form for a scheme.
  * Route: /apply/:schemeId
  */
 function ApplyPage() {
     const { schemeId } = useParams();
-    const scheme = schemeMap[schemeId];
+    const [scheme, setScheme] = useState(null);
+    const [loading, setLoading] = useState(true);
     const { language } = useLanguage();
     const isHi = language === 'hi';
+
+    useEffect(() => {
+        setLoading(true);
+        fetchScheme(schemeId)
+            .then((data) => {
+                if (data && !data.error) setScheme(data);
+            })
+            .catch(() => { })
+            .finally(() => setLoading(false));
+    }, [schemeId]);
 
     if (!scheme) {
         return (

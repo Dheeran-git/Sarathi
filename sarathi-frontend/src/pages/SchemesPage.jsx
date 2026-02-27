@@ -1,10 +1,9 @@
 import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Filter } from 'lucide-react';
+import { Search, Filter, Loader2 } from 'lucide-react';
 import SchemeCard from '../components/ui/SchemeCard';
 import EmptyState from '../components/ui/EmptyState';
-import { schemes as mockSchemes } from '../data/mockSchemes';
-import { checkEligibility } from '../utils/api';
+import { fetchAllSchemes } from '../utils/api';
 import { useLanguage } from '../context/LanguageContext';
 import { t } from '../utils/translations';
 import { localizeNum } from '../utils/formatters';
@@ -25,45 +24,21 @@ function SchemesPage() {
   const isHi = language === 'hi';
   const [category, setCategory] = useState('all');
   const [search, setSearch] = useState('');
-  const [schemes, setSchemes] = useState(mockSchemes);
+  const [schemes, setSchemes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Fetch live schemes on mount
+  // Fetch all schemes from live API on mount
   useEffect(() => {
-    checkEligibility({ age: 1, gender: 'any', monthlyIncome: 999999, category: 'General' })
+    setLoading(true);
+    setError(null);
+    fetchAllSchemes()
       .then((data) => {
-        if (data.matchedSchemes && data.matchedSchemes.length > 0) {
-          // Merge live scheme data with mock data for rich display fields
-          const liveSchemes = data.matchedSchemes.map((live) => {
-            const mock = mockSchemes.find(
-              (m) => m.id === live.schemeId || m.nameEnglish === live.nameEnglish
-            );
-            return mock
-              ? { ...mock, annualBenefit: live.annualBenefit || mock.annualBenefit }
-              : {
-                id: live.schemeId,
-                nameHindi: live.nameHindi || live.nameEnglish,
-                nameEnglish: live.nameEnglish || live.schemeId,
-                category: live.category || 'employment',
-                annualBenefit: live.annualBenefit || 0,
-                ministry: live.ministry || '',
-                applyUrl: live.applyUrl || '#',
-                eligibilityTags: [],
-                eligibilityTagsEn: [],
-                benefits: [],
-                benefitsEn: [],
-                benefitDescription: '',
-                howToApply: [],
-                howToApplyEn: [],
-                documentsRequired: [],
-                documentsRequiredEn: [],
-                eligibility: { category: ['SC', 'ST', 'OBC', 'General'] },
-              };
-          });
-          setSchemes(liveSchemes);
-        }
+        setSchemes(data);
       })
-      .catch(() => { /* keep mock data */ })
+      .catch((err) => {
+        setError(isHi ? 'सर्वर से कनेक्ट नहीं हो पा रहा' : 'Could not connect to server');
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -76,13 +51,13 @@ function SchemesPage() {
       const q = search.toLowerCase();
       results = results.filter(
         (s) =>
-          s.nameHindi.toLowerCase().includes(q) ||
-          s.nameEnglish.toLowerCase().includes(q) ||
-          s.ministry.toLowerCase().includes(q)
+          (s.nameHindi || '').toLowerCase().includes(q) ||
+          (s.nameEnglish || '').toLowerCase().includes(q) ||
+          (s.ministry || '').toLowerCase().includes(q)
       );
     }
     return results;
-  }, [category, search]);
+  }, [category, search, schemes]);
 
   return (
     <div className="min-h-screen bg-off-white">
@@ -136,12 +111,35 @@ function SchemesPage() {
           ))}
         </div>
 
+        {/* Loading state */}
+        {loading && (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="animate-spin text-saffron mr-3" size={24} />
+            <span className="font-body text-sm text-gray-500">
+              {isHi ? 'योजनाएं लोड हो रही हैं...' : 'Loading schemes...'}
+            </span>
+          </div>
+        )}
+
+        {/* Error state */}
+        {error && !loading && (
+          <div className="text-center py-16">
+            <p className="text-red-500 font-body text-sm mb-2">🔴 {error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="text-saffron font-body text-sm hover:underline"
+            >
+              {isHi ? 'पुनः प्रयास करें' : 'Try Again'}
+            </button>
+          </div>
+        )}
+
         {/* Results */}
-        {filtered.length > 0 ? (
+        {!loading && !error && filtered.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filtered.map((scheme, i) => (
               <motion.div
-                key={scheme.id}
+                key={scheme.schemeId || scheme.id || i}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05, duration: 0.3 }}
@@ -150,7 +148,9 @@ function SchemesPage() {
               </motion.div>
             ))}
           </div>
-        ) : (
+        )}
+
+        {!loading && !error && filtered.length === 0 && schemes.length > 0 && (
           <EmptyState
             title={isHi ? "कोई योजना नहीं मिली" : "No Schemes Found"}
             subtitle={isHi ? "कृपया अन्य श्रेणी या खोज शब्द प्रयोग करें।" : "Please try a different category or search term."}
