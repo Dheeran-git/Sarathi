@@ -1,0 +1,299 @@
+import { useState, useMemo } from 'react';
+
+/* ── Status → color mapping ───────────────────────────────────────────── */
+const STATUS_COLOR = {
+  enrolled: '#00C851',
+  eligible: '#FF8800',
+  none: '#E53935',
+  unknown: '#78909C',
+};
+
+const STATUS_LABEL = {
+  enrolled: 'लाभान्वित',
+  eligible: 'योग्य लेकिन वंचित',
+  none: 'शून्य लाभ',
+  unknown: 'डेटा नहीं',
+};
+
+/* ── Filter chip definitions ──────────────────────────────────────────── */
+const FILTERS = [
+  { key: 'all', label: 'सभी' },
+  { key: 'eligible', label: 'योग्य लेकिन वंचित' },
+  { key: 'none', label: 'शून्य लाभ' },
+];
+
+/* ── Ward layout generator ────────────────────────────────────────────── *
+ * Groups households by ward, then positions each ward cluster on a
+ * virtual canvas. Within each cluster dots sit in a tight grid.         */
+function buildLayout(households) {
+  const byWard = {};
+  households.forEach((h) => {
+    (byWard[h.ward] = byWard[h.ward] || []).push(h);
+  });
+
+  const wards = Object.keys(byWard).sort(
+    (a, b) => Number(a.replace(/\D/g, '')) - Number(b.replace(/\D/g, ''))
+  );
+
+  // Each ward cluster: cols determined by sqrt of household count,
+  // placed in a meta-grid of ward blocks.
+  const wardCols = Math.ceil(Math.sqrt(wards.length));
+  const dotSize = 16;
+  const dotGap = 4;
+  const wardPadding = 32; // space between ward clusters
+  const roadWidth = 2;
+
+  const positioned = [];
+  const roads = [];
+  let maxX = 0;
+  let maxY = 0;
+
+  wards.forEach((ward, wi) => {
+    const members = byWard[ward];
+    const cols = Math.max(2, Math.ceil(Math.sqrt(members.length)));
+    const wardRow = Math.floor(wi / wardCols);
+    const wardCol = wi % wardCols;
+
+    // Estimate previous ward widths/heights for offset.
+    // Use a fixed cell budget so wards align reasonably.
+    const clusterW = cols * (dotSize + dotGap);
+    const clusterH = Math.ceil(members.length / cols) * (dotSize + dotGap);
+
+    const originX = wardCol * (8 * (dotSize + dotGap) + wardPadding);
+    const originY = wardRow * (8 * (dotSize + dotGap) + wardPadding);
+
+    members.forEach((h, di) => {
+      const col = di % cols;
+      const row = Math.floor(di / cols);
+      positioned.push({
+        ...h,
+        x: originX + col * (dotSize + dotGap),
+        y: originY + row * (dotSize + dotGap),
+        idx: positioned.length,
+      });
+    });
+
+    const endX = originX + clusterW;
+    const endY = originY + clusterH;
+    if (endX > maxX) maxX = endX;
+    if (endY > maxY) maxY = endY;
+
+    // Horizontal road below each ward row
+    if (wardRow < Math.ceil(wards.length / wardCols) - 1 && wardCol === 0) {
+      const roadY = originY + clusterH + wardPadding / 2 - roadWidth;
+      roads.push({ x1: 0, y1: roadY, x2: maxX + wardPadding, y2: roadY });
+    }
+
+    // Vertical road to the right of each column (except last)
+    if (wardCol < wardCols - 1) {
+      const roadX = originX + clusterW + wardPadding / 2 - roadWidth;
+      roads.push({ x1: roadX, y1: originY - 8, x2: roadX, y2: originY + clusterH + 8 });
+    }
+  });
+
+  return { positioned, roads, width: maxX + 16, height: maxY + 16 };
+}
+
+/* ── Tooltip ──────────────────────────────────────────────────────────── */
+function Tooltip({ dot, containerRect, mapEl }) {
+  if (!dot || !containerRect || !mapEl) return null;
+
+  // Position tooltip near the dot, clamped inside the container
+  const scrollLeft = mapEl.scrollLeft;
+  const scrollTop = mapEl.scrollTop;
+  const left = dot.x - scrollLeft + 24;
+  const top = dot.y - scrollTop - 8;
+
+  return (
+    <div
+      className="absolute z-20 pointer-events-none px-3 py-2 rounded-lg bg-navy text-white shadow-lg font-body text-xs leading-relaxed whitespace-nowrap"
+      style={{ left, top, transform: 'translateY(-100%)' }}
+    >
+      <p className="font-semibold text-sm">{dot.name}</p>
+      <p className="text-gray-300">
+        वार्ड: {dot.ward}
+      </p>
+      <p>
+        स्थिति:{' '}
+        <span style={{ color: STATUS_COLOR[dot.status] }}>
+          {STATUS_LABEL[dot.status]}
+        </span>
+      </p>
+      {dot.schemesCount !== undefined && (
+        <p className="text-gray-300">योजनाएं: {dot.schemesCount}</p>
+      )}
+    </div>
+  );
+}
+
+/* ── Village Map ──────────────────────────────────────────────────────── */
+function VillageMap({ households = [] }) {
+  const [filter, setFilter] = useState('all');
+  const [hoveredDot, setHoveredDot] = useState(null);
+  const [mapEl, setMapEl] = useState(null);
+  const [containerRect, setContainerRect] = useState(null);
+
+  const { positioned, roads, width, height } = useMemo(
+    () => buildLayout(households),
+    [households]
+  );
+
+  const handleMouseEnter = (dot, e) => {
+    setHoveredDot(dot);
+    if (mapEl) setContainerRect(mapEl.getBoundingClientRect());
+  };
+
+  const dotMatches = (status) => {
+    if (filter === 'all') return true;
+    return status === filter;
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Filter Chips */}
+      <div className="flex flex-wrap gap-2">
+        {FILTERS.map((f) => (
+          <button
+            key={f.key}
+            onClick={() => setFilter(f.key)}
+            className={`px-3 py-1.5 rounded-full font-body text-xs font-medium transition-colors duration-200 ${
+              filter === f.key
+                ? 'bg-saffron text-white'
+                : 'bg-white text-gray-700 border border-gray-200 hover:border-saffron/40'
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Map Container */}
+      <div
+        ref={setMapEl}
+        className="relative overflow-auto rounded-xl border border-gray-200 bg-gray-100"
+        style={{ maxHeight: 480 }}
+      >
+        {/* Subtle grid background */}
+        <svg
+          className="absolute inset-0 w-full h-full pointer-events-none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <defs>
+            <pattern id="mapgrid" width="40" height="40" patternUnits="userSpaceOnUse">
+              <path
+                d="M 40 0 L 0 0 0 40"
+                fill="none"
+                stroke="#C8C3B8"
+                strokeWidth="0.5"
+                opacity="0.25"
+              />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#mapgrid)" />
+        </svg>
+
+        {/* Ward layout */}
+        <div
+          className="relative"
+          style={{
+            width: Math.max(width, 300),
+            height: Math.max(height, 200),
+            padding: 16,
+          }}
+        >
+          {/* Road lines */}
+          <svg
+            className="absolute inset-0 pointer-events-none"
+            style={{ width: width + 32, height: height + 32 }}
+          >
+            {roads.map((r, i) => (
+              <line
+                key={i}
+                x1={r.x1 + 16}
+                y1={r.y1 + 16}
+                x2={r.x2 + 16}
+                y2={r.y2 + 16}
+                stroke="#C8C3B8"
+                strokeWidth="1.5"
+                strokeDasharray="6 4"
+                opacity="0.4"
+              />
+            ))}
+          </svg>
+
+          {/* Household dots */}
+          {positioned.map((dot) => {
+            const color = STATUS_COLOR[dot.status] || STATUS_COLOR.unknown;
+            const matches = dotMatches(dot.status);
+            const pulseClass =
+              dot.status === 'eligible'
+                ? 'animate-[pulse-eligible_2s_ease-in-out_infinite]'
+                : dot.status === 'none'
+                  ? 'animate-[pulse-none_1.2s_ease-in-out_infinite]'
+                  : '';
+
+            return (
+              <div
+                key={dot.id}
+                className={`absolute rounded-sm cursor-pointer transition-opacity duration-300 ${pulseClass}`}
+                style={{
+                  width: 16,
+                  height: 16,
+                  left: dot.x + 16,
+                  top: dot.y + 16,
+                  backgroundColor: color,
+                  opacity: matches ? 1 : 0.1,
+                  animation: `dotAppear 0.4s ${dot.idx * 5}ms both ease-out${
+                    pulseClass && matches
+                      ? `, ${dot.status === 'eligible' ? 'pulse-eligible 2s ease-in-out infinite' : 'pulse-none 1.2s ease-in-out infinite'}`
+                      : ''
+                  }`,
+                }}
+                onMouseEnter={(e) => handleMouseEnter(dot, e)}
+                onMouseLeave={() => setHoveredDot(null)}
+              />
+            );
+          })}
+
+          {/* Tooltip */}
+          {hoveredDot && (
+            <Tooltip dot={hoveredDot} containerRect={containerRect} mapEl={mapEl} />
+          )}
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div className="flex flex-wrap items-center gap-4 px-1">
+        {Object.entries(STATUS_COLOR).map(([status, color]) => (
+          <div key={status} className="flex items-center gap-1.5">
+            <span
+              className="w-3 h-3 rounded-full inline-block"
+              style={{ backgroundColor: color }}
+            />
+            <span className="font-body text-xs text-gray-700">
+              {STATUS_LABEL[status]}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Keyframe styles (injected once) */}
+      <style>{`
+        @keyframes dotAppear {
+          from { opacity: 0; transform: scale(0); }
+          to   { opacity: 1; transform: scale(1); }
+        }
+        @keyframes pulse-eligible {
+          0%, 100% { transform: scale(1);   opacity: 1; }
+          50%      { transform: scale(1.4); opacity: 0.7; }
+        }
+        @keyframes pulse-none {
+          0%, 100% { transform: scale(1);   opacity: 1; }
+          50%      { transform: scale(1.4); opacity: 0.7; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+export default VillageMap;
