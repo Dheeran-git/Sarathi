@@ -23,7 +23,7 @@ function SchemeTimeline({ bestPathway = [] }) {
                 year: y,
                 month: m,
                 scheme: point.scheme,
-                schemeHindi: point.scheme,
+                schemeHindi: point.schemeHindi || point.scheme,
                 impactHi: 'अनुमानित आय वृद्धि',
                 impactEn: 'Est. income boost',
                 category: 'general'

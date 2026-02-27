@@ -66,6 +66,9 @@ function PanchayatDashboard() {
               category: h.category || 'General',
               gender: h.gender || 'any',
               isWidow: h.isWidow === true || h.isWidow === 'true',
+              matchedSchemes: h.matchedSchemes || [],
+              enrolledSchemes: h.enrolledSchemes || [],
+              estimatedBenefit: h.estimatedBenefit || 0,
             }));
             setHouseholds(processed);
           }
@@ -100,22 +103,28 @@ function PanchayatDashboard() {
   // Build eligible citizens for CitizenTable from households data
   let eligibleCitizens = households
     .filter(h => h.status === 'eligible')
-    .map(h => ({
-      id: h.id,
-      name: h.name,
-      ward: h.ward,
-      age: h.age,
-      category: h.category,
-      categoryEnglish: h.category,
-      gender: h.gender,
-      isWidow: h.isWidow,
-      missingSchemes: [],
-      missingSchemesEnglish: [],
-      estimatedBenefit: 0,
-      status: 'deprived',
-      statusLabel: '🔴 ' + (isHi ? 'वंचित' : 'Deprived'),
-      statusLabelEnglish: '🔴 Deprived',
-    }));
+    .map(h => {
+      const enrolledIds = (h.enrolledSchemes || []).map(e => e.schemeId || e);
+      const missingList = (h.matchedSchemes || [])
+        .filter(s => !enrolledIds.includes(s.schemeId));
+      return {
+        id: h.id,
+        name: h.name,
+        ward: h.ward,
+        age: h.age,
+        category: h.category,
+        categoryEnglish: h.category,
+        gender: h.gender,
+        isWidow: h.isWidow,
+        missingSchemes: missingList.map(s => s.nameHindi || s.nameEnglish || s.schemeId),
+        missingSchemesEnglish: missingList.map(s => s.nameEnglish || s.schemeId),
+        estimatedBenefit: h.estimatedBenefit ||
+          missingList.reduce((sum, s) => sum + (parseInt(s.annualBenefit) || 0), 0),
+        status: 'deprived',
+        statusLabel: '🔴 ' + (isHi ? 'वंचित' : 'Deprived'),
+        statusLabelEnglish: '🔴 Deprived',
+      };
+    });
 
   // Apply alert filter if one is active
   if (activeAlertFilter) {

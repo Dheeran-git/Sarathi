@@ -27,15 +27,18 @@ def lambda_handler(event, context):
                 if scheme_index < len(schemes_to_use) and month % months_per_scheme == 1:
                     scheme = schemes_to_use[scheme_index]
                     income += int(scheme.get('annualBenefit', 0)) / 12
-                    scheme_name = scheme.get('nameEnglish', '')
+                    scheme_name_en = scheme.get('nameEnglish', '')
+                    scheme_name_hi = scheme.get('nameHindi', scheme_name_en)
                     scheme_index += 1
                 else:
-                    scheme_name = None
+                    scheme_name_en = None
+                    scheme_name_hi = None
 
                 data_points.append({
                     'month': month,
                     'income': round(income),
-                    'scheme': scheme_name
+                    'scheme': scheme_name_en,
+                    'schemeHindi': scheme_name_hi,
                 })
             return data_points
 
