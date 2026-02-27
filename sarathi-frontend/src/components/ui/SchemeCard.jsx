@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -8,6 +8,9 @@ import {
   GraduationCap,
   Baby,
   Briefcase,
+  Volume2,
+  VolumeX,
+  Loader2,
 } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { localizeNum } from '../../utils/formatters';
@@ -31,11 +34,73 @@ function formatRupee(amount, language) {
 
 function SchemeCard({ scheme, isEligible = false, isApplied = false }) {
   const [hovered, setHovered] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+  const audioRef = useRef(null);
   const { language } = useLanguage();
   const isHi = language === 'hi';
   const config = CATEGORY_CONFIG[scheme.category] || CATEGORY_CONFIG.employment;
   const Icon = config.icon;
   const catColor = config.color;
+
+  /** Play Hindi audio explanation via Polly (or browser TTS fallback) */
+  const playExplanation = async () => {
+    // If already playing, stop
+    if (isPlaying) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+        audioRef.current = null;
+      }
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      setIsPlaying(false);
+      return;
+    }
+
+    setIsLoadingAudio(true);
+
+    // Try to fetch audio from bedrock-explainer API
+    const apiBase = import.meta.env.VITE_API_BASE_URL;
+    if (apiBase) {
+      try {
+        const res = await fetch(`${apiBase}/explain`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scheme }),
+        });
+        const data = await res.json();
+        const parsed = typeof data.body === 'string' ? JSON.parse(data.body) : data;
+
+        if (parsed.audioUrl) {
+          const audio = new Audio(parsed.audioUrl);
+          audioRef.current = audio;
+          audio.onended = () => { setIsPlaying(false); audioRef.current = null; };
+          audio.onerror = () => { setIsPlaying(false); audioRef.current = null; };
+          setIsLoadingAudio(false);
+          setIsPlaying(true);
+          audio.play();
+          return;
+        }
+      } catch (err) {
+        console.warn('[SchemeCard] API audio failed, using browser TTS fallback:', err);
+      }
+    }
+
+    // Fallback: Browser speech synthesis
+    setIsLoadingAudio(false);
+    if ('speechSynthesis' in window) {
+      const text = isHi
+        ? (scheme.benefitDescription || scheme.nameHindi)
+        : (scheme.benefitDescriptionEn || scheme.nameEnglish);
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = isHi ? 'hi-IN' : 'en-IN';
+      utterance.rate = 0.9;
+      utterance.onend = () => setIsPlaying(false);
+      utterance.onerror = () => setIsPlaying(false);
+      setIsPlaying(true);
+      window.speechSynthesis.speak(utterance);
+    }
+  };
 
   return (
     <motion.article
@@ -88,13 +153,32 @@ function SchemeCard({ scheme, isEligible = false, isApplied = false }) {
           )}
         </div>
 
-        {/* Right — Benefit Amount */}
-        <div className="shrink-0 text-right pl-2">
+        {/* Right — Benefit Amount + Speaker */}
+        <div className="shrink-0 text-right pl-2 flex flex-col items-end">
           <p className="font-mono text-[22px] font-bold text-saffron leading-tight whitespace-nowrap">
             <span className="text-sm">₹</span>
             {localizeNum(formatRupee(scheme.annualBenefit, language), language)}
           </p>
           <p className="font-body text-[11px] text-gray-500">{isHi ? 'प्रति वर्ष' : 'per year'}</p>
+
+          {/* 🔊 Speaker Button — plays Hindi audio explanation */}
+          <button
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); playExplanation(); }}
+            className={`mt-1.5 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${isPlaying
+                ? 'bg-saffron text-white shadow-md scale-110'
+                : 'bg-saffron/10 text-saffron hover:bg-saffron/20'
+              }`}
+            aria-label={isHi ? 'आवाज़ में सुनें' : 'Listen in voice'}
+            title={isHi ? 'आवाज़ में सुनें' : 'Listen in voice'}
+          >
+            {isLoadingAudio ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : isPlaying ? (
+              <VolumeX size={16} />
+            ) : (
+              <Volume2 size={16} />
+            )}
+          </button>
         </div>
       </div>
 

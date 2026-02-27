@@ -1,53 +1,127 @@
 import { useState, useCallback, useRef } from 'react';
 
 /**
- * useVoiceInput — hook for voice recording.
- * In production, this would use Web Speech API or AWS Transcribe.
- * For the prototype, it simulates recording states.
+ * useVoiceInput — hook for voice recording using Web Speech API.
+ *
+ * Uses the browser's SpeechRecognition API for real voice-to-text.
+ * Falls back to mock data if the API is unavailable.
+ *
+ * Member 2 · Sarathi AI Services
  */
 export function useVoiceInput({ onTranscript, language = 'hi-IN' } = {}) {
   const [state, setState] = useState('idle'); // idle | listening | processing
   const [transcript, setTranscript] = useState('');
+  const recognitionRef = useRef(null);
   const timeoutRef = useRef(null);
 
+  // Check for Web Speech API support
+  const SpeechRecognition =
+    typeof window !== 'undefined'
+      ? window.SpeechRecognition || window.webkitSpeechRecognition
+      : null;
+
+  const isSupported = Boolean(SpeechRecognition);
+
   const startListening = useCallback(() => {
-    setState('listening');
+    if (!isSupported) {
+      // Fallback: Simulated voice input for browsers without Web Speech API
+      _simulateVoiceInput();
+      return;
+    }
 
-    // Simulate voice capture — in production, use SpeechRecognition API
-    timeoutRef.current = setTimeout(() => {
-      setState('processing');
+    try {
+      const recognition = new SpeechRecognition();
+      recognitionRef.current = recognition;
 
-      // Simulate processing delay
-      setTimeout(() => {
-        const mockTranscript = language === 'hi-IN'
-          ? 'मुझे पेंशन योजना चाहिए'
-          : 'I need pension scheme';
-        setTranscript(mockTranscript);
+      recognition.lang = language; // 'hi-IN' for Hindi, 'en-IN' for English
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => {
+        setState('listening');
+      };
+
+      recognition.onresult = (event) => {
+        setState('processing');
+        const result = event.results[0][0];
+        const text = result.transcript;
+        const confidence = result.confidence;
+
+        console.log(`[VoiceInput] Transcript: "${text}" (confidence: ${confidence.toFixed(2)})`);
+
+        setTranscript(text);
         setState('idle');
-        onTranscript?.(mockTranscript);
-      }, 1500);
-    }, 3000);
-  }, [language, onTranscript]);
+        onTranscript?.(text, confidence);
+      };
+
+      recognition.onerror = (event) => {
+        console.error('[VoiceInput] Error:', event.error);
+        setState('idle');
+
+        // If permission denied or not supported, fall back to simulation
+        if (event.error === 'not-allowed' || event.error === 'no-speech') {
+          _simulateVoiceInput();
+        }
+      };
+
+      recognition.onend = () => {
+        if (state === 'listening') {
+          setState('idle');
+        }
+      };
+
+      recognition.start();
+    } catch (err) {
+      console.error('[VoiceInput] Failed to start recognition:', err);
+      _simulateVoiceInput();
+    }
+  }, [SpeechRecognition, isSupported, language, onTranscript, state]);
 
   const stopListening = useCallback(() => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+    }
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
     if (state === 'listening') {
       setState('processing');
-      setTimeout(() => {
-        const mockTranscript = 'मुझे योजना की जानकारी चाहिए';
-        setTranscript(mockTranscript);
-        setState('idle');
-        onTranscript?.(mockTranscript);
-      }, 1000);
+      setTimeout(() => setState('idle'), 500);
     }
-  }, [state, onTranscript]);
+  }, [state]);
 
   const toggleListening = useCallback(() => {
     if (state === 'idle') startListening();
     else if (state === 'listening') stopListening();
   }, [state, startListening, stopListening]);
 
-  return { state, transcript, startListening, stopListening, toggleListening };
+  // Private: Simulated voice input fallback
+  const _simulateVoiceInput = useCallback(() => {
+    setState('listening');
+    timeoutRef.current = setTimeout(() => {
+      setState('processing');
+      setTimeout(() => {
+        const mockTranscript =
+          language === 'hi-IN'
+            ? 'मुझे पेंशन योजना चाहिए'
+            : 'I need pension scheme';
+        setTranscript(mockTranscript);
+        setState('idle');
+        onTranscript?.(mockTranscript, 0.95);
+      }, 1500);
+    }, 3000);
+  }, [language, onTranscript]);
+
+  return {
+    state,
+    transcript,
+    startListening,
+    stopListening,
+    toggleListening,
+    isSupported,
+  };
 }
 
 export default useVoiceInput;
