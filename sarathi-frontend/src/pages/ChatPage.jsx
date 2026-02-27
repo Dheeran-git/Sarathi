@@ -4,7 +4,7 @@ import ChatPanel from '../components/chat/ChatPanel';
 import InputBar from '../components/chat/InputBar';
 import ResultsPanel from '../components/chat/ResultsPanel';
 import { schemes } from '../data/mockSchemes';
-import { checkEligibility } from '../utils/api';
+import { checkEligibility, saveCitizen } from '../utils/api';
 import { stateChips, categoryChips, occupationChips, profileSteps } from '../data/mockCitizens';
 import { useCitizen } from '../context/CitizenContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -157,6 +157,19 @@ function ChatPage() {
               });
 
               setTimeout(() => setShowResults(true), 500);
+
+              // Save citizen profile to DynamoDB (fire-and-forget)
+              saveCitizen({
+                name: citizenProfile.name,
+                age: citizenProfile.age,
+                gender: citizenProfile.gender || 'any',
+                state: citizenProfile.state || '',
+                monthlyIncome: citizenProfile.income || 0,
+                category: citizenProfile.category || 'General',
+                isWidow: citizenProfile.isWidow || false,
+                occupation: citizenProfile.occupation || 'any',
+                matchedSchemes: matched,
+              }).catch(() => { }); // silently ignore save failures
             })
             .catch(() => {
               // Fallback to mock data if API call fails
