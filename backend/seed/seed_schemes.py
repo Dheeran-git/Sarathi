@@ -28,7 +28,7 @@ def seed():
     with table.batch_writer() as batch:
         for scheme in schemes:
             batch.put_item(Item=scheme)
-            print(f"  ✅ {scheme['schemeId']} — {scheme['nameEnglish']}")
+            print(f"  [OK] {scheme['schemeId']} - {scheme['nameEnglish']}")
 
     print(f"\nDone! {len(schemes)} schemes seeded successfully.")
 

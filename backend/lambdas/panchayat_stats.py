@@ -1,9 +1,16 @@
 import json
 import boto3
+from decimal import Decimal
 from boto3.dynamodb.conditions import Attr
 
 dynamodb = boto3.resource('dynamodb', region_name='ap-south-1')
 citizens_table = dynamodb.Table('SarathiCitizens')
+
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, Decimal):
+            return int(o) if o % 1 == 0 else float(o)
+        return super().default(o)
 
 def lambda_handler(event, context):
     panchayat_id = event.get('pathParameters', {}).get('panchayatId', 'rampur-barabanki-up')
@@ -27,7 +34,7 @@ def lambda_handler(event, context):
             'type': 'widow_pension',
             'urgency': 'high',
             'count': len(widows_unserved),
-            'title': f'{len(widows_unserved)} विधवाएं पेंशन से वंचित',
+            'title': f'{len(widows_unserved)} widows eligible for pension but not enrolled',
             'description': f'{len(widows_unserved)} widows eligible for pension but not enrolled'
         })
 
@@ -37,7 +44,7 @@ def lambda_handler(event, context):
             'type': 'old_age_pension',
             'urgency': 'high',
             'count': len(elderly_unserved),
-            'title': f'{len(elderly_unserved)} बुजुर्ग पेंशन से वंचित',
+            'title': f'{len(elderly_unserved)} elderly citizens missing old age pension',
             'description': f'{len(elderly_unserved)} elderly citizens missing old age pension'
         })
 
@@ -55,5 +62,5 @@ def lambda_handler(event, context):
             'zeroBenefits': len(zero),
             'households': citizens,
             'alerts': alerts
-        })
+        }, cls=DecimalEncoder)
     }

@@ -1,8 +1,15 @@
 import json
 import boto3
+from decimal import Decimal
 
 dynamodb = boto3.resource('dynamodb', region_name='ap-south-1')
 table = dynamodb.Table('SarathiSchemes')
+
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, Decimal):
+            return int(o) if o % 1 == 0 else float(o)
+        return super().default(o)
 
 def lambda_handler(event, context):
     scheme_id = event.get('pathParameters', {}).get('schemeId', '')
@@ -22,5 +29,5 @@ def lambda_handler(event, context):
     return {
         'statusCode': 200,
         'headers': { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
-        'body': json.dumps(item)
+        'body': json.dumps(item, cls=DecimalEncoder)
     }

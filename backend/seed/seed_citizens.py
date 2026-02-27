@@ -107,7 +107,7 @@ def seed():
     with table.batch_writer() as batch:
         for citizen in all_records:
             batch.put_item(Item=citizen)
-            print(f"  ✅ {citizen['citizenId']} — {citizen['name']} ({citizen['status']})")
+            print(f"  [OK] {citizen['citizenId']} - {citizen['name']} ({citizen['status']})")
 
     print(f"\nDone! {len(all_records)} citizen records seeded successfully.")
 
