@@ -36,7 +36,7 @@ function ProgressSteps({ currentStep = 0, completedSteps = [] }) {
                                 className={`ml-1.5 text-xs font-body whitespace-nowrap ${isActive ? 'text-saffron font-medium' : isCompleted ? 'text-navy' : 'text-gray-400'
                                     }`}
                             >
-                                {isHi ? step.labelHindi : (step.labelEnglish)}
+                                {isHi ? step.labelHindi : step.labelEnglish}
                             </span>
 
                             {/* Connecting line */}
@@ -56,7 +56,7 @@ function ProgressSteps({ currentStep = 0, completedSteps = [] }) {
                 <span className="font-body text-sm text-gray-700">
                     {isHi ? 'चरण' : 'Step'} {localizeNum(currentStep + 1, language)} / {localizeNum(profileSteps.length, language)}:{' '}
                     <span className="font-medium text-saffron">
-                        {isHi ? profileSteps[currentStep]?.labelHindi : (profileSteps[currentStep]?.labelEn || profileSteps[currentStep]?.key)}
+                        {isHi ? profileSteps[currentStep]?.labelHindi : (profileSteps[currentStep]?.labelEnglish || profileSteps[currentStep]?.key)}
                     </span>
                 </span>
                 <div className="flex gap-1">

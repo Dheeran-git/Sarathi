@@ -1,13 +1,14 @@
-import { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import ProgressSteps from '../components/chat/ProgressSteps';
 import ChatPanel from '../components/chat/ChatPanel';
 import InputBar from '../components/chat/InputBar';
 import ResultsPanel from '../components/chat/ResultsPanel';
 import { checkEligibility, saveCitizen } from '../utils/api';
-import { stateChips, categoryChips, occupationChips, profileSteps } from '../data/citizenConfig';
+import { stateChips, categoryChips } from '../data/citizenConfig';
 import { useCitizen } from '../context/CitizenContext';
 import { useLanguage } from '../context/LanguageContext';
 import { t } from '../utils/translations';
+import { useVoiceInput } from '../hooks/useVoiceInput';
 
 /**
  * ChatPage — full citizen chat interface with simulated conversation.
@@ -32,18 +33,31 @@ const FLOW_QUESTIONS = {
 };
 
 function ChatPage() {
+  // Bug fix: use real context hooks instead of stub variables
   const { citizenProfile, updateProfile, setEligibleSchemes } = useCitizen();
   const { language } = useLanguage();
   const T = (key) => t(key, language);
-  const questions = FLOW_QUESTIONS[language] || FLOW_QUESTIONS.hi;
+  // Bug fix: derive questions from actual language, not hardcoded 'hi'
+  const questions = FLOW_QUESTIONS[language] || FLOW_QUESTIONS.en;
+
   const [step, setStep] = useState(0);
   const [messages, setMessages] = useState([]);
   const [isThinking, setIsThinking] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
   const [matchedSchemes, setMatchedSchemes] = useState([]);
   const [showResults, setShowResults] = useState(false);
 
   const addMessage = (msg) => setMessages((prev) => [...prev, msg]);
+
+  // Bug fix: wire voice input hook so mic button actually works
+  const { state: voiceState, toggleListening } = useVoiceInput({
+    onTranscript: (text) => {
+      if (text && text.trim()) {
+        handleSend(text.trim());
+      }
+    },
+    language: language === 'hi' ? 'hi-IN' : 'en-IN',
+  });
+  const isRecording = voiceState === 'listening' || voiceState === 'processing';
 
   // Re-translate messages when language changes
   useEffect(() => {
@@ -64,8 +78,8 @@ function ChatPage() {
           return {
             ...msg,
             text: language === 'hi'
-              ? `बहुत बढ़िया! मैंने आपके लिए ${matchedSchemes.length} योजनाएं ढूंढी हैं। 🎉\n\nकुल अनुमानित वार्षिक लाभ: ₹${matchedSchemes.reduce((s, sc) => s + sc.annualBenefit, 0).toLocaleString('en-IN')}`
-              : `Great! I found ${matchedSchemes.length} schemes for you. 🎉\n\nTotal estimated annual benefit: ₹${matchedSchemes.reduce((s, sc) => s + sc.annualBenefit, 0).toLocaleString('en-IN')}`,
+              ? `बहुत बढ़िया! मैंने आपके लिए ${matchedSchemes.length} योजनाएं ढूंढी हैं। 🎉\n\nकुल अनुमानित वार्षिक लाभ: ₹${matchedSchemes.reduce((s, sc) => s + (sc.annualBenefit || 0), 0).toLocaleString('en-IN')}`
+              : `Great! I found ${matchedSchemes.length} schemes for you. 🎉\n\nTotal estimated annual benefit: ₹${matchedSchemes.reduce((s, sc) => s + (sc.annualBenefit || 0), 0).toLocaleString('en-IN')}`,
           };
         }
         return msg;
@@ -75,10 +89,12 @@ function ChatPage() {
 
   const processAnswer = useCallback(
     (answer) => {
-      const currentQuestion = questions[step];
+      // 1. Capture current flow state directly
+      const currentStep = step;
+      const currentQuestion = questions[currentStep];
       if (!currentQuestion) return;
 
-      // Map user response to profile
+      // 2. Compute Context Updates
       const updates = {};
       switch (currentQuestion.key) {
         case 'name': updates.name = answer; break;
@@ -91,21 +107,29 @@ function ChatPage() {
         }
         case 'category': updates.category = answer; break;
         case 'family': {
-          updates.familySize = answer.includes('अकेला') ? 1 : answer.includes('बच्चे') ? 4 : 2;
-          if (answer.includes('विधवा')) { updates.isWidow = true; updates.gender = 'female'; }
+          // Bug fix: check both Hindi and English family option strings
+          const isAlone = answer.includes('अकेला') || answer === 'Single';
+          const hasChildren = answer.includes('बच्चे') || answer.includes('Children');
+          const isWidow = answer.includes('विधवा') || answer.includes('Widow');
+          updates.familySize = isAlone ? 1 : hasChildren ? 4 : 2;
+          if (isWidow) { updates.isWidow = true; updates.gender = 'female'; }
           break;
         }
+        default: break;
       }
+
+      // 3. Fire all side-effects *outside* of any React state updater callback
       updateProfile(updates);
-
-      // Add user response
       addMessage({ type: 'user', text: answer, timestamp: 'JUST_NOW' });
-
-      // Simulate thinking
       setIsThinking(true);
+
+      // 4. Update core progression state
+      const nextStep = currentStep + 1;
+      setStep(nextStep);
+
+      // 5. Defer the Sarathi response
       setTimeout(() => {
         setIsThinking(false);
-        const nextStep = step + 1;
         if (nextStep < questions.length) {
           // Ask next question
           const next = questions[nextStep];
@@ -115,33 +139,33 @@ function ChatPage() {
             text: next.options ? undefined : next.question,
             question: next.options ? next.question : undefined,
             options: next.options,
-            onOptionSelect: (opt) => {
-              // remove chips from the question
+            onOptionSelect: () => {
+              // remove chips from the current question so it can't be clicked again
               setMessages((prev) =>
                 prev.map((m, i) =>
                   i === prev.length - 1 ? { ...m, options: null } : m
                 )
               );
-              processAnswer(opt);
             },
             stepKey: next.key,
             timestamp: 'JUST_NOW',
           });
-          setStep(nextStep);
         } else {
           // Done! Call live eligibility API
           setIsThinking(true);
           const apiProfile = {
-            age: citizenProfile.age || 30,
-            gender: citizenProfile.gender || 'any',
-            monthlyIncome: citizenProfile.income || 5000,
-            isWidow: citizenProfile.isWidow || false,
-            occupation: citizenProfile.occupation || 'any',
-            category: citizenProfile.category || 'General',
+            age: updates.age ?? citizenProfile.age ?? 30,
+            gender: updates.gender ?? citizenProfile.gender ?? 'any',
+            monthlyIncome: updates.income ?? citizenProfile.income ?? 5000,
+            isWidow: updates.isWidow ?? citizenProfile.isWidow ?? false,
+            occupation: updates.occupation ?? citizenProfile.occupation ?? 'any',
+            category: updates.category ?? citizenProfile.category ?? 'General',
           };
+
           checkEligibility(apiProfile)
             .then((result) => {
-              const matched = result.matchedSchemes || schemes.slice(0, 6);
+              // Bug fix: 'schemes' was undefined — use empty array as fallback
+              const matched = result.matchedSchemes || [];
               setMatchedSchemes(matched);
               setEligibleSchemes(matched);
               setIsThinking(false);
@@ -157,21 +181,20 @@ function ChatPage() {
 
               setTimeout(() => setShowResults(true), 500);
 
-              // Save citizen profile to DynamoDB (fire-and-forget)
+              // Save citizen profile to DynamoDB (fire and forget)
               saveCitizen({
-                name: citizenProfile.name,
-                age: citizenProfile.age,
-                gender: citizenProfile.gender || 'any',
-                state: citizenProfile.state || '',
-                monthlyIncome: citizenProfile.income || 0,
-                category: citizenProfile.category || 'General',
-                isWidow: citizenProfile.isWidow || false,
-                occupation: citizenProfile.occupation || 'any',
+                name: updates.name ?? citizenProfile.name,
+                age: updates.age ?? citizenProfile.age,
+                gender: updates.gender ?? citizenProfile.gender ?? 'any',
+                state: updates.state ?? citizenProfile.state ?? '',
+                monthlyIncome: updates.income ?? citizenProfile.income ?? 0,
+                category: updates.category ?? citizenProfile.category ?? 'General',
+                isWidow: updates.isWidow ?? citizenProfile.isWidow ?? false,
+                occupation: updates.occupation ?? citizenProfile.occupation ?? 'any',
                 matchedSchemes: matched,
-              }).catch(() => { }); // silently ignore save failures
+              }).catch(() => { /* background save — non-critical */ });
             })
-            .catch((err) => {
-              // Show error — no mock fallback
+            .catch(() => {
               setIsThinking(false);
               addMessage({
                 type: 'sarathi',
@@ -182,30 +205,29 @@ function ChatPage() {
                 timestamp: 'JUST_NOW',
               });
             });
-          return; // exit early — the API callback handles the rest
         }
       }, 1200);
     },
-    [step, updateProfile, setEligibleSchemes]
+    [questions, language, updateProfile, setEligibleSchemes, citizenProfile, step]
   );
 
   const handleSend = (text) => processAnswer(text);
-  const handleQuickStart = (chip) => {
-    if (messages.length === 0) {
-      // First injection
-      const first = questions[0];
-      addMessage({ type: 'sarathi', text: first.question, stepKey: first.key, timestamp: 'JUST_NOW' });
-    }
-  };
 
-  // Start conversation automatically
+  // Show the first question on mount — guard against StrictMode double-invoke
   useEffect(() => {
-    if (messages.length === 0) {
+    if (messages.length === 0 && questions.length > 0) {
       const first = questions[0];
-      addMessage({ type: 'sarathi', text: first.question, stepKey: first.key, timestamp: 'JUST_NOW' });
+      setMessages([{ type: 'sarathi', text: first.question, stepKey: first.key, timestamp: 'JUST_NOW' }]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleQuickStart = () => {
+    if (messages.length === 0 && questions.length > 0) {
+      const first = questions[0];
+      setMessages([{ type: 'sarathi', text: first.question, stepKey: first.key, timestamp: 'JUST_NOW' }]);
+    }
+  };
 
   return (
     <div className="flex h-[calc(100vh-64px)]">
@@ -222,10 +244,11 @@ function ChatPage() {
           isThinking={isThinking}
           onQuickStart={handleQuickStart}
         />
+        {/* Bug fix: voice is now wired through useVoiceInput hook */}
         <InputBar
           onSend={handleSend}
           isRecording={isRecording}
-          onToggleRecording={() => setIsRecording(!isRecording)}
+          onToggleRecording={toggleListening}
         />
       </div>
 

@@ -1,4 +1,4 @@
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import Navbar from './components/ui/Navbar';
 import LandingPage from './pages/LandingPage';
@@ -44,6 +44,18 @@ function App() {
             <Route path="/schemes/:schemeId" element={<PageTransition><SchemeDetailPage /></PageTransition>} />
             <Route path="/apply/:schemeId" element={<PageTransition><ApplyPage /></PageTransition>} />
             <Route path="/about" element={<PageTransition><AboutPage /></PageTransition>} />
+            {/* 404 catch-all — prevents blank screen on unknown routes */}
+            <Route path="*" element={
+              <PageTransition>
+                <div className="min-h-screen bg-off-white flex items-center justify-center">
+                  <div className="text-center">
+                    <p className="font-display text-6xl text-gray-200 mb-4">404</p>
+                    <p className="font-body text-gray-500 mb-6">This page could not be found.</p>
+                    <Link to="/" className="text-saffron font-body hover:underline">← Go Home</Link>
+                  </div>
+                </div>
+              </PageTransition>
+            } />
           </Routes>
         </AnimatePresence>
       </main>

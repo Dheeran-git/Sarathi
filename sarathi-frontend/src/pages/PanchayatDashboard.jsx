@@ -65,7 +65,7 @@ function PanchayatDashboard() {
               schemesCount: (h.matchedSchemes || []).length,
               category: h.category || 'General',
               gender: h.gender || 'any',
-              isWidow: h.isWidow || 'false',
+              isWidow: h.isWidow === true || h.isWidow === 'true',
             }));
             setHouseholds(processed);
           }
@@ -120,7 +120,7 @@ function PanchayatDashboard() {
   // Apply alert filter if one is active
   if (activeAlertFilter) {
     if (activeAlertFilter === 'widow_pension') {
-      eligibleCitizens = eligibleCitizens.filter(c => c.isWidow === 'true');
+      eligibleCitizens = eligibleCitizens.filter(c => c.isWidow === true);
     } else if (activeAlertFilter === 'old_age_pension') {
       eligibleCitizens = eligibleCitizens.filter(c => c.age >= 60);
     }
@@ -260,8 +260,10 @@ function PanchayatDashboard() {
                     `Location: ${stats.panchayatName}, ${stats.district}, ${stats.state}\n` +
                     `Total Households: ${stats.totalHouseholds}\n` +
                     `Enrolled Citizens: ${stats.enrolled} (${stats.receivingPercent || 0}%)\n` +
-                    `Eligible but Deprived: ${stats.eligibleDeprived} (${stats.deprivedPercent || 0}%)\n\n` +
-                    `Top Priority Action: ${stats.alerts?.[0] ? stats.alerts[0].title : 'None'}`;
+                    `Eligible but Deprived: ${stats.eligibleNotEnrolled} (${
+                      stats.totalHouseholds ? Math.round((stats.eligibleNotEnrolled / stats.totalHouseholds) * 100) : 0
+                    }%)\n\n` +
+                    `Top Priority Action: ${alerts[0]?.title || 'None'}`;
 
                   const blob = new Blob([reportContent], { type: 'text/plain;charset=utf-8;' });
                   const url = URL.createObjectURL(blob);

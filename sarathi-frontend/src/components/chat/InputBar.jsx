@@ -79,7 +79,6 @@ function InputBar({ onSend, isRecording = false, onToggleRecording }) {
                 {/* Send button */}
                 <button
                     onClick={handleSend}
-                    disabled={!text.trim()}
                     className={`shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 ${text.trim()
                         ? 'bg-saffron text-white shadow-saffron hover:bg-saffron-light'
                         : 'bg-gray-200 text-gray-400 cursor-not-allowed'

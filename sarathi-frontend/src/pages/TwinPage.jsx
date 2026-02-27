@@ -30,7 +30,9 @@ function TwinPage() {
   const citizenCategory = hasCitizenData ? (citizenProfile.category || 'General') : 'General';
 
   const monthlyIncome = hasCitizenData ? (citizenProfile.income || 2000) : 2000;
-  const matchedSchemes = eligibleSchemes.length > 0 ? eligibleSchemes : [];
+  // Bug fix: use eligibleSchemes directly (stable useState reference from context)
+  // instead of deriving a new array every render, which causes stale dep in useEffect
+  const matchedSchemes = eligibleSchemes;
 
   // Live API data
   const [twinData, setTwinData] = useState(null);
@@ -61,7 +63,9 @@ function TwinPage() {
         if (conflicts) setConflictData(conflicts);
       })
       .finally(() => setLoading(false));
-  }, [monthlyIncome, matchedSchemes.length]);
+  // Bug fix: depend on eligibleSchemes (stable useState ref) not matchedSchemes.length
+  // matchedSchemes.length misses changes where scheme content changes but count stays same
+  }, [monthlyIncome, eligibleSchemes]);
 
   // Compute display values from live data
   const currentIncome = twinData?.currentMonthlyIncome || monthlyIncome;

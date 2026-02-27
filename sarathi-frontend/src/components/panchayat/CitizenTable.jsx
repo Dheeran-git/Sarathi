@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Download, ChevronDown, ChevronUp } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
@@ -26,10 +26,18 @@ function CitizenTable({ citizens = [] }) {
                 (c) => c.name.toLowerCase().includes(q) || c.id.toLowerCase().includes(q)
             );
         }
+        // Bug fix: sort handles both numeric and string fields correctly
         results = [...results].sort((a, b) => {
             const aVal = a[sortBy];
             const bVal = b[sortBy];
-            return sortDir === 'desc' ? bVal - aVal : aVal - bVal;
+            if (typeof aVal === 'number' && typeof bVal === 'number') {
+                return sortDir === 'desc' ? bVal - aVal : aVal - bVal;
+            }
+            const aStr = String(aVal ?? '');
+            const bStr = String(bVal ?? '');
+            return sortDir === 'desc'
+                ? bStr.localeCompare(aStr, 'hi')
+                : aStr.localeCompare(bStr, 'hi');
         });
         return results;
     }, [citizens, search, sortBy, sortDir]);
@@ -137,15 +145,15 @@ function CitizenTable({ citizens = [] }) {
                         </tr>
                     </thead>
                     <tbody>
+                        {/* Bug fix: key on React.Fragment instead of inner <tr> to avoid React key warnings */}
                         {paginated.map((citizen, i) => (
-                            <>
+                            <React.Fragment key={citizen.id}>
                                 <tr
-                                    key={citizen.id}
                                     className={`border-b border-gray-100 cursor-pointer transition-colors duration-150 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'
                                         } hover:bg-saffron-pale`}
                                     onClick={() => setExpandedRow(expandedRow === citizen.id ? null : citizen.id)}
                                 >
-                                    <td className="px-4 py-3 font-body text-sm font-medium text-gray-900">{isHi ? citizen.name : citizen.name.replace('कमला देवी', 'Kamla Devi').replace('रहीम शेख', 'Rahim Sheikh').replace('सावित्री यादव', 'Savitri Yadav').replace('दिनेश कुमार', 'Dinesh Kumar').replace('लक्ष्मी प्रसाद', 'Lakshmi Prasad').replace('गीता शर्मा', 'Geeta Sharma').replace('मोहन सिंह', 'Mohan Singh').replace('रेखा वर्मा', 'Rekha Verma').replace('बाबू राम', 'Babu Ram').replace('चम्पा देवी', 'Champa Devi')}</td>
+                                    <td className="px-4 py-3 font-body text-sm font-medium text-gray-900">{citizen.name}</td>
                                     <td className="px-4 py-3 font-body text-sm text-gray-600">{isHi ? `वार्ड ${localizeNum(citizen.ward.replace(/\D/g, ''), language)}` : `Ward ${citizen.ward.replace(/\D/g, '')}`}</td>
                                     <td className="px-4 py-3 font-body text-sm text-gray-600">
                                         {localizeNum(citizen.age, language)}, {isHi ? citizen.category : citizen.categoryEnglish}
@@ -173,7 +181,7 @@ function CitizenTable({ citizens = [] }) {
                                     </td>
                                 </tr>
                                 {expandedRow === citizen.id && (
-                                    <tr key={`${citizen.id}-expanded`}>
+                                    <tr>
                                         <td colSpan={7} className="px-4 py-3 bg-saffron-pale/50">
                                             <div className="flex items-center justify-between">
                                                 <p className="font-body text-xs text-gray-600">
@@ -193,7 +201,7 @@ function CitizenTable({ citizens = [] }) {
                                         </td>
                                     </tr>
                                 )}
-                            </>
+                            </React.Fragment>
                         ))}
                     </tbody>
                 </table>
@@ -205,7 +213,7 @@ function CitizenTable({ citizens = [] }) {
                     <div key={citizen.id} className="bg-gray-50 rounded-lg p-3 border border-gray-100">
                         <div className="flex justify-between items-start">
                             <div>
-                                <p className="font-body text-sm font-medium text-gray-900">{isHi ? citizen.name : citizen.name.replace('कमला देवी', 'Kamla Devi').replace('रहीम शेख', 'Rahim Sheikh').replace('सावित्री यादव', 'Savitri Yadav').replace('दिनेश कुमार', 'Dinesh Kumar').replace('लक्ष्मी प्रसाद', 'Lakshmi Prasad').replace('गीता शर्मा', 'Geeta Sharma').replace('मोहन सिंह', 'Mohan Singh').replace('रेखा वर्मा', 'Rekha Verma').replace('बाबू राम', 'Babu Ram').replace('चम्पा देवी', 'Champa Devi')}</p>
+                                <p className="font-body text-sm font-medium text-gray-900">{citizen.name}</p>
                                 <p className="font-body text-xs text-gray-500">{isHi ? `वार्ड ${localizeNum(citizen.ward.replace(/\D/g, ''), language)}` : `Ward ${citizen.ward.replace(/\D/g, '')}`} • {localizeNum(citizen.age, language)}, {isHi ? citizen.category : citizen.categoryEnglish}</p>
                             </div>
                             <span className="font-mono text-sm font-bold text-saffron">₹{localizeNum(citizen.estimatedBenefit.toLocaleString('en-IN'), language)}</span>

@@ -12,12 +12,12 @@ function ChatBubble({ type = 'sarathi', text, schemes, question, options, onOpti
     if (type === 'user') {
         return (
             <div className="flex justify-end mb-3">
-                <div className="max-w-[70%] lg:max-w-[60%]">
+                <div className="max-w-[70%] lg:max-w-[60%] flex flex-col items-end">
                     <div className="bg-saffron text-white px-4 py-3 rounded-[18px_18px_4px_18px] font-body text-[15px] leading-relaxed shadow-sm">
                         {text}
                     </div>
                     {displayTime && (
-                        <p className="text-right text-[11px] text-white/50 mt-1 mr-1 font-body">{displayTime}</p>
+                        <p className="text-[11px] text-gray-500 mt-1 mr-1 font-body">{displayTime}</p>
                     )}
                 </div>
             </div>

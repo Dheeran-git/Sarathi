@@ -3,10 +3,17 @@ import { createContext, useContext, useState } from 'react';
 const LanguageContext = createContext();
 
 export function LanguageProvider({ children }) {
-  const [language, setLanguage] = useState('en');
+  // Bug fix: persist language preference across page refreshes via localStorage
+  const [language, setLanguage] = useState(
+    () => localStorage.getItem('sarathi-lang') || 'en'
+  );
 
   const toggleLanguage = () => {
-    setLanguage((prev) => (prev === 'hi' ? 'en' : 'hi'));
+    setLanguage((prev) => {
+      const next = prev === 'hi' ? 'en' : 'hi';
+      localStorage.setItem('sarathi-lang', next);
+      return next;
+    });
   };
 
   return (

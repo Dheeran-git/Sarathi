@@ -26,6 +26,16 @@ function ApplyPage() {
             .finally(() => setLoading(false));
     }, [schemeId]);
 
+    // Bug fix: check loading BEFORE scheme null check — avoids "Scheme Not Found" flash during fetch
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-off-white flex items-center justify-center">
+                <Loader2 className="animate-spin text-saffron mr-3" size={24} />
+                <span className="font-body text-sm text-gray-500">{isHi ? 'लोड हो रहा है...' : 'Loading...'}</span>
+            </div>
+        );
+    }
+
     if (!scheme) {
         return (
             <div className="min-h-screen bg-off-white flex items-center justify-center">
@@ -76,7 +86,7 @@ function ApplyPage() {
                             <FileText size={18} className="text-saffron" /> {isHi ? 'आवश्यक दस्तावेज़' : 'Required Documents'}
                         </h2>
                         <div className="mt-3 space-y-2">
-                            {(isHi ? scheme.documentsRequired : (scheme.documentsRequiredEn || scheme.documentsRequired)).map((doc, i) => (
+                            {(isHi ? (scheme.documentsRequired || []) : (scheme.documentsRequiredEn || scheme.documentsRequired || [])).map((doc, i) => (
                                 <div key={i} className="flex items-center gap-3 p-3 bg-off-white rounded-lg">
                                     <input type="checkbox" className="w-5 h-5 accent-saffron rounded" id={`doc-${i}`} />
                                     <label htmlFor={`doc-${i}`} className="font-body text-sm text-gray-700 cursor-pointer flex-1">{doc}</label>
