@@ -155,7 +155,7 @@ function GovernanceHeatmap({ data = [], schemes = [] }) {
                                         {isHi ? `वार्ड ${localizeNum(row.ward.replace(/\D/g, ''), language)}` : `Ward ${row.ward.replace(/\D/g, '')}`}
                                     </td>
                                     {row.schemes.map((cell, ci) => {
-                                        const value = cell.enrollment;
+                                        const value = cell[metric] !== undefined ? cell[metric] : cell.enrollment;
                                         const isHovered =
                                             hoveredCell?.ward === row.ward &&
                                             hoveredCell?.scheme === cell.scheme;
