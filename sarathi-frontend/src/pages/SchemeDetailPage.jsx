@@ -222,13 +222,10 @@ function SchemeDetailPage() {
                   <div className="space-y-4">
                     <h3 className="font-body text-lg font-bold text-gray-900">{isHi ? 'आवश्यक दस्तावेज़' : 'Required Documents'}</h3>
                     <div className="space-y-2">
-                      {[
-                        isHi ? 'आधार कार्ड' : 'Aadhaar Card',
-                        isHi ? 'बैंक खाता विवरण' : 'Bank Account Details',
-                        isHi ? 'आय प्रमाण पत्र' : 'Income Certificate',
-                        isHi ? 'जाति प्रमाण पत्र' : 'Caste Certificate',
-                        isHi ? 'निवास प्रमाण पत्र' : 'Residence Certificate',
-                      ].map((doc, i) => (
+                      {(isHi
+                        ? (scheme.documentsRequired || [])
+                        : (scheme.documentsRequiredEn || scheme.documentsRequired || [])
+                      ).map((doc, i) => (
                         <div key={i} className="flex items-center gap-3 p-3 bg-off-white rounded-lg">
                           <div className="w-8 h-8 rounded-lg bg-navy/10 flex items-center justify-center shrink-0">
                             <FileText size={14} className="text-navy" />
