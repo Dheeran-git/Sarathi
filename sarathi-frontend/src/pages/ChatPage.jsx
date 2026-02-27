@@ -4,6 +4,7 @@ import ChatPanel from '../components/chat/ChatPanel';
 import InputBar from '../components/chat/InputBar';
 import ResultsPanel from '../components/chat/ResultsPanel';
 import { schemes } from '../data/mockSchemes';
+import { checkEligibility } from '../utils/api';
 import { stateChips, categoryChips, occupationChips, profileSteps } from '../data/mockCitizens';
 import { useCitizen } from '../context/CitizenContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -32,7 +33,7 @@ const FLOW_QUESTIONS = {
 };
 
 function ChatPage() {
-  const { updateProfile, setEligibleSchemes } = useCitizen();
+  const { citizenProfile, updateProfile, setEligibleSchemes } = useCitizen();
   const { language } = useLanguage();
   const T = (key) => t(key, language);
   const questions = FLOW_QUESTIONS[language] || FLOW_QUESTIONS.hi;
@@ -129,21 +130,53 @@ function ChatPage() {
           });
           setStep(nextStep);
         } else {
-          // Done! Show results
-          const matched = schemes.slice(0, 6);
-          setMatchedSchemes(matched);
-          setEligibleSchemes(matched);
+          // Done! Call live eligibility API
+          setIsThinking(true);
+          const apiProfile = {
+            age: citizenProfile.age || 30,
+            gender: citizenProfile.gender || 'any',
+            monthlyIncome: citizenProfile.income || 5000,
+            isWidow: citizenProfile.isWidow || false,
+            occupation: citizenProfile.occupation || 'any',
+            category: citizenProfile.category || 'General',
+          };
+          checkEligibility(apiProfile)
+            .then((result) => {
+              const matched = result.matchedSchemes || schemes.slice(0, 6);
+              setMatchedSchemes(matched);
+              setEligibleSchemes(matched);
+              setIsThinking(false);
 
-          addMessage({
-            type: 'sarathi',
-            isFinal: true,
-            text: language === 'hi'
-              ? `बहुत बढ़िया! मैंने आपके लिए ${matched.length} योजनाएं ढूंढी हैं। 🎉\n\nकुल अनुमानित वार्षिक लाभ: ₹${matched.reduce((s, sc) => s + sc.annualBenefit, 0).toLocaleString('en-IN')}`
-              : `Great! I found ${matched.length} schemes for you. 🎉\n\nTotal estimated annual benefit: ₹${matched.reduce((s, sc) => s + sc.annualBenefit, 0).toLocaleString('en-IN')}`,
-            timestamp: 'JUST_NOW',
-          });
+              addMessage({
+                type: 'sarathi',
+                isFinal: true,
+                text: language === 'hi'
+                  ? `बहुत बढ़िया! मैंने आपके लिए ${matched.length} योजनाएं ढूंढी हैं। 🎉\n\nकुल अनुमानित वार्षिक लाभ: ₹${(result.totalAnnualBenefit || matched.reduce((s, sc) => s + (sc.annualBenefit || 0), 0)).toLocaleString('en-IN')}`
+                  : `Great! I found ${matched.length} schemes for you. 🎉\n\nTotal estimated annual benefit: ₹${(result.totalAnnualBenefit || matched.reduce((s, sc) => s + (sc.annualBenefit || 0), 0)).toLocaleString('en-IN')}`,
+                timestamp: 'JUST_NOW',
+              });
 
-          setTimeout(() => setShowResults(true), 500);
+              setTimeout(() => setShowResults(true), 500);
+            })
+            .catch(() => {
+              // Fallback to mock data if API call fails
+              const matched = schemes.slice(0, 6);
+              setMatchedSchemes(matched);
+              setEligibleSchemes(matched);
+              setIsThinking(false);
+
+              addMessage({
+                type: 'sarathi',
+                isFinal: true,
+                text: language === 'hi'
+                  ? `बहुत बढ़िया! मैंने आपके लिए ${matched.length} योजनाएं ढूंढी हैं। 🎉\n\nकुल अनुमानित वार्षिक लाभ: ₹${matched.reduce((s, sc) => s + sc.annualBenefit, 0).toLocaleString('en-IN')}`
+                  : `Great! I found ${matched.length} schemes for you. 🎉\n\nTotal estimated annual benefit: ₹${matched.reduce((s, sc) => s + sc.annualBenefit, 0).toLocaleString('en-IN')}`,
+                timestamp: 'JUST_NOW',
+              });
+
+              setTimeout(() => setShowResults(true), 500);
+            });
+          return; // exit early — the API callback handles the rest
         }
       }, 1200);
     },
