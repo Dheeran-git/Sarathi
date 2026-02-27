@@ -2,9 +2,12 @@
 Sarathi — Lex Fulfillment Lambda
 Member 2 · AWS AI Services
 
-Called by Amazon Lex when the SarathiBot conversation completes.
-Receives citizen profile from Lex slots, calls the eligibility-engine
-Lambda (built by Member 1), and returns the result to the user.
+Called by Amazon Lex during dialog (DialogCodeHook) and after slot
+collection (FulfillmentCodeHook).
+
+- DialogCodeHook:   Delegates back to Lex to continue slot collection.
+- FulfillmentCodeHook: Calls the eligibility-engine Lambda (Member 1),
+  saves the citizen profile, and returns the result.
 """
 
 import json
@@ -20,15 +23,24 @@ CITIZENS_TABLE = os.environ.get('CITIZENS_TABLE', 'SarathiCitizens')
 
 
 def lambda_handler(event, context):
-    """Main handler — invoked by Amazon Lex."""
+    """Main handler — invoked by Amazon Lex V2."""
     print(f"[LexFulfillment] Received event: {json.dumps(event)}")
 
-    intent_name = event.get('sessionState', {}).get('intent', {}).get('name', '')
+    invocation_source = event.get('invocationSource', '')
+
+    # ── DialogCodeHook: Lex is still collecting slots ─────────────
+    # Just delegate back so Lex continues the conversation.
+    if invocation_source == 'DialogCodeHook':
+        print("[LexFulfillment] DialogCodeHook — delegating back to Lex")
+        return delegate(event)
+
+    # ── FulfillmentCodeHook: All slots collected, process now ─────
     slots = event.get('sessionState', {}).get('intent', {}).get('slots', {})
 
-    # ── Collect all slots from the dialog ──────────────────────────
     citizen_profile = extract_profile(slots)
     print(f"[LexFulfillment] Extracted profile: {json.dumps(citizen_profile, ensure_ascii=False)}")
+
+    matched_schemes = []
 
     # ── Call eligibility-engine Lambda ─────────────────────────────
     try:
@@ -64,16 +76,34 @@ def lambda_handler(event, context):
 
     except Exception as e:
         print(f"[LexFulfillment] Error calling eligibility-engine: {str(e)}")
-        message = "कुछ तकनीकी समस्या हुई। कृपया थोड़ी देर बाद पुनः प्रयास करें।"
+        # ── Fallback: return a helpful response even without the engine ──
+        message = (
+            f"🙏 {citizen_profile['name']} जी, आपकी जानकारी सफलतापूर्वक दर्ज हो गई है।\n"
+            f"📋 उम्र: {citizen_profile['age']}, आय: ₹{citizen_profile['income']}\n"
+            f"हम जल्द ही आपकी योजनाओं की जानकारी आपके पंचायत तक पहुँचाएंगे।"
+        )
 
     # ── Save citizen profile to DynamoDB ──────────────────────────
     try:
-        save_citizen(citizen_profile, matched_schemes if 'matched_schemes' in dir() else [])
+        save_citizen(citizen_profile, matched_schemes)
     except Exception as e:
         print(f"[LexFulfillment] Error saving citizen: {str(e)}")
 
     # ── Return response to Lex ────────────────────────────────────
     return close_dialog(event, message)
+
+
+def delegate(event):
+    """Delegate back to Lex to continue slot elicitation."""
+    return {
+        'sessionState': {
+            'dialogAction': {
+                'type': 'Delegate',
+            },
+            'intent': event['sessionState']['intent'],
+            'sessionAttributes': event.get('sessionState', {}).get('sessionAttributes', {}),
+        },
+    }
 
 
 def extract_profile(slots):
@@ -141,6 +171,7 @@ def close_dialog(event, message):
                 'name': event['sessionState']['intent']['name'],
                 'state': 'Fulfilled',
             },
+            'sessionAttributes': event.get('sessionState', {}).get('sessionAttributes', {}),
         },
         'messages': [
             {

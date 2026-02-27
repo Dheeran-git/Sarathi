@@ -2,22 +2,8 @@ import axios from 'axios';
 import { schemes } from '../data/mockSchemes';
 import { citizens, pathwayData } from '../data/mockCitizens';
 
-/**
- * API configuration.
- *
- * If VITE_API_BASE_URL is not set (local dev), uses mock data.
- *
- * Set VITE_API_BASE_URL in .env to your API Gateway invoke URL:
- *   VITE_API_BASE_URL=https://abc123xyz.execute-api.us-east-1.amazonaws.com/prod
- *
- * Supports endpoints:
- *   - /schemes
- *   - /citizens
- *   - /eligibility
- *   - /explain
- *   - /lex
- *   - /notify
- */
+
+
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 const USE_MOCK = !BASE_URL;
 
@@ -125,7 +111,6 @@ export async function post(endpoint, data) {
   return response.data;
 }
 
-<<<<<<< HEAD
 /* ── AI Service helpers (Member 2) ─────────────────────────────────── */
 
 /**
@@ -155,8 +140,6 @@ export async function notifyPanchayat(notificationData) {
   return post('/notify', notificationData);
 }
 
-=======
->>>>>>> de05dd62f9d763e9d5381d02dd0cfa35fadf70d9
 /* ── Mock data handlers ──────────────────────────────────────────────── */
 function getMockData(endpoint) {
   if (endpoint.startsWith('/schemes')) {
