@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, Download, ChevronDown, ChevronUp } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { localizeNum } from '../../utils/formatters';
@@ -7,6 +8,7 @@ import { localizeNum } from '../../utils/formatters';
  * CitizenTable — full data table of eligible-but-unserved citizens.
  */
 function CitizenTable({ citizens = [] }) {
+    const navigate = useNavigate();
     const { language } = useLanguage();
     const isHi = language === 'hi';
     const [search, setSearch] = useState('');
@@ -44,6 +46,39 @@ function CitizenTable({ citizens = [] }) {
         }
     };
 
+    const handleDownloadCSV = () => {
+        const headers = ["ID", "Name", "Ward", "Age", "Category", "Gender", "Estimated Benefit", "Status"];
+        const rows = filtered.map(c => [
+            c.id,
+            c.name,
+            c.ward,
+            c.age,
+            c.category,
+            c.gender,
+            c.estimatedBenefit,
+            c.status
+        ]);
+
+        const csvContent = [
+            headers.join(","),
+            ...rows.map(r => r.join(","))
+        ].join("\n");
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", "unserved_citizens.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const handleContact = (e, citizen) => {
+        e.stopPropagation();
+        alert(isHi ? `${citizen.name} से संपर्क करने का अनुरोध भेजा गया। (सिम्युलेटेड)` : `Contact request initiated for ${citizen.name}. (Simulated)`);
+    };
+
     const SortIcon = ({ column }) =>
         sortBy === column ? (
             sortDir === 'desc' ? <ChevronDown size={12} /> : <ChevronUp size={12} />
@@ -70,7 +105,10 @@ function CitizenTable({ citizens = [] }) {
                     </div>
 
                     {/* Export */}
-                    <button className="h-9 px-3 rounded-lg border border-gray-200 font-body text-xs text-gray-600 flex items-center gap-1.5 hover:bg-gray-50">
+                    <button
+                        onClick={handleDownloadCSV}
+                        className="h-9 px-3 rounded-lg border border-gray-200 font-body text-xs text-gray-600 flex items-center gap-1.5 hover:bg-gray-50"
+                    >
                         <Download size={14} />
                         {isHi ? 'CSV डाउनलोड' : 'Download CSV'}
                     </button>
@@ -128,7 +166,7 @@ function CitizenTable({ citizens = [] }) {
                                     <td className="px-4 py-3">
                                         <button
                                             className="h-7 px-3 rounded-md bg-saffron text-white font-body text-xs font-medium hover:bg-saffron-light transition-colors"
-                                            onClick={(e) => e.stopPropagation()}
+                                            onClick={(e) => handleContact(e, citizen)}
                                         >
                                             {isHi ? 'संपर्क करें' : 'Contact'}
                                         </button>
@@ -142,7 +180,13 @@ function CitizenTable({ citizens = [] }) {
                                                     <span className="font-medium">{isHi ? 'वंचित योजनाओं का विवरण:' : 'Missing Schemes Details:'}</span>{' '}
                                                     {(isHi ? citizen.missingSchemes : citizen.missingSchemesEnglish).join(', ')}
                                                 </p>
-                                                <button className="text-xs font-body text-navy font-medium hover:underline">
+                                                <button
+                                                    className="text-xs font-body text-navy font-medium hover:underline"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        navigate(`/twin?id=${citizen.id}`);
+                                                    }}
+                                                >
                                                     {isHi ? 'Digital Twin देखें →' : 'View Digital Twin →'}
                                                 </button>
                                             </div>
@@ -173,7 +217,12 @@ function CitizenTable({ citizens = [] }) {
                         </div>
                         <div className="flex justify-between items-center mt-2">
                             <span className="text-xs">{isHi ? citizen.statusLabel : citizen.statusLabelEnglish}</span>
-                            <button className="h-7 px-3 rounded-md bg-saffron text-white font-body text-xs font-medium">{isHi ? 'संपर्क करें' : 'Contact'}</button>
+                            <button
+                                className="h-7 px-3 rounded-md bg-saffron text-white font-body text-xs font-medium"
+                                onClick={(e) => handleContact(e, citizen)}
+                            >
+                                {isHi ? 'संपर्क करें' : 'Contact'}
+                            </button>
                         </div>
                     </div>
                 ))}
