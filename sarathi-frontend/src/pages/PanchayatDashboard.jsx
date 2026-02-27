@@ -30,9 +30,12 @@ function PanchayatDashboard() {
   const [alerts, setAlerts] = useState([]);
   const [households, setHouseholds] = useState([]);
 
+  const [activeAlertFilter, setActiveAlertFilter] = useState(null);
+
   const fetchData = () => {
     setLoading(true);
     setError(null);
+    setActiveAlertFilter(null);
     getPanchayatStats('rampur-barabanki-up')
       .then((data) => {
         if (data) {
@@ -62,6 +65,7 @@ function PanchayatDashboard() {
               schemesCount: (h.matchedSchemes || []).length,
               category: h.category || 'General',
               gender: h.gender || 'any',
+              isWidow: h.isWidow || 'false',
             }));
             setHouseholds(processed);
           }
@@ -70,7 +74,7 @@ function PanchayatDashboard() {
           if (data.alerts && data.alerts.length > 0) {
             const liveAlerts = data.alerts.map((a, i) => ({
               id: `live-${i}`,
-              type: a.urgency === 'high' ? 'urgent' : 'warning',
+              type: a.type || (a.urgency === 'high' ? 'urgent' : 'warning'), // Use exact type from backend if available
               icon: a.urgency === 'high' ? '🔴' : '🟠',
               title: a.title,
               titleEnglish: a.description,
@@ -94,7 +98,7 @@ function PanchayatDashboard() {
   useEffect(() => { fetchData(); }, []);
 
   // Build eligible citizens for CitizenTable from households data
-  const eligibleCitizens = households
+  let eligibleCitizens = households
     .filter(h => h.status === 'eligible')
     .map(h => ({
       id: h.id,
@@ -104,6 +108,7 @@ function PanchayatDashboard() {
       category: h.category,
       categoryEnglish: h.category,
       gender: h.gender,
+      isWidow: h.isWidow,
       missingSchemes: [],
       missingSchemesEnglish: [],
       estimatedBenefit: 0,
@@ -111,6 +116,26 @@ function PanchayatDashboard() {
       statusLabel: '🔴 ' + (isHi ? 'वंचित' : 'Deprived'),
       statusLabelEnglish: '🔴 Deprived',
     }));
+
+  // Apply alert filter if one is active
+  if (activeAlertFilter) {
+    if (activeAlertFilter === 'widow_pension') {
+      eligibleCitizens = eligibleCitizens.filter(c => c.isWidow === 'true');
+    } else if (activeAlertFilter === 'old_age_pension') {
+      eligibleCitizens = eligibleCitizens.filter(c => c.age >= 60);
+    }
+  }
+
+  const handleViewAlertList = (alertType) => {
+    // Toggle filter
+    setActiveAlertFilter(prev => prev === alertType ? null : alertType);
+
+    // Smooth scroll to table
+    setTimeout(() => {
+      const tableEl = document.getElementById('citizen-table-section');
+      if (tableEl) tableEl.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
 
   // Build heatmap data from households
   const wardSet = [...new Set(households.map(h => h.ward))].sort();
@@ -205,12 +230,15 @@ function PanchayatDashboard() {
             <h2 className="font-body text-lg font-bold text-gray-900 mb-3">{T('panchMapTitle')}</h2>
             <VillageMap households={households} />
           </div>
-          <AlertsPanel alerts={alerts} />
+          <AlertsPanel alerts={alerts} onViewList={handleViewAlertList} />
         </div>
 
         {/* Citizen Table */}
         {eligibleCitizens.length > 0 && (
-          <div className="mb-6">
+          <div id="citizen-table-section" className="mb-6">
+            <h2 className="font-body text-lg font-bold text-gray-900 mb-3">
+              {activeAlertFilter ? (isHi ? 'फ़िल्टर की गई सूची' : 'Filtered Action List') : (isHi ? 'पात्र नागरिक' : 'Eligible Citizens')}
+            </h2>
             <CitizenTable citizens={eligibleCitizens} />
           </div>
         )}

@@ -4,7 +4,7 @@ import { localizeNum } from '../../utils/formatters';
 /**
  * AlertsPanel — priority action alerts for the Panchayat dashboard.
  */
-function AlertsPanel({ alerts = [] }) {
+function AlertsPanel({ alerts = [], onViewList }) {
     const { language } = useLanguage();
     const isHi = language === 'hi';
 
@@ -41,7 +41,10 @@ function AlertsPanel({ alerts = [] }) {
                                     {isHi ? alert.description : alert.descriptionEnglish}
                                 </p>
                                 <div className="flex items-center justify-between mt-2">
-                                    <button className="font-body text-xs font-medium text-saffron hover:underline">
+                                    <button
+                                        onClick={() => onViewList && onViewList(alert.type)}
+                                        className="font-body text-xs font-medium text-saffron hover:underline"
+                                    >
                                         {isHi ? alert.action : alert.actionEnglish} →
                                     </button>
                                     <span className="font-body text-[10px] text-gray-400">
