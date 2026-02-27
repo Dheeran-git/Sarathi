@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Filter } from 'lucide-react';
 import SchemeCard from '../components/ui/SchemeCard';
 import EmptyState from '../components/ui/EmptyState';
-import { schemes } from '../data/mockSchemes';
+import { schemes as mockSchemes } from '../data/mockSchemes';
+import { checkEligibility } from '../utils/api';
 import { useLanguage } from '../context/LanguageContext';
 import { t } from '../utils/translations';
 import { localizeNum } from '../utils/formatters';
@@ -24,6 +25,47 @@ function SchemesPage() {
   const isHi = language === 'hi';
   const [category, setCategory] = useState('all');
   const [search, setSearch] = useState('');
+  const [schemes, setSchemes] = useState(mockSchemes);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch live schemes on mount
+  useEffect(() => {
+    checkEligibility({ age: 1, gender: 'any', monthlyIncome: 999999, category: 'General' })
+      .then((data) => {
+        if (data.matchedSchemes && data.matchedSchemes.length > 0) {
+          // Merge live scheme data with mock data for rich display fields
+          const liveSchemes = data.matchedSchemes.map((live) => {
+            const mock = mockSchemes.find(
+              (m) => m.id === live.schemeId || m.nameEnglish === live.nameEnglish
+            );
+            return mock
+              ? { ...mock, annualBenefit: live.annualBenefit || mock.annualBenefit }
+              : {
+                id: live.schemeId,
+                nameHindi: live.nameHindi || live.nameEnglish,
+                nameEnglish: live.nameEnglish || live.schemeId,
+                category: live.category || 'employment',
+                annualBenefit: live.annualBenefit || 0,
+                ministry: live.ministry || '',
+                applyUrl: live.applyUrl || '#',
+                eligibilityTags: [],
+                eligibilityTagsEn: [],
+                benefits: [],
+                benefitsEn: [],
+                benefitDescription: '',
+                howToApply: [],
+                howToApplyEn: [],
+                documentsRequired: [],
+                documentsRequiredEn: [],
+                eligibility: { category: ['SC', 'ST', 'OBC', 'General'] },
+              };
+          });
+          setSchemes(liveSchemes);
+        }
+      })
+      .catch(() => { /* keep mock data */ })
+      .finally(() => setLoading(false));
+  }, []);
 
   const filtered = useMemo(() => {
     let results = schemes;

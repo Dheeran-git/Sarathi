@@ -1,8 +1,9 @@
 import { useParams, Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, ExternalLink, Check, FileText, Users, Coins, ClipboardList, BookOpen } from 'lucide-react';
 import { schemeMap, schemes } from '../data/mockSchemes';
+import { fetchScheme } from '../utils/api';
 import { useLanguage } from '../context/LanguageContext';
 import { localizeNum } from '../utils/formatters';
 
@@ -41,6 +42,18 @@ function SchemeDetailPage() {
   const tabs = tabsData[language] || tabsData.hi;
   const catLabels = isHi ? categoryLabelsHi : categoryLabelsEn;
   const scheme = schemeMap[schemeId];
+  const [liveData, setLiveData] = useState(null);
+
+  // Fetch live scheme data from API
+  useEffect(() => {
+    fetchScheme(schemeId)
+      .then((data) => {
+        if (data && !data.error) {
+          setLiveData(data);
+        }
+      })
+      .catch(() => { /* keep mock data */ });
+  }, [schemeId]);
 
   if (!scheme) {
     return (

@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ChevronRight, RefreshCw, Download } from 'lucide-react';
@@ -9,17 +10,77 @@ import VillageMap from '../components/panchayat/VillageMap';
 import AlertsPanel from '../components/panchayat/AlertsPanel';
 import CitizenTable from '../components/panchayat/CitizenTable';
 import GovernanceHeatmap from '../components/panchayat/GovernanceHeatmap';
-import { panchayatStats, alerts, eligibleCitizens, households, heatmapData, heatmapSchemes } from '../data/mockPanchayat';
+import { getPanchayatStats } from '../utils/api';
+import {
+  panchayatStats as mockStats,
+  alerts as mockAlerts,
+  eligibleCitizens as mockEligibleCitizens,
+  households as mockHouseholds,
+  heatmapData,
+  heatmapSchemes,
+} from '../data/mockPanchayat';
 
 /**
  * PanchayatDashboard — the Sarpanch's comprehensive welfare dashboard.
  * Spec §9 — includes breadcrumb, refresh/download buttons, 5 stat cards,
  * village map + alerts, citizen table, governance heatmap.
+ * Now fetches live stats from API and merges with rich mock visualisation data.
  */
 function PanchayatDashboard() {
   const { language } = useLanguage();
   const T = (key) => t(key, language);
   const isHi = language === 'hi';
+
+  const [stats, setStats] = useState(mockStats);
+  const [alerts, setAlerts] = useState(mockAlerts);
+  const [eligibleCitizens, setEligibleCitizens] = useState(mockEligibleCitizens);
+  const [households, setHouseholds] = useState(mockHouseholds);
+  const [loading, setLoading] = useState(true);
+
+  const fetchData = () => {
+    setLoading(true);
+    getPanchayatStats('rampur-barabanki-up')
+      .then((data) => {
+        if (data) {
+          // Merge live stats into template
+          setStats((prev) => ({
+            ...prev,
+            totalHouseholds: data.totalHouseholds || prev.totalHouseholds,
+            receiving: data.enrolled || prev.receiving,
+            receivingPercent: data.totalHouseholds
+              ? Math.round((data.enrolled / data.totalHouseholds) * 100)
+              : prev.receivingPercent,
+            eligibleNotEnrolled: data.eligibleNotEnrolled || prev.eligibleNotEnrolled,
+            zeroBenefits: data.zeroBenefits || prev.zeroBenefits,
+          }));
+          // Use live alerts if returned
+          if (data.alerts && data.alerts.length > 0) {
+            const liveAlerts = data.alerts.map((a, i) => ({
+              id: `live-${i}`,
+              type: a.urgency === 'high' ? 'urgent' : 'warning',
+              icon: a.urgency === 'high' ? '🔴' : '🟠',
+              title: a.title,
+              titleEnglish: a.description,
+              description: a.description,
+              descriptionEnglish: a.description,
+              action: isHi ? 'सूची देखें' : 'View List',
+              actionEnglish: 'View List',
+              time: isHi ? 'अभी' : 'Just now',
+              timeEnglish: 'Just now',
+            }));
+            // Prepend live alerts to mock alerts
+            setAlerts([...liveAlerts, ...mockAlerts]);
+          }
+        }
+      })
+      .catch(() => {
+        // Silently keep mock data
+      })
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { fetchData(); }, []);
+
   return (
     <div className="min-h-screen bg-off-white">
       {/* Header — spec lines 930-943 */}
@@ -39,10 +100,10 @@ function PanchayatDashboard() {
               </nav>
 
               <h1 className="font-display text-[28px] lg:text-[36px] text-white">
-                {isHi ? panchayatStats.panchayatName : panchayatStats.panchayatNameEnglish}
+                {isHi ? stats.panchayatName : stats.panchayatNameEnglish}
               </h1>
               <p className="font-body text-sm text-gray-300">
-                {isHi ? 'जिला:' : 'District:'} {isHi ? panchayatStats.district : 'Barabanki'}, {isHi ? panchayatStats.state : 'Uttar Pradesh'} • {localizeNum(panchayatStats.totalHouseholds, language)} {isHi ? 'परिवार' : 'Households'}
+                {isHi ? 'जिला:' : 'District:'} {isHi ? stats.district : 'Barabanki'}, {isHi ? stats.state : 'Uttar Pradesh'} • {localizeNum(stats.totalHouseholds, language)} {isHi ? 'परिवार' : 'Households'}
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -54,10 +115,11 @@ function PanchayatDashboard() {
               </span>
               {/* Refresh button — spec line 941 */}
               <button
+                onClick={fetchData}
                 className="w-9 h-9 rounded-lg flex items-center justify-center bg-saffron/20 text-saffron hover:bg-saffron/30 transition-colors"
                 aria-label="Refresh data"
               >
-                <RefreshCw size={16} />
+                <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
               </button>
               {/* Download report — spec line 942 */}
               <button className="hidden md:flex items-center gap-1.5 h-9 px-4 rounded-lg border border-saffron/40 text-saffron font-body text-xs font-medium hover:bg-saffron/10 transition-colors">
@@ -71,11 +133,11 @@ function PanchayatDashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Stats Row — spec lines 946-952 */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
-          <StatCard icon="🏠" value={panchayatStats.totalHouseholds} label={T('panchTotalHouseholds')} variant="primary" />
-          <StatCard icon="✅" value={`${panchayatStats.receiving} (${panchayatStats.receivingPercent}%)`} label={T('panchReceiving')} variant="success" trend={12} progress={panchayatStats.receivingPercent} />
-          <StatCard icon="⚠️" value={panchayatStats.eligibleNotEnrolled} label={T('panchEligibleNot')} variant="warning" trend={-8} />
-          <StatCard icon="🔴" value={panchayatStats.zeroBenefits} label={T('panchZero')} variant="primary" />
-          <StatCard icon="📈" value={`+${panchayatStats.addedThisMonth}`} label={T('panchThisMonth')} variant="dark" trend={23} />
+          <StatCard icon="🏠" value={stats.totalHouseholds} label={T('panchTotalHouseholds')} variant="primary" />
+          <StatCard icon="✅" value={`${stats.receiving} (${stats.receivingPercent}%)`} label={T('panchReceiving')} variant="success" trend={12} progress={stats.receivingPercent} />
+          <StatCard icon="⚠️" value={stats.eligibleNotEnrolled} label={T('panchEligibleNot')} variant="warning" trend={-8} />
+          <StatCard icon="🔴" value={stats.zeroBenefits} label={T('panchZero')} variant="primary" />
+          <StatCard icon="📈" value={`+${stats.addedThisMonth}`} label={T('panchThisMonth')} variant="dark" trend={23} />
         </div>
 
         {/* Village Map + Alerts — spec lines 956-1013 */}
