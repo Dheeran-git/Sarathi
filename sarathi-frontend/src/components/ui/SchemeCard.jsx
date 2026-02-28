@@ -20,9 +20,10 @@ function SchemeCard({ scheme, isEligible = false }) {
   const cat = categoryColors[scheme.category] || categoryColors.employment;
   const name = scheme.nameEnglish || scheme.name;
   const ministry = scheme.ministry;
-  const benefitAmt = scheme.annualBenefit >= 100000
-    ? `₹${(scheme.annualBenefit / 100000).toFixed(scheme.annualBenefit % 100000 === 0 ? 0 : 1)}L`
-    : `₹${scheme.annualBenefit.toLocaleString('en-IN')}`;
+  const benefit = scheme.annualBenefit || 0;
+  const benefitAmt = benefit >= 100000
+    ? `₹${(benefit / 100000).toFixed(benefit % 100000 === 0 ? 0 : 1)}L`
+    : `₹${benefit.toLocaleString('en-IN')}`;
   const eligTags = scheme.eligibilityTagsEn || scheme.eligibilityTags || [];
 
   return (
@@ -76,15 +77,17 @@ function SchemeCard({ scheme, isEligible = false }) {
         >
           View Details <ArrowRight size={12} />
         </Link>
-        <a
-          href={scheme.applyUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center w-9 h-9 rounded-lg border border-saffron text-saffron hover:bg-saffron/5 transition-colors"
-          title="Apply Now"
-        >
-          <ExternalLink size={14} />
-        </a>
+        {scheme.applyUrl && (
+          <a
+            href={scheme.applyUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center w-9 h-9 rounded-lg border border-saffron text-saffron hover:bg-saffron/5 transition-colors"
+            title="Apply Now"
+          >
+            <ExternalLink size={14} />
+          </a>
+        )}
       </div>
     </motion.div>
   );

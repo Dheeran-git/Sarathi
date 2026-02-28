@@ -18,8 +18,8 @@ function ResultsPanel({ schemes = [], visible = false }) {
             <div className="p-3 space-y-2">
                 {schemes.map((scheme) => (
                     <Link
-                        key={scheme.id}
-                        to={`/schemes/${scheme.id}`}
+                        key={scheme.schemeId || scheme.id}
+                        to={`/schemes/${scheme.schemeId || scheme.id}`}
                         className="block p-3 bg-off-white rounded-lg hover:bg-saffron-pale transition-colors border border-gray-100"
                     >
                         <div className="flex items-start justify-between gap-2">
@@ -30,9 +30,9 @@ function ResultsPanel({ schemes = [], visible = false }) {
                                 <p className="font-body text-xs text-gray-500 mt-0.5">{scheme.ministry}</p>
                             </div>
                             <span className="font-mono text-sm font-bold text-saffron shrink-0">
-                                ₹{scheme.annualBenefit >= 100000
-                                    ? `${(scheme.annualBenefit / 100000).toFixed(scheme.annualBenefit % 100000 === 0 ? 0 : 1)}L`
-                                    : scheme.annualBenefit.toLocaleString('en-IN')}
+                                ₹{(scheme.annualBenefit || 0) >= 100000
+                                    ? `${((scheme.annualBenefit || 0) / 100000).toFixed((scheme.annualBenefit || 0) % 100000 === 0 ? 0 : 1)}L`
+                                    : (scheme.annualBenefit || 0).toLocaleString('en-IN')}
                             </span>
                         </div>
                         <div className="flex flex-wrap gap-1 mt-2">
