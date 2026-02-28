@@ -11,7 +11,6 @@ export function useVoiceInput({ onTranscript, language = 'en-IN' } = {}) {
   const [transcript, setTranscript] = useState('');
   const recognitionRef = useRef(null);
   const timeoutRef = useRef(null);
-  const silenceTimerRef = useRef(null);
   const fullTranscriptRef = useRef('');
 
   // Check for Web Speech API support
@@ -62,15 +61,10 @@ export function useVoiceInput({ onTranscript, language = 'en-IN' } = {}) {
         const displayText = (fullTranscriptRef.current + ' ' + currentInterim).trim();
         setTranscript(displayText);
 
-        // Reset the silence timer on every new word detected
-        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-
-        silenceTimerRef.current = setTimeout(() => {
-          // Once user pauses for 1.5s, finalize 
-          if (recognitionRef.current) {
-            recognitionRef.current.stop();
-          }
-        }, 1500);
+        // Save the current highest-fidelity display text for fallback in onEnd
+        if (displayText) {
+          recognitionRef.current.latestInterim = currentInterim;
+        }
       };
 
       recognition.onerror = (event) => {
@@ -85,7 +79,9 @@ export function useVoiceInput({ onTranscript, language = 'en-IN' } = {}) {
       recognition.onend = () => {
         if (state === 'listening' || state === 'processing') {
           setState('idle');
-          const finalOutput = fullTranscriptRef.current.trim();
+
+          const lingeringInterim = recognitionRef.current?.latestInterim || '';
+          const finalOutput = (fullTranscriptRef.current + ' ' + lingeringInterim).trim();
 
           if (finalOutput) {
             onTranscript?.(finalOutput, 1.0);
@@ -94,6 +90,9 @@ export function useVoiceInput({ onTranscript, language = 'en-IN' } = {}) {
           // Clear it out for next time
           setTranscript('');
           fullTranscriptRef.current = '';
+          if (recognitionRef.current) {
+            recognitionRef.current.latestInterim = '';
+          }
         }
       };
 
@@ -105,21 +104,29 @@ export function useVoiceInput({ onTranscript, language = 'en-IN' } = {}) {
   }, [SpeechRecognition, isSupported, language, onTranscript, state]);
 
   const stopListening = useCallback(() => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-      recognitionRef.current = null;
+    if (state === 'listening' || state === 'processing') {
+      setState('processing');
+      const lingeringInterim = recognitionRef.current?.latestInterim || '';
+      const finalOutput = (fullTranscriptRef.current + ' ' + lingeringInterim).trim();
+
+      if (finalOutput) {
+        onTranscript?.(finalOutput, 1.0);
+      }
+
+      setTranscript('');
+      fullTranscriptRef.current = '';
+      if (recognitionRef.current) {
+        recognitionRef.current.latestInterim = '';
+        recognitionRef.current.stop();
+        recognitionRef.current = null;
+      }
+      setTimeout(() => setState('idle'), 50);
     }
+
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
-    if (silenceTimerRef.current) {
-      clearTimeout(silenceTimerRef.current);
-    }
-    if (state === 'listening') {
-      setState('processing');
-      // The onend handler will fire and submit the text
-    }
-  }, [state]);
+  }, [state, onTranscript]);
 
   const toggleListening = useCallback(() => {
     if (state === 'idle') startListening();
