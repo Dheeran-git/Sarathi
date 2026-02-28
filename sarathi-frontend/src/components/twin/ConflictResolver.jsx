@@ -91,7 +91,7 @@ function ConflictResolver({ conflictData }) {
                 </h4>
 
                 <div className="space-y-2">
-                    {optimalBundle.map((item) => (
+                    {Array.isArray(optimalBundle) && optimalBundle.map((item) => (
                         <div key={item.schemeId || item.nameEnglish || item.nameHindi} className="flex items-center justify-between py-1">
                             <span className="flex items-center gap-2 font-body text-sm text-gray-700">
                                 <Check size={14} className="text-success" />

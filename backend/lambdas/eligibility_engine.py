@@ -53,7 +53,7 @@ def lambda_handler(event, context):
 
             # Check widow requirement
             widow_req = scheme.get('isWidow', 'any')
-            if widow_req == 'true' and not is_widow:
+            if widow_req in (True, 'true', 'yes', '1') and not is_widow:
                 continue
 
             # Check occupation requirement

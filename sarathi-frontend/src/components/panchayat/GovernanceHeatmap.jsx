@@ -5,7 +5,8 @@ function Tooltip({ data, containerEl }) {
     if (!data || !containerEl) return null;
 
     // Calculate position relative to container's static wrapper
-    const wrapperRect = containerEl.parentElement.getBoundingClientRect();
+    const wrapperRect = containerEl.parentElement?.getBoundingClientRect();
+    if (!wrapperRect) return null;
     const cellRect = data.element.getBoundingClientRect();
 
     let top = cellRect.top - wrapperRect.top - 8;

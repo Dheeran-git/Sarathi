@@ -226,7 +226,7 @@ function ChatPage() {
       {/* Main chat area */}
       <div className="flex-1 flex flex-col bg-off-white">
         <ProgressSteps currentStep={currentStep} labels={stepLabels} totalSteps={totalSteps} />
-        <ChatPanel messages={messages} isThinking={isThinking} />
+        <ChatPanel messages={messages} isThinking={isThinking} language={language} />
         <InputBar
           onSend={handleSend}
           isRecording={isRecording}

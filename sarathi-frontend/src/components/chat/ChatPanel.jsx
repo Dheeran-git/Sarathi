@@ -4,7 +4,7 @@ import { Volume2 } from 'lucide-react';
 /**
  * ChatPanel — renders the chat message list + auto-scroll.
  */
-function ChatPanel({ messages = [], isThinking = false }) {
+function ChatPanel({ messages = [], isThinking = false, language = 'en' }) {
     const bottomRef = useRef(null);
 
     // Text to Speech
@@ -12,7 +12,7 @@ function ChatPanel({ messages = [], isThinking = false }) {
         if (!('speechSynthesis' in window)) return;
         window.speechSynthesis.cancel(); // Stop current speech
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'en-IN';
+        utterance.lang = language === 'hi' ? 'hi-IN' : 'en-IN';
         window.speechSynthesis.speak(utterance);
     };
 

@@ -5,6 +5,7 @@ import SchemeCard from '../components/ui/SchemeCard';
 import EmptyState from '../components/ui/EmptyState';
 import { schemes } from '../data/mockSchemes';
 import { t } from '../utils/translations';
+import { useLanguage } from '../context/LanguageContext';
 
 const categories = [
   { key: 'all', label: 'All', emoji: '📋', color: '#0F2240' },
@@ -17,7 +18,8 @@ const categories = [
 ];
 
 function SchemesPage() {
-  const T = (key) => t(key);
+  const { language } = useLanguage();
+  const T = (key) => t(key, language);
   const [category, setCategory] = useState('all');
   const [search, setSearch] = useState('');
 

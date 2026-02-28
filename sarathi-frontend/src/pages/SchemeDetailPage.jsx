@@ -70,6 +70,14 @@ function SchemeDetailPage() {
       .finally(() => setLoading(false));
   }, [schemeId]);
 
+  // Stop audio on unmount to prevent playback after navigation
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+    };
+  }, []);
+
   /** Fetch AI explanation from Bedrock + Polly */
   const handleExplain = async () => {
     if (explanation || !scheme) return;

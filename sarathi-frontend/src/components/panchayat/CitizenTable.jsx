@@ -154,7 +154,7 @@ function CitizenTable({ citizens = [] }) {
                                     onClick={() => setExpandedRow(expandedRow === citizen.id ? null : citizen.id)}
                                 >
                                     <td className="px-4 py-3 font-body text-sm font-medium text-gray-900">{citizen.name}</td>
-                                    <td className="px-4 py-3 font-body text-sm text-gray-600">{isHi ? `वार्ड ${localizeNum(citizen.ward.replace(/\D/g, ''), language)}` : `Ward ${citizen.ward.replace(/\D/g, '')}`}</td>
+                                    <td className="px-4 py-3 font-body text-sm text-gray-600">{isHi ? `वार्ड ${localizeNum((citizen.ward?.replace(/\D/g, '') || ''), language)}` : `Ward ${(citizen.ward?.replace(/\D/g, '') || '')}`}</td>
                                     <td className="px-4 py-3 font-body text-sm text-gray-600">
                                         {localizeNum(citizen.age, language)}, {isHi ? citizen.category : citizen.categoryEnglish}
                                     </td>
@@ -214,7 +214,7 @@ function CitizenTable({ citizens = [] }) {
                         <div className="flex justify-between items-start">
                             <div>
                                 <p className="font-body text-sm font-medium text-gray-900">{citizen.name}</p>
-                                <p className="font-body text-xs text-gray-500">{isHi ? `वार्ड ${localizeNum(citizen.ward.replace(/\D/g, ''), language)}` : `Ward ${citizen.ward.replace(/\D/g, '')}`} • {localizeNum(citizen.age, language)}, {isHi ? citizen.category : citizen.categoryEnglish}</p>
+                                <p className="font-body text-xs text-gray-500">{isHi ? `वार्ड ${localizeNum((citizen.ward?.replace(/\D/g, '') || ''), language)}` : `Ward ${(citizen.ward?.replace(/\D/g, '') || '')}`} • {localizeNum(citizen.age, language)}, {isHi ? citizen.category : citizen.categoryEnglish}</p>
                             </div>
                             <span className="font-mono text-sm font-bold text-saffron">₹{localizeNum(citizen.estimatedBenefit.toLocaleString('en-IN'), language)}</span>
                         </div>
