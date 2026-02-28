@@ -12,6 +12,7 @@ export function useVoiceInput({ onTranscript, language = 'en-IN' } = {}) {
   const recognitionRef = useRef(null);
   const timeoutRef = useRef(null);
   const silenceTimerRef = useRef(null);
+  const fullTranscriptRef = useRef('');
 
   // Check for Web Speech API support
   const SpeechRecognition =
@@ -38,22 +39,28 @@ export function useVoiceInput({ onTranscript, language = 'en-IN' } = {}) {
 
       recognition.onstart = () => {
         setState('listening');
+        fullTranscriptRef.current = '';
+        setTranscript('');
       };
 
       recognition.onresult = (event) => {
-        let finalStr = '';
-        let interimStr = '';
+        let currentInterim = '';
+        let currentFinal = '';
 
         for (let i = event.resultIndex; i < event.results.length; ++i) {
           if (event.results[i].isFinal) {
-            finalStr += event.results[i][0].transcript;
+            currentFinal += event.results[i][0].transcript;
           } else {
-            interimStr += event.results[i][0].transcript;
+            currentInterim += event.results[i][0].transcript;
           }
         }
 
-        const currentText = finalStr || interimStr;
-        setTranscript(currentText);
+        if (currentFinal) {
+          fullTranscriptRef.current += ' ' + currentFinal;
+        }
+
+        const displayText = (fullTranscriptRef.current + ' ' + currentInterim).trim();
+        setTranscript(displayText);
 
         // Reset the silence timer on every new word detected
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
@@ -78,13 +85,15 @@ export function useVoiceInput({ onTranscript, language = 'en-IN' } = {}) {
       recognition.onend = () => {
         if (state === 'listening' || state === 'processing') {
           setState('idle');
-          // Flush the current transcript out to the parent when mic shuts off
-          setTranscript((current) => {
-            if (current.trim()) {
-              onTranscript?.(current.trim(), 1.0);
-            }
-            return ''; // Clear it out for next time
-          });
+          const finalOutput = fullTranscriptRef.current.trim();
+
+          if (finalOutput) {
+            onTranscript?.(finalOutput, 1.0);
+          }
+
+          // Clear it out for next time
+          setTranscript('');
+          fullTranscriptRef.current = '';
         }
       };
 
