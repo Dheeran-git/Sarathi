@@ -78,12 +78,8 @@ export function useVoiceInput({ onTranscript, language = 'en-IN' } = {}) {
       };
 
       recognition.onerror = (event) => {
-        console.error('[VoiceInput] Error:', event.error);
+        console.warn('[VoiceInput] Error:', event.error);
         setState('idle');
-
-        if (event.error === 'not-allowed' || event.error === 'no-speech') {
-          _simulateVoiceInput();
-        }
       };
 
       recognition.onend = () => {

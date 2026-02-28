@@ -100,7 +100,15 @@ function ChatPage() {
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = 'en-IN';
 
+    // Anti-Garbage-Collection hack for Chrome
+    window.__utterances = window.__utterances || [];
+    window.__utterances.push(utterance);
+
     const onComplete = () => {
+      // Remove from global array
+      const index = window.__utterances.indexOf(utterance);
+      if (index !== -1) window.__utterances.splice(index, 1);
+
       // If we are in live mode, automatically turn mic back on!
       if (shouldResume && isLiveModeRef.current && !conversationDoneRef.current) {
         startListening();
