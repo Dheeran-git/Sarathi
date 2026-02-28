@@ -1,220 +1,92 @@
-import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import {
-  Wheat,
-  Home,
-  Heart,
-  GraduationCap,
-  Baby,
-  Briefcase,
-  Volume2,
-  VolumeX,
-  Loader2,
-} from 'lucide-react';
-import { useLanguage } from '../../context/LanguageContext';
-import { localizeNum } from '../../utils/formatters';
+import { ArrowRight, Check, ExternalLink } from 'lucide-react';
 
-const CATEGORY_CONFIG = {
-  agriculture: { color: '#4CAF50', icon: Wheat },
-  housing: { color: '#FF9800', icon: Home },
-  health: { color: '#F44336', icon: Heart },
-  education: { color: '#2196F3', icon: GraduationCap },
-  women: { color: '#E91E63', icon: Baby },
-  employment: { color: '#9C27B0', icon: Briefcase },
+const categoryColors = {
+  agriculture: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: '#4CAF50' },
+  housing: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: '#FF9800' },
+  health: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: '#F44336' },
+  education: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', dot: '#2196F3' },
+  women: { bg: 'bg-pink-50', text: 'text-pink-700', border: 'border-pink-200', dot: '#E91E63' },
+  employment: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: '#9C27B0' },
 };
 
-function formatRupee(amount, language) {
-  const isHi = language === 'hi';
-  if (amount >= 100000) {
-    return `${(amount / 100000).toFixed(amount % 100000 === 0 ? 0 : 1)}${isHi ? 'लाख' : 'L'}`;
-  }
-  return amount.toLocaleString('en-IN');
-}
+const categoryLabels = {
+  agriculture: 'Agriculture', housing: 'Housing', health: 'Health',
+  education: 'Education', women: 'Women & Child', employment: 'Employment',
+};
 
-function SchemeCard({ scheme, isEligible = false, isApplied = false }) {
-  const [hovered, setHovered] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
-  const audioRef = useRef(null);
-  const { language } = useLanguage();
-  const isHi = language === 'hi';
-  const config = CATEGORY_CONFIG[scheme.category] || CATEGORY_CONFIG.employment;
-  const Icon = config.icon;
-  const catColor = config.color;
-
-  /** Play Hindi audio explanation via Polly (or browser TTS fallback) */
-  const playExplanation = async () => {
-    // If already playing, stop
-    if (isPlaying) {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-        audioRef.current = null;
-      }
-      if (window.speechSynthesis) window.speechSynthesis.cancel();
-      setIsPlaying(false);
-      return;
-    }
-
-    setIsLoadingAudio(true);
-
-    // Try to fetch audio from bedrock-explainer API
-    const apiBase = import.meta.env.VITE_API_BASE_URL;
-    if (apiBase) {
-      try {
-        const res = await fetch(`${apiBase}/explain`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ scheme }),
-        });
-        const data = await res.json();
-        const parsed = typeof data.body === 'string' ? JSON.parse(data.body) : data;
-
-        if (parsed.audioUrl) {
-          const audio = new Audio(parsed.audioUrl);
-          audioRef.current = audio;
-          audio.onended = () => { setIsPlaying(false); audioRef.current = null; };
-          audio.onerror = () => { setIsPlaying(false); audioRef.current = null; };
-          setIsLoadingAudio(false);
-          setIsPlaying(true);
-          audio.play();
-          return;
-        }
-      } catch (err) {
-        console.warn('[SchemeCard] API audio failed, using browser TTS fallback:', err);
-      }
-    }
-
-    // Fallback: Browser speech synthesis
-    setIsLoadingAudio(false);
-    if ('speechSynthesis' in window) {
-      const text = isHi
-        ? (scheme.benefitDescription || scheme.nameHindi)
-        : (scheme.benefitDescriptionEn || scheme.nameEnglish);
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = isHi ? 'hi-IN' : 'en-IN';
-      utterance.rate = 0.9;
-      utterance.onend = () => setIsPlaying(false);
-      utterance.onerror = () => setIsPlaying(false);
-      setIsPlaying(true);
-      window.speechSynthesis.speak(utterance);
-    }
-  };
+function SchemeCard({ scheme, isEligible = false }) {
+  const cat = categoryColors[scheme.category] || categoryColors.employment;
+  const name = scheme.nameEnglish || scheme.name;
+  const ministry = scheme.ministry;
+  const benefitAmt = scheme.annualBenefit >= 100000
+    ? `₹${(scheme.annualBenefit / 100000).toFixed(scheme.annualBenefit % 100000 === 0 ? 0 : 1)}L`
+    : `₹${scheme.annualBenefit.toLocaleString('en-IN')}`;
+  const eligTags = scheme.eligibilityTagsEn || scheme.eligibilityTags || [];
 
   return (
-    <motion.article
-      onHoverStart={() => setHovered(true)}
-      onHoverEnd={() => setHovered(false)}
+    <motion.div
       whileHover={{ y: -2 }}
-      transition={{ type: 'tween', duration: 0.2, ease: 'easeOut' }}
-      className={`relative w-full min-h-[140px] bg-white rounded-[12px] overflow-hidden ${isEligible
-        ? 'ring-2 ring-[#1A7F4B]/40 shadow-[0_0_12px_rgba(26,127,75,0.15)]'
-        : 'shadow-card'
-        } ${hovered ? 'shadow-md' : ''}`}
-      style={{ borderLeft: `4px solid ${catColor}` }}
-      aria-label={`${scheme.nameHindi} — ${scheme.nameEnglish} — ₹${scheme.annualBenefit.toLocaleString('en-IN')} ${isHi ? 'प्रति वर्ष' : 'per year'}${isEligible ? (isHi ? ' — आप योग्य हैं' : ' — You are eligible') : ''}`}
+      className="bg-white rounded-xl shadow-card overflow-hidden border border-gray-100 hover:shadow-lg transition-shadow duration-300 flex flex-col h-full"
     >
-      <div className="flex items-start gap-3 p-4 pr-3">
-        {/* Category Icon */}
-        <div
-          className="shrink-0 w-12 h-12 rounded-lg flex items-center justify-center"
-          style={{ backgroundColor: `${catColor}1A` }}
-        >
-          <Icon size={24} style={{ color: catColor }} />
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <p className="font-body text-base font-bold text-gray-900 leading-snug truncate">
-            {isHi ? scheme.nameHindi : scheme.nameEnglish}
-          </p>
-          <p className="font-body text-xs text-gray-500 mt-0.5">
-            {isHi ? 'मंत्रालय' : 'Ministry'}: {isHi ? scheme.ministryHindi : scheme.ministry}
-          </p>
-
-          {/* Eligibility Tags */}
-          {scheme.eligibilityTags && scheme.eligibilityTags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-2">
-              {(isHi ? scheme.eligibilityTags : (scheme.eligibilityTagsEn || scheme.eligibilityTags)).slice(0, 3).map((tag, i) => (
-                <span
-                  key={i}
-                  className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-body font-medium border"
-                  style={{
-                    color: catColor,
-                    borderColor: `${catColor}40`,
-                    backgroundColor: `${catColor}08`,
-                  }}
-                >
-                  {localizeNum(tag.startsWith('✓') ? (isHi ? tag.replace('✓', '✓ ') : tag.replace('✓', '✓ ')) : `✓ ${tag}`, language)}
-                </span>
-              ))}
-            </div>
+      {/* Header */}
+      <div className="p-4 pb-3">
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-body font-medium ${cat.bg} ${cat.text}`}>
+            {categoryLabels[scheme.category]}
+          </span>
+          {isEligible && (
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-light text-success text-[10px] font-body font-medium">
+              <Check size={10} /> Eligible
+            </span>
           )}
         </div>
+        <h3 className="font-body text-base font-bold text-gray-900 leading-snug line-clamp-2">{name}</h3>
+        <p className="font-body text-xs text-gray-500 mt-0.5">{ministry}</p>
+      </div>
 
-        {/* Right — Benefit Amount + Speaker */}
-        <div className="shrink-0 text-right pl-2 flex flex-col items-end">
-          <p className="font-mono text-[22px] font-bold text-saffron leading-tight whitespace-nowrap">
-            <span className="text-sm">₹</span>
-            {localizeNum(formatRupee(scheme.annualBenefit, language), language)}
-          </p>
-          <p className="font-body text-[11px] text-gray-500">{isHi ? 'प्रति वर्ष' : 'per year'}</p>
+      {/* Benefit amount */}
+      <div className="px-4 py-3 bg-saffron-pale/50">
+        <p className="font-body text-[10px] text-gray-500 uppercase tracking-wider">Annual Benefit</p>
+        <p className="font-mono text-xl font-bold text-saffron">{benefitAmt}</p>
+      </div>
 
-          {/* 🔊 Speaker Button — plays Hindi audio explanation */}
-          <button
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); playExplanation(); }}
-            className={`mt-1.5 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${isPlaying
-                ? 'bg-saffron text-white shadow-md scale-110'
-                : 'bg-saffron/10 text-saffron hover:bg-saffron/20'
-              }`}
-            aria-label={isHi ? 'आवाज़ में सुनें' : 'Listen in voice'}
-            title={isHi ? 'आवाज़ में सुनें' : 'Listen in voice'}
-          >
-            {isLoadingAudio ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : isPlaying ? (
-              <VolumeX size={16} />
-            ) : (
-              <Volume2 size={16} />
-            )}
-          </button>
+      {/* Tags */}
+      <div className="px-4 py-3 flex-1">
+        <div className="flex flex-wrap gap-1">
+          {eligTags.slice(0, 3).map((tag, i) => (
+            <span key={i} className="px-1.5 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-body rounded">
+              {tag}
+            </span>
+          ))}
+          {eligTags.length > 3 && (
+            <span className="px-1.5 py-0.5 text-gray-400 text-[10px] font-body">
+              +{eligTags.length - 3} more
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Top-right Badge */}
-      {(isEligible || isApplied) && (
-        <span
-          className={`absolute top-2 right-2 px-2 py-0.5 rounded-full text-[11px] font-body font-medium ${isApplied
-            ? 'bg-gray-200 text-gray-700'
-            : 'bg-[#E8F5EE] text-[#1A7F4B]'
-            }`}
-        >
-          {isApplied ? (isHi ? 'आवेदन किया' : 'Applied') : (isHi ? '✓ योग्य' : '✓ Eligible')}
-        </span>
-      )}
-
-      {/* Hover Action Bar */}
-      <motion.div
-        initial={{ y: '100%' }}
-        animate={{ y: hovered ? 0 : '100%' }}
-        transition={{ type: 'tween', duration: 0.2, ease: 'easeOut' }}
-        className="absolute bottom-0 left-0 right-0 flex items-center justify-between px-4 py-2.5 bg-gray-100 border-t border-gray-200"
-      >
+      {/* Footer */}
+      <div className="px-4 py-3 border-t border-gray-100 flex items-center gap-2">
         <Link
           to={`/schemes/${scheme.id}`}
-          className="font-body text-sm font-medium text-saffron hover:underline"
+          className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-lg bg-navy text-white font-body text-xs font-medium hover:bg-navy-mid transition-colors"
         >
-          {isHi ? 'विवरण देखें' : 'View Details'}
+          View Details <ArrowRight size={12} />
         </Link>
-        <Link
-          to={`/schemes/${scheme.id}`}
-          className="inline-flex items-center h-8 px-4 rounded-md bg-saffron text-white font-body text-sm font-medium hover:bg-saffron-light transition-colors duration-150"
+        <a
+          href={scheme.applyUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center w-9 h-9 rounded-lg border border-saffron text-saffron hover:bg-saffron/5 transition-colors"
+          title="Apply Now"
         >
-          {isHi ? 'आवेदन करें' : 'Apply'}
-        </Link>
-      </motion.div>
-    </motion.article>
+          <ExternalLink size={14} />
+        </a>
+      </div>
+    </motion.div>
   );
 }
 

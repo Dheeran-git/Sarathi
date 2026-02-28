@@ -1,20 +1,17 @@
 import { useState, useEffect } from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { useLanguage } from '../../context/LanguageContext';
 
 const navLinks = [
-  { to: '/chat', label: 'नागरिक', labelEn: 'Citizens' },
-  { to: '/panchayat', label: 'पंचायत', labelEn: 'Panchayat' },
-  { to: '/schemes', label: 'योजनाएं', labelEn: 'Schemes' },
-  { to: '/twin', label: 'डिजिटल ट्विन', labelEn: 'Digital Twin' },
-  { to: '/about', label: 'हमारे बारे में', labelEn: 'About' },
+  { to: '/chat', label: 'Citizens' },
+  { to: '/panchayat', label: 'Panchayat' },
+  { to: '/schemes', label: 'Schemes' },
+  { to: '/twin', label: 'Digital Twin' },
+  { to: '/about', label: 'About' },
 ];
 
 function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { language, toggleLanguage } = useLanguage();
-  const isHi = language === 'hi';
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
@@ -39,10 +36,10 @@ function Navbar() {
         {/* Left — Logo */}
         <Link to="/" className="flex flex-col leading-tight shrink-0">
           <span className="font-display text-2xl text-saffron leading-none">
-            सारथी
+            Sarathi
           </span>
           <span className="font-body text-xs text-gray-300 leading-tight">
-            Sarathi
+            AI Welfare Engine
           </span>
         </Link>
 
@@ -59,49 +56,25 @@ function Navbar() {
                 }`
               }
             >
-              {isHi ? link.label : link.labelEn}
+              {link.label}
             </NavLink>
           ))}
         </div>
 
         {/* Right — Actions */}
         <div className="flex items-center gap-3">
-          {/* Language Toggle */}
-          <button
-            onClick={toggleLanguage}
-            className="relative w-20 h-8 rounded-full border border-navy-light flex items-center overflow-hidden shrink-0"
-            aria-label="Toggle language"
-          >
-            <span
-              className={`absolute top-0 h-full w-1/2 rounded-full bg-saffron transition-transform duration-200 ease-in-out ${isHi ? 'translate-x-0' : 'translate-x-full'
-                }`}
-            />
-            <span
-              className={`relative z-10 flex-1 text-center text-xs font-body font-medium transition-colors duration-200 ${isHi ? 'text-white' : 'text-gray-500'
-                }`}
-            >
-              हिं
-            </span>
-            <span
-              className={`relative z-10 flex-1 text-center text-xs font-body font-medium transition-colors duration-200 ${!isHi ? 'text-white' : 'text-gray-500'
-                }`}
-            >
-              EN
-            </span>
-          </button>
-
           {/* Desktop-only Buttons */}
           <Link
             to="/panchayat"
             className="hidden lg:inline-flex items-center h-9 px-4 rounded-md border border-saffron text-saffron font-body text-sm font-medium hover:bg-saffron/10 transition-colors duration-200"
           >
-            {isHi ? 'पंचायत लॉगिन' : 'Panchayat Login'}
+            Panchayat Login
           </Link>
           <Link
             to="/chat"
             className="hidden lg:inline-flex items-center h-9 px-4 rounded-md bg-saffron text-white font-body text-sm font-medium hover:bg-saffron-light transition-colors duration-200"
           >
-            {isHi ? 'शुरू करें' : 'Get Started'}
+            Get Started
           </Link>
 
           {/* Mobile Hamburger */}
@@ -153,7 +126,7 @@ function Navbar() {
                 }`
               }
             >
-              {isHi ? link.label : link.labelEn}
+              {link.label}
             </NavLink>
           ))}
 
@@ -164,14 +137,14 @@ function Navbar() {
             onClick={() => setMobileOpen(false)}
             className="flex items-center justify-center h-12 rounded-lg border border-saffron text-saffron font-body text-sm font-medium hover:bg-saffron/10 transition-colors duration-200"
           >
-            {isHi ? 'पंचायत लॉगिन' : 'Panchayat Login'}
+            Panchayat Login
           </Link>
           <Link
             to="/chat"
             onClick={() => setMobileOpen(false)}
             className="flex items-center justify-center h-12 rounded-lg bg-saffron text-white font-body text-sm font-medium hover:bg-saffron-light transition-colors duration-200"
           >
-            {isHi ? 'शुरू करें' : 'Get Started'}
+            Get Started
           </Link>
         </div>
       </div>

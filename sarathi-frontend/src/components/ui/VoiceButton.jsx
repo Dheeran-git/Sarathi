@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Mic, Square, Loader2 } from 'lucide-react';
 
 /**
@@ -14,22 +13,19 @@ function VoiceButton({ state = 'idle', onClick, size = 'large' }) {
             bg: 'bg-saffron',
             shadow: 'shadow-saffron',
             Icon: Mic,
-            label: 'बोलें',
-            labelEn: 'Speak',
+            label: 'Speak',
         },
         listening: {
             bg: 'bg-danger',
             shadow: 'shadow-lg',
             Icon: Square,
-            label: 'सुन रहा हूँ...',
-            labelEn: 'Listening...',
+            label: 'Listening...',
         },
         processing: {
             bg: 'bg-gray-200',
             shadow: 'shadow-md',
             Icon: Loader2,
-            label: 'समझ रहा हूँ...',
-            labelEn: 'Processing...',
+            label: 'Processing...',
         },
     };
 
@@ -41,7 +37,7 @@ function VoiceButton({ state = 'idle', onClick, size = 'large' }) {
             <button
                 onClick={onClick}
                 className={`relative ${sizeClass} rounded-full ${config.bg} ${config.shadow} flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-saffron focus:ring-offset-2`}
-                aria-label="माइक से बोलें — voice input button"
+                aria-label="Voice input button"
                 aria-pressed={state === 'listening'}
                 role="button"
             >

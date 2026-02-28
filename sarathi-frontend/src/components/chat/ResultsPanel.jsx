@@ -1,107 +1,64 @@
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import SchemeCard from '../ui/SchemeCard';
-import { useState } from 'react';
-import { useLanguage } from '../../context/LanguageContext';
+import { ArrowRight, Download } from 'lucide-react';
 
-const categoryLabelsHi = {
-    agriculture: 'कृषि', housing: 'आवास', health: 'स्वास्थ्य',
-    education: 'शिक्षा', women: 'महिला एवं बाल', employment: 'रोजगार',
-};
-const categoryLabelsEn = {
-    agriculture: 'Agriculture', housing: 'Housing', health: 'Health',
-    education: 'Education', women: 'Women & Child', employment: 'Employment',
-};
-
-/**
- * ResultsPanel — left side panel showing matched schemes.
- */
 function ResultsPanel({ schemes = [], visible = false }) {
-    const [activeFilter, setActiveFilter] = useState('all');
-    const { language } = useLanguage();
-    const isHi = language === 'hi';
-    const catLabels = isHi ? categoryLabelsHi : categoryLabelsEn;
-
-    const filters = [
-        { key: 'all', label: isHi ? 'सभी' : 'All' },
-        ...Array.from(new Set(schemes.map((s) => s.category))).map((cat) => ({
-            key: cat,
-            label: catLabels[cat] || cat,
-        })),
-    ];
-
-    const filtered =
-        activeFilter === 'all'
-            ? schemes
-            : schemes.filter((s) => s.category === activeFilter);
-
     if (!visible) return null;
 
+    const totalBenefit = schemes.reduce((sum, s) => sum + (s.annualBenefit || 0), 0);
+
     return (
-        <motion.div
-            initial={{ x: -40, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 0.4, ease: 'easeOut' }}
-            className="h-full overflow-y-auto border-r border-gray-200 bg-white"
-        >
-            <div className="p-4">
-                {/* Header */}
-                <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-body text-lg font-bold text-gray-900">
-                        {isHi ? 'आपके लिए योजनाएं' : 'Schemes For You'}
-                    </h3>
-                    <span className="px-2.5 py-1 rounded-full bg-saffron text-white font-body text-xs font-medium">
-                        {schemes.length} {isHi ? 'योजनाएं मिलीं' : 'found'}
-                    </span>
-                </div>
-
-                {/* Filter chips */}
-                <div className="flex flex-wrap gap-1.5 mb-4">
-                    {filters.map((f) => (
-                        <button
-                            key={f.key}
-                            onClick={() => setActiveFilter(f.key)}
-                            className={`px-2.5 py-1 rounded-full font-body text-xs font-medium transition-colors duration-200 ${activeFilter === f.key
-                                ? 'bg-saffron text-white'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                }`}
-                        >
-                            {f.label}
-                        </button>
-                    ))}
-                </div>
-
-                {/* Scheme cards */}
-                <div className="space-y-3">
-                    {filtered.map((scheme, i) => (
-                        <motion.div
-                            key={scheme.id}
-                            initial={{ x: 30, opacity: 0 }}
-                            animate={{ x: 0, opacity: 1 }}
-                            transition={{ delay: i * 0.08, duration: 0.35 }}
-                        >
-                            <SchemeCard scheme={scheme} isEligible />
-                        </motion.div>
-                    ))}
-                </div>
-
-                {/* Bottom actions */}
-                <div className="mt-6 space-y-2">
-                    <Link
-                        to="/twin"
-                        className="flex items-center justify-center h-10 rounded-lg bg-navy text-white font-body text-sm font-medium hover:bg-navy-mid transition-colors duration-200"
-                    >
-                        {isHi ? 'Digital Twin देखें →' : 'View Digital Twin →'}
-                    </Link>
-                    <Link
-                        to="/schemes"
-                        className="flex items-center justify-center h-10 rounded-lg border border-gray-200 text-gray-600 font-body text-sm hover:bg-gray-50 transition-colors duration-200"
-                    >
-                        {isHi ? 'सब योजनाएं देखें' : 'View All Schemes'}
-                    </Link>
-                </div>
+        <div className="h-full bg-white border-r border-gray-200 overflow-y-auto">
+            <div className="p-4 border-b border-gray-200">
+                <h3 className="font-body text-base font-bold text-gray-900">Matched Schemes</h3>
+                <p className="font-body text-xs text-gray-500 mt-0.5">
+                    {schemes.length} schemes found • Total: ₹{totalBenefit.toLocaleString('en-IN')}/year
+                </p>
             </div>
-        </motion.div>
+
+            <div className="p-3 space-y-2">
+                {schemes.map((scheme) => (
+                    <Link
+                        key={scheme.id}
+                        to={`/schemes/${scheme.id}`}
+                        className="block p-3 bg-off-white rounded-lg hover:bg-saffron-pale transition-colors border border-gray-100"
+                    >
+                        <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                                <p className="font-body text-sm font-medium text-gray-900 truncate">
+                                    {scheme.nameEnglish || scheme.name}
+                                </p>
+                                <p className="font-body text-xs text-gray-500 mt-0.5">{scheme.ministry}</p>
+                            </div>
+                            <span className="font-mono text-sm font-bold text-saffron shrink-0">
+                                ₹{scheme.annualBenefit >= 100000
+                                    ? `${(scheme.annualBenefit / 100000).toFixed(scheme.annualBenefit % 100000 === 0 ? 0 : 1)}L`
+                                    : scheme.annualBenefit.toLocaleString('en-IN')}
+                            </span>
+                        </div>
+                        <div className="flex flex-wrap gap-1 mt-2">
+                            {(scheme.eligibilityTagsEn || scheme.eligibilityTags || []).slice(0, 2).map((tag, i) => (
+                                <span key={i} className="px-1.5 py-0.5 bg-success-light text-success text-[10px] font-body rounded">
+                                    {tag}
+                                </span>
+                            ))}
+                        </div>
+                    </Link>
+                ))}
+            </div>
+
+            {/* Action buttons */}
+            <div className="p-3 border-t border-gray-200 space-y-2">
+                <Link
+                    to="/twin"
+                    className="flex items-center justify-center gap-2 h-10 w-full rounded-lg bg-saffron text-white font-body text-sm font-medium hover:bg-saffron-light transition-colors"
+                >
+                    View Digital Twin <ArrowRight size={14} />
+                </Link>
+                <button className="flex items-center justify-center gap-2 h-9 w-full rounded-lg border border-gray-200 text-gray-600 font-body text-xs hover:bg-gray-50 transition-colors">
+                    <Download size={14} /> Download Report
+                </button>
+            </div>
+        </div>
     );
 }
 

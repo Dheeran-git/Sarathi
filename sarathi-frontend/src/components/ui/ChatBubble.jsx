@@ -1,14 +1,11 @@
 import SchemeCard from './SchemeCard';
-import { useLanguage } from '../../context/LanguageContext';
 
 /**
  * ChatBubble — User and Sarathi chat message bubbles.
  * type: 'user' | 'sarathi' | 'sarathi-schemes' | 'sarathi-question'
  */
 function ChatBubble({ type = 'sarathi', text, schemes, question, options, onOptionSelect, timestamp, isFirst = false }) {
-    const { language } = useLanguage();
-    const isHi = language === 'hi';
-    const displayTime = timestamp === 'अभी' || timestamp === 'JUST_NOW' ? (isHi ? 'अभी' : 'Just now') : timestamp;
+    const displayTime = timestamp === 'JUST_NOW' ? 'Just now' : timestamp;
     if (type === 'user') {
         return (
             <div className="flex justify-end mb-3">
@@ -29,7 +26,7 @@ function ChatBubble({ type = 'sarathi', text, schemes, question, options, onOpti
         <div className="flex justify-start mb-3">
             <div className="max-w-[75%] lg:max-w-[65%]">
                 {isFirst && (
-                    <p className="text-[11px] font-body text-gray-500 mb-1 ml-1">{isHi ? '🤖 सारथी' : '🤖 Sarathi'}</p>
+                    <p className="text-[11px] font-body text-gray-500 mb-1 ml-1">🤖 Sarathi</p>
                 )}
 
                 <div className="bg-white border-l-[3px] border-saffron px-4 py-3 rounded-[4px_18px_18px_18px] shadow-card font-body text-[15px] text-gray-900 leading-relaxed">
@@ -39,7 +36,7 @@ function ChatBubble({ type = 'sarathi', text, schemes, question, options, onOpti
                     {/* Scheme results */}
                     {type === 'sarathi-schemes' && schemes && (
                         <div className="mt-3 space-y-3">
-                            <p className="font-medium text-sm text-gray-700">{isHi ? 'मुझे ये योजनाएं मिलीं:' : 'I found these schemes for you:'}</p>
+                            <p className="font-medium text-sm text-gray-700">I found these schemes for you:</p>
                             {schemes.map((scheme) => (
                                 <SchemeCard key={scheme.id} scheme={scheme} isEligible />
                             ))}
@@ -85,15 +82,10 @@ export function TypingIndicator() {
                     <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                     <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                 </div>
-                <TypingText />
+                <p className="text-[11px] text-gray-400 mt-1 font-body">Sarathi is typing...</p>
             </div>
         </div>
     );
-}
-
-function TypingText() {
-    const { language } = useLanguage();
-    return <p className="text-[11px] text-gray-400 mt-1 font-body">{language === 'hi' ? 'सारथी सोच रहा है...' : 'Sarathi is typing...'}</p>;
 }
 
 export default ChatBubble;

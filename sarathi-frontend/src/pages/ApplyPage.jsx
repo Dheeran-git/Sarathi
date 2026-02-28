@@ -1,115 +1,113 @@
 import { useParams, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ArrowLeft, ExternalLink, FileText, Upload, CheckCircle } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowLeft, Upload } from 'lucide-react';
 import { schemeMap } from '../data/mockSchemes';
-import { useLanguage } from '../context/LanguageContext';
 
-/**
- * ApplyPage — mock application form for a scheme.
- * Route: /apply/:schemeId
- */
 function ApplyPage() {
     const { schemeId } = useParams();
     const scheme = schemeMap[schemeId];
-    const { language } = useLanguage();
-    const isHi = language === 'hi';
+    const [submitted, setSubmitted] = useState(false);
 
     if (!scheme) {
         return (
             <div className="min-h-screen bg-off-white flex items-center justify-center">
                 <div className="text-center">
-                    <p className="font-display text-2xl text-gray-400">{isHi ? 'योजना नहीं मिली' : 'Scheme Not Found'}</p>
+                    <p className="font-display text-2xl text-gray-400">Scheme Not Found</p>
                     <Link to="/schemes" className="mt-4 inline-block text-saffron font-body hover:underline">
-                        {isHi ? '← सभी योजनाएं' : '← All Schemes'}
+                        ← View All Schemes
                     </Link>
                 </div>
             </div>
         );
     }
 
-    const formFields = isHi
-        ? [
-            { label: 'पूरा नाम', placeholder: 'अपना नाम दर्ज करें' },
-            { label: 'आधार नंबर', placeholder: 'XXXX XXXX XXXX' },
-            { label: 'मोबाइल नंबर', placeholder: '+91' },
-            { label: 'बैंक खाता नंबर', placeholder: 'खाता नंबर' },
-        ]
-        : [
-            { label: 'Full Name', placeholder: 'Enter your name' },
-            { label: 'Aadhaar Number', placeholder: 'XXXX XXXX XXXX' },
-            { label: 'Mobile Number', placeholder: '+91' },
-            { label: 'Bank Account Number', placeholder: 'Account number' },
-        ];
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        setSubmitted(true);
+    };
+
+    if (submitted) {
+        return (
+            <div className="min-h-screen bg-off-white flex items-center justify-center">
+                <div className="text-center max-w-md">
+                    <div className="text-5xl mb-4">🎉</div>
+                    <h2 className="font-display text-2xl text-navy">Application Submitted!</h2>
+                    <p className="font-body text-sm text-gray-600 mt-3">
+                        Your application for <span className="font-medium">{scheme.nameEnglish}</span> has been submitted successfully. You will receive an update via SMS.
+                    </p>
+                    <Link to="/schemes" className="inline-block mt-6 px-6 py-2 bg-saffron text-white rounded-lg font-body text-sm font-medium hover:bg-saffron-light transition-colors">
+                        View More Schemes
+                    </Link>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-off-white">
             {/* Header */}
             <div className="bg-navy py-6">
-                <div className="max-w-3xl mx-auto px-4">
+                <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
                     <Link to={`/schemes/${schemeId}`} className="inline-flex items-center gap-1 font-body text-sm text-gray-300 hover:text-white mb-3 transition-colors">
-                        <ArrowLeft size={14} /> {isHi ? 'वापस जाएं' : 'Go Back'}
+                        <ArrowLeft size={14} /> Back to Scheme
                     </Link>
-                    <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="font-display text-[24px] lg:text-[30px] text-white">
-                        {isHi ? 'आवेदन करें' : 'Apply'} — {isHi ? scheme.nameHindi : scheme.nameEnglish}
-                    </motion.h1>
+                    <h1 className="font-display text-[24px] lg:text-[28px] text-white">
+                        Apply: {scheme.nameEnglish}
+                    </h1>
                 </div>
             </div>
 
-            <div className="max-w-3xl mx-auto px-4 py-8">
-                {/* Mock Form */}
-                <div className="bg-white rounded-xl shadow-card p-6 space-y-6">
-                    {/* Step 1: Documents */}
+            <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-card p-6 space-y-5">
+                    {/* Full Name */}
                     <div>
-                        <h2 className="font-body text-lg font-bold text-gray-900 flex items-center gap-2">
-                            <FileText size={18} className="text-saffron" /> {isHi ? 'आवश्यक दस्तावेज़' : 'Required Documents'}
-                        </h2>
-                        <div className="mt-3 space-y-2">
-                            {(isHi ? scheme.documentsRequired : (scheme.documentsRequiredEn || scheme.documentsRequired)).map((doc, i) => (
-                                <div key={i} className="flex items-center gap-3 p-3 bg-off-white rounded-lg">
-                                    <input type="checkbox" className="w-5 h-5 accent-saffron rounded" id={`doc-${i}`} />
-                                    <label htmlFor={`doc-${i}`} className="font-body text-sm text-gray-700 cursor-pointer flex-1">{doc}</label>
-                                    <button className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 font-body text-xs text-gray-500 hover:border-saffron hover:text-saffron transition-colors">
-                                        <Upload size={12} /> {isHi ? 'अपलोड करें' : 'Upload'}
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
+                        <label className="block font-body text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+                        <input type="text" required placeholder="Enter your full name" className="w-full h-11 px-4 rounded-lg border border-gray-200 font-body text-sm focus:outline-none focus:border-saffron focus:ring-1 focus:ring-saffron/30" />
                     </div>
 
-                    {/* Step 2: Personal Details */}
+                    {/* Aadhaar */}
                     <div>
-                        <h2 className="font-body text-lg font-bold text-gray-900">{isHi ? 'व्यक्तिगत विवरण' : 'Personal Details'}</h2>
-                        <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {formFields.map((field, i) => (
-                                <div key={i}>
-                                    <label className="font-body text-sm font-medium text-gray-700 block mb-1">{field.label}</label>
-                                    <input
-                                        type="text"
-                                        placeholder={field.placeholder}
-                                        className="w-full h-11 px-4 rounded-lg border border-gray-200 font-body text-sm focus:outline-none focus:border-saffron focus:ring-1 focus:ring-saffron/30 transition-colors"
-                                    />
-                                </div>
-                            ))}
-                        </div>
+                        <label className="block font-body text-sm font-medium text-gray-700 mb-1">Aadhaar Number *</label>
+                        <input type="text" required placeholder="12-digit Aadhaar number" maxLength="12" className="w-full h-11 px-4 rounded-lg border border-gray-200 font-body text-sm focus:outline-none focus:border-saffron focus:ring-1 focus:ring-saffron/30" />
                     </div>
 
-                    {/* Submit */}
-                    <div className="pt-4 border-t border-gray-100 flex flex-col sm:flex-row items-center gap-3">
-                        <button className="w-full sm:w-auto flex items-center justify-center gap-2 h-12 px-8 rounded-xl bg-saffron text-white font-body text-base font-semibold hover:bg-saffron-light transition-colors shadow-saffron">
-                            <CheckCircle size={18} /> {isHi ? 'आवेदन जमा करें' : 'Submit Application'}
-                        </button>
-                        <a href={scheme.applyUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 font-body text-sm text-saffron hover:underline">
-                            {isHi ? 'आधिकारिक पोर्टल' : 'Official Portal'} <ExternalLink size={12} />
-                        </a>
+                    {/* Mobile */}
+                    <div>
+                        <label className="block font-body text-sm font-medium text-gray-700 mb-1">Mobile Number *</label>
+                        <input type="tel" required placeholder="10-digit mobile number" maxLength="10" className="w-full h-11 px-4 rounded-lg border border-gray-200 font-body text-sm focus:outline-none focus:border-saffron focus:ring-1 focus:ring-saffron/30" />
+                    </div>
+
+                    {/* Bank Account */}
+                    <div>
+                        <label className="block font-body text-sm font-medium text-gray-700 mb-1">Bank Account Number</label>
+                        <input type="text" placeholder="Bank account for direct benefit transfer" className="w-full h-11 px-4 rounded-lg border border-gray-200 font-body text-sm focus:outline-none focus:border-saffron focus:ring-1 focus:ring-saffron/30" />
+                    </div>
+
+                    {/* Document Upload */}
+                    <div>
+                        <label className="block font-body text-sm font-medium text-gray-700 mb-1">Upload Documents</label>
+                        <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center hover:border-saffron/40 transition-colors cursor-pointer">
+                            <Upload size={24} className="mx-auto text-gray-400 mb-2" />
+                            <p className="font-body text-sm text-gray-500">Click or drag to upload</p>
+                            <p className="font-body text-xs text-gray-400 mt-1">PDF, JPG, PNG — Max 5MB each</p>
+                        </div>
                     </div>
 
                     {/* Disclaimer */}
-                    <p className="font-body text-xs text-gray-400 text-center">
-                        {isHi
-                            ? 'यह एक प्रोटोटाइप आवेदन फॉर्म है। वास्तविक आवेदन के लिए आधिकारिक पोर्टल पर जाएं।'
-                            : 'This is a prototype application form. For actual applications, visit the official portal.'}
-                    </p>
-                </div>
+                    <div className="p-3 bg-off-white rounded-lg">
+                        <p className="font-body text-xs text-gray-500 leading-relaxed">
+                            By submitting, you confirm that all information is accurate. Sarathi only assists in discovery — actual enrollment is processed by the government portal.
+                        </p>
+                    </div>
+
+                    {/* Submit */}
+                    <button
+                        type="submit"
+                        className="w-full h-12 rounded-xl bg-saffron text-white font-body text-base font-semibold hover:bg-saffron-light transition-colors shadow-saffron"
+                    >
+                        Submit Application
+                    </button>
+                </form>
             </div>
         </div>
     );

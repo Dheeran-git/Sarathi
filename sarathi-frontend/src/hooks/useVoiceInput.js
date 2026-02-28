@@ -5,10 +5,8 @@ import { useState, useCallback, useRef } from 'react';
  *
  * Uses the browser's SpeechRecognition API for real voice-to-text.
  * Falls back to mock data if the API is unavailable.
- *
- * Member 2 · Sarathi AI Services
  */
-export function useVoiceInput({ onTranscript, language = 'hi-IN' } = {}) {
+export function useVoiceInput({ onTranscript, language = 'en-IN' } = {}) {
   const [state, setState] = useState('idle'); // idle | listening | processing
   const [transcript, setTranscript] = useState('');
   const recognitionRef = useRef(null);
@@ -24,7 +22,6 @@ export function useVoiceInput({ onTranscript, language = 'hi-IN' } = {}) {
 
   const startListening = useCallback(() => {
     if (!isSupported) {
-      // Fallback: Simulated voice input for browsers without Web Speech API
       _simulateVoiceInput();
       return;
     }
@@ -33,7 +30,7 @@ export function useVoiceInput({ onTranscript, language = 'hi-IN' } = {}) {
       const recognition = new SpeechRecognition();
       recognitionRef.current = recognition;
 
-      recognition.lang = language; // 'hi-IN' for Hindi, 'en-IN' for English
+      recognition.lang = language; // 'en-IN' for English
       recognition.continuous = false;
       recognition.interimResults = false;
       recognition.maxAlternatives = 1;
@@ -59,7 +56,6 @@ export function useVoiceInput({ onTranscript, language = 'hi-IN' } = {}) {
         console.error('[VoiceInput] Error:', event.error);
         setState('idle');
 
-        // If permission denied or not supported, fall back to simulation
         if (event.error === 'not-allowed' || event.error === 'no-speech') {
           _simulateVoiceInput();
         }
@@ -103,16 +99,13 @@ export function useVoiceInput({ onTranscript, language = 'hi-IN' } = {}) {
     timeoutRef.current = setTimeout(() => {
       setState('processing');
       setTimeout(() => {
-        const mockTranscript =
-          language === 'hi-IN'
-            ? 'मुझे पेंशन योजना चाहिए'
-            : 'I need pension scheme';
+        const mockTranscript = 'I need pension scheme';
         setTranscript(mockTranscript);
         setState('idle');
         onTranscript?.(mockTranscript, 0.95);
       }, 1500);
     }, 3000);
-  }, [language, onTranscript]);
+  }, [onTranscript]);
 
   return {
     state,

@@ -21,19 +21,19 @@ export function formatRupeeWithSymbol(amount) {
  * Format monthly income display
  */
 export function formatMonthlyIncome(amount) {
-  return `₹${amount.toLocaleString('en-IN')} / माह`;
+  return `₹${amount.toLocaleString('en-IN')} / month`;
 }
 
 /**
- * Relative time string (Hindi)
+ * Relative time string (English)
  */
 export function relativeTime(minutes) {
-  if (minutes < 1) return 'अभी';
-  if (minutes < 60) return `${minutes} मिनट पहले`;
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${minutes} minutes ago`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} घंटे पहले`;
+  if (hours < 24) return `${hours} hours ago`;
   const days = Math.floor(hours / 24);
-  return `${days} दिन पहले`;
+  return `${days} days ago`;
 }
 
 /**
@@ -55,22 +55,8 @@ export function animateCounter(target, duration, callback) {
 }
 
 /**
- * Convert Western digits (0-9) to Devanagari (०-९).
- * Also converts commas, decimals, etc. to Devanagari-friendly forms.
+ * Convenience: localizeNum just returns value as-is (English only).
  */
-const HINDI_DIGITS = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
-
-export function toHindiDigits(value) {
-  return String(value).replace(/[0-9]/g, (d) => HINDI_DIGITS[Number(d)]);
-}
-
-/**
- * Convenience: return Devanagari digits when language is 'hi', otherwise keep as-is.
- *   localizeNum('₹40,000', 'hi')  →  '₹४०,०००'
- *   localizeNum('₹40,000', 'en')  →  '₹40,000'
- */
-export function localizeNum(value, language) {
-  if (language === 'hi') return toHindiDigits(value);
+export function localizeNum(value, _language) {
   return String(value);
 }
-

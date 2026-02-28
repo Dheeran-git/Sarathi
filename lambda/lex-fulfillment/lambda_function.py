@@ -56,31 +56,31 @@ def lambda_handler(event, context):
         total_benefit = body.get('totalAnnualBenefit', 0)
         matched_count = len(matched_schemes)
 
-        # Build a nice Hindi + English summary
+        # Build a nice English summary
         if matched_count > 0:
             top_3 = ', '.join(
-                s.get('nameHindi', s.get('nameEnglish', ''))
+                s.get('nameEnglish', s.get('name', ''))
                 for s in matched_schemes[:3]
             )
             message = (
-                f"🎉 {citizen_profile['name']} जी, आपके लिए {matched_count} सरकारी योजनाएं मिलीं!\n"
-                f"💰 कुल वार्षिक लाभ: ₹{total_benefit:,}\n"
-                f"📋 प्रमुख योजनाएं: {top_3}\n\n"
-                f"अधिक जानकारी के लिए सारथी ऐप खोलें।"
+                f"🎉 {citizen_profile['name']}, we found {matched_count} government schemes for you!\n"
+                f"💰 Total annual benefit: ₹{total_benefit:,}\n"
+                f"📋 Top schemes: {top_3}\n\n"
+                f"Please open the Sarathi app for more details."
             )
         else:
             message = (
-                f"{citizen_profile['name']} जी, हमें अभी कोई सीधे मिलने वाली योजना नहीं मिली। "
-                "कृपया अपनी जानकारी दोबारा जांचें या पंचायत कार्यालय से संपर्क करें।"
+                f"{citizen_profile['name']}, we didn't find any direct schemes for you at this time. "
+                "Please verify your details or contact your Panchayat office."
             )
 
     except Exception as e:
         print(f"[LexFulfillment] Error calling eligibility-engine: {str(e)}")
         # ── Fallback: return a helpful response even without the engine ──
         message = (
-            f"🙏 {citizen_profile['name']} जी, आपकी जानकारी सफलतापूर्वक दर्ज हो गई है।\n"
-            f"📋 उम्र: {citizen_profile['age']}, आय: ₹{citizen_profile['income']}\n"
-            f"हम जल्द ही आपकी योजनाओं की जानकारी आपके पंचायत तक पहुँचाएंगे।"
+            f"🙏 {citizen_profile['name']}, your details have been successfully recorded.\n"
+            f"📋 Age: {citizen_profile['age']}, Income: ₹{citizen_profile['income']}\n"
+            f"We will soon share your scheme eligibility with your Panchayat."
         )
 
     # ── Save citizen profile to DynamoDB ──────────────────────────

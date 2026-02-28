@@ -1,120 +1,96 @@
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ChevronRight } from 'lucide-react';
-import StatCard from '../components/ui/StatCard';
-import PathwayChart from '../components/twin/PathwayChart';
-import { useLanguage } from '../context/LanguageContext';
-import { t } from '../utils/translations';
-import { localizeNum } from '../utils/formatters';
 import SchemeTimeline from '../components/twin/SchemeTimeline';
 import ConflictResolver from '../components/twin/ConflictResolver';
-import { pathwayData, defaultCitizen } from '../data/mockCitizens';
+import { useCitizen } from '../context/CitizenContext';
 
-/**
- * TwinPage — Digital Twin Dashboard for a citizen's welfare pathway.
- * Spec §8 — includes breadcrumb, citizen summary pill, "change profile" link,
- * 4 stat cards, pathway chart, scheme timeline, conflict resolver.
- */
 function TwinPage() {
-  const citizen = defaultCitizen;
-  const { language } = useLanguage();
-  const T = (key) => t(key, language);
-  const isHi = language === 'hi';
+  const { citizenProfile } = useCitizen();
 
   return (
     <div className="min-h-screen bg-off-white">
-      {/* Header — spec lines 791-802 */}
-      <div className="bg-navy py-8 lg:py-10" style={{ background: 'radial-gradient(ellipse at bottom center, rgba(232,116,12,0.08), #0F2240 70%)' }}>
+      {/* Hero */}
+      <div className="bg-navy py-6 lg:py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Breadcrumb — spec line 796 */}
-          <nav className="flex items-center gap-1 font-body text-xs text-gray-400 mb-3" aria-label="Breadcrumb">
-            <Link to="/" className="hover:text-white transition-colors">{isHi ? 'होम' : 'Home'}</Link>
-            <ChevronRight size={12} />
-            <Link to="/chat" className="hover:text-white transition-colors">{isHi ? 'चैट' : 'Chat'}</Link>
-            <ChevronRight size={12} />
-            <span className="text-gray-300">{isHi ? 'आपका रोडमैप' : 'Your Roadmap'}</span>
+          <nav className="flex items-center gap-2 font-body text-xs text-gray-400 mb-3">
+            <Link to="/" className="hover:text-saffron transition-colors">Home</Link>
+            <span>/</span>
+            <span className="text-white">Digital Twin</span>
           </nav>
-
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-8"
-          >
-            {/* Avatar */}
-            <div className="w-16 h-16 rounded-full bg-saffron/20 flex items-center justify-center shrink-0">
-              <span className="font-display text-2xl text-saffron">{isHi ? citizen.name[0] : citizen.nameEnglish[0]}</span>
-            </div>
-
-            <div className="flex-1">
-              {/* Title — spec line 797 */}
-              <h1 className="font-display text-[28px] lg:text-[36px] text-white">
-                {T('twinTitle')}
-              </h1>
-              <p className="font-body text-sm text-gray-300 mt-1">
-                {isHi ? `अगले ${localizeNum(3, language)} वर्षों में आप गरीबी रेखा से ऊपर आ सकते हैं।` : 'In the next 3 years, you can rise above the poverty line.'}
-              </p>
-            </div>
-
-            <div className="flex flex-col items-end gap-2">
-              {/* Citizen summary pill — spec line 801 */}
-              <span className="px-4 py-1.5 rounded-full bg-navy-light text-white font-body text-xs font-medium">
-                {isHi ? citizen.name : citizen.nameEnglish} | {localizeNum(citizen.age, language)} {isHi ? 'वर्ष' : 'years'} | {isHi ? citizen.state : citizen.stateEnglish} | {isHi ? (citizen.category === 'SC' ? 'एससी' : citizen.category === 'ST' ? 'एसटी' : citizen.category === 'OBC' ? 'ओबीसी' : citizen.category === 'General' ? 'सामान्य' : citizen.category) : citizen.category}
-              </span>
-              {/* Change profile link — spec line 802 */}
-              <Link to="/chat" className="font-body text-xs text-saffron hover:underline" aria-label="Change profile">
-                {T('twinChangeProfile')}
-              </Link>
-            </div>
-          </motion.div>
+          <h1 className="font-display text-[28px] lg:text-[36px] text-white">
+            Your Welfare Roadmap
+          </h1>
+          <p className="font-body text-sm text-gray-300 mt-1">
+            In the next 3 years, you can rise above the poverty line.
+          </p>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stat Cards — spec lines 806-813 */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-8">
-          <StatCard
-            icon="💰"
-            value={`₹${localizeNum((2000).toLocaleString('en-IN'), language)}/${isHi ? 'माह' : 'mo'}`}
-            label={T('twinCurrentIncome')}
-            variant="warning"
-          />
-          <StatCard
-            icon="📈"
-            value={`₹${localizeNum((7400).toLocaleString('en-IN'), language)}/${isHi ? 'माह' : 'mo'}`}
-            label={T('twinAfter3Years')}
-            variant="success"
-          />
-          <StatCard
-            icon="💵"
-            value={`₹${localizeNum((64800).toLocaleString('en-IN'), language)}`}
-            label={T('twinTotalBenefit')}
-            variant="primary"
-            trend={230}
-          />
-          <StatCard
-            icon="📋"
-            value={localizeNum(8, language)}
-            label={T('twinActiveSchemes')}
-            variant="dark"
-          />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* Citizen Summary */}
+        <div className="bg-white rounded-xl shadow-card p-4 lg:p-6">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-saffron/10 flex items-center justify-center">
+              <span className="font-display text-lg text-saffron">
+                {(citizenProfile.name || 'C')[0]}
+              </span>
+            </div>
+            <div className="flex-1">
+              <h2 className="font-body text-base font-bold text-gray-900">
+                {citizenProfile.name || 'Citizen'}
+              </h2>
+              <div className="flex flex-wrap gap-2 mt-1">
+                <span className="px-2 py-0.5 bg-navy/5 rounded-full font-body text-xs text-gray-600">
+                  Age: {citizenProfile.age || '—'}
+                </span>
+                <span className="px-2 py-0.5 bg-navy/5 rounded-full font-body text-xs text-gray-600">
+                  Category: {citizenProfile.category || 'General'}
+                </span>
+                <span className="px-2 py-0.5 bg-navy/5 rounded-full font-body text-xs text-gray-600">
+                  State: {citizenProfile.state || '—'}
+                </span>
+              </div>
+            </div>
+            <Link to="/chat" className="px-3 py-1.5 border border-saffron text-saffron font-body text-xs rounded-md hover:bg-saffron/5 transition-colors">
+              Change Profile
+            </Link>
+          </div>
         </div>
 
-        {/* Pathway Chart — spec lines 817-852 */}
-        <div className="mb-8">
-          <h2 className="font-body text-xl font-bold text-gray-900 mb-4">{T('twinIncomeChart')}</h2>
-          <PathwayChart pathways={pathwayData} />
+        {/* Stat Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+          {[
+            { label: 'Current Income', value: `₹${(citizenProfile.income || 5000).toLocaleString('en-IN')}/mo`, color: '#6B7280' },
+            { label: 'After 3 Years', value: `₹${((citizenProfile.income || 5000) + 8800).toLocaleString('en-IN')}/mo`, color: '#4CAF50' },
+            { label: 'Total Annual Benefit', value: `₹${(64800).toLocaleString('en-IN')}`, color: '#E8740C' },
+            { label: 'Active Schemes', value: '6', color: '#2196F3' },
+          ].map((card) => (
+            <div key={card.label} className="bg-white rounded-xl shadow-card p-4">
+              <p className="font-body text-xs text-gray-500">{card.label}</p>
+              <p className="font-mono text-xl font-bold mt-1" style={{ color: card.color }}>{card.value}</p>
+            </div>
+          ))}
         </div>
 
-        {/* Two column: timeline + conflict — spec lines 856-892 */}
-        <div className="grid grid-cols-1 lg:grid-cols-[55%_45%] gap-6">
-          <div>
-            <h2 className="font-body text-xl font-bold text-gray-900 mb-4">{T('twinSchemeSequence')}</h2>
-            <SchemeTimeline />
-          </div>
-          <div>
-            <h2 className="font-body text-xl font-bold text-gray-900 mb-4">{T('twinConflict')}</h2>
-            <ConflictResolver />
-          </div>
+        {/* Income Trajectory Chart */}
+        <div className="bg-white rounded-xl shadow-card p-4 lg:p-6">
+          <h3 className="font-body text-lg font-bold text-gray-900 mb-4">Income Trajectory</h3>
+          <svg viewBox="0 0 600 200" className="w-full">
+            <line x1="40" y1="170" x2="570" y2="170" stroke="#E5E2DA" strokeWidth="1" />
+            <line x1="40" y1="80" x2="570" y2="80" stroke="#C0392B" strokeWidth="1" strokeDasharray="6 3" />
+            <text x="567" y="73" fill="#C0392B" fontSize="10" fontFamily="DM Sans" textAnchor="end">Poverty Line</text>
+            <path d="M40 155 Q130 145 220 120 Q310 95 400 65 Q490 45 560 30" stroke="#E8740C" strokeWidth="2.5" fill="none" />
+            <path d="M40 155 Q130 145 220 120 Q310 95 400 65 Q490 45 560 30 L560 170 L40 170 Z" fill="#E8740C" opacity="0.06" />
+            <text x="40" y="188" fill="#8A8578" fontSize="9" fontFamily="DM Sans">Now</text>
+            <text x="220" y="188" fill="#8A8578" fontSize="9" fontFamily="DM Sans">Year 1</text>
+            <text x="400" y="188" fill="#8A8578" fontSize="9" fontFamily="DM Sans">Year 2</text>
+            <text x="555" y="188" fill="#8A8578" fontSize="9" fontFamily="DM Sans" textAnchor="end">Year 3</text>
+          </svg>
+        </div>
+
+        {/* Timeline + Conflicts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <SchemeTimeline />
+          <ConflictResolver />
         </div>
       </div>
     </div>

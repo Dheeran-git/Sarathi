@@ -1,34 +1,14 @@
-import { useLanguage } from '../../context/LanguageContext';
-
 /**
- * Standalone Language Toggle — pill-shaped हिं/EN toggle.
+ * LanguageToggle — placeholder for future language switching.
+ * Currently displays English-only indicator.
  */
-function LanguageToggle({ className = '' }) {
-    const { language, toggleLanguage } = useLanguage();
-
+function LanguageToggle() {
     return (
-        <button
-            onClick={toggleLanguage}
-            className={`relative w-[100px] h-[34px] rounded-full border border-gray-200 flex items-center overflow-hidden shrink-0 ${className}`}
-            aria-label="Toggle language"
-        >
-            <span
-                className={`absolute top-0 h-full w-1/2 rounded-full bg-saffron transition-transform duration-200 ease-in-out ${language === 'hi' ? 'translate-x-0' : 'translate-x-full'
-                    }`}
-            />
-            <span
-                className={`relative z-10 flex-1 text-center text-xs font-body font-medium transition-colors duration-200 ${language === 'hi' ? 'text-white' : 'text-gray-500'
-                    }`}
-            >
-                हिं
-            </span>
-            <span
-                className={`relative z-10 flex-1 text-center text-xs font-body font-medium transition-colors duration-200 ${language === 'en' ? 'text-white' : 'text-gray-500'
-                    }`}
-            >
+        <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-navy-mid/50 border border-navy-light/30">
+            <span className="font-body text-xs text-white font-medium px-1.5 py-0.5 rounded-full bg-saffron">
                 EN
             </span>
-        </button>
+        </div>
     );
 }
 

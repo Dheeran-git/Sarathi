@@ -114,7 +114,7 @@ export async function post(endpoint, data) {
 /* ── AI Service helpers (Member 2) ─────────────────────────────────── */
 
 /**
- * Get a Hindi explanation + audio URL for a scheme via Bedrock + Polly.
+ * Get a simple explanation + audio URL for a scheme via Bedrock + Polly.
  * @param {Object} scheme - The scheme object to explain
  * @returns {{ explanationHindi: string, audioUrl: string|null, schemeId: string }}
  */
@@ -128,8 +128,8 @@ export async function explainScheme(scheme) {
  * @param {string} sessionId - Lex session ID
  * @returns {{ message: string, slots: Object }}
  */
-export async function sendToLex(message, sessionId = 'default') {
-  return post('/lex', { message, sessionId });
+export async function sendToLex(message, sessionId = 'default', locale = 'en_US') {
+  return post('/lex', { message, sessionId, locale });
 }
 
 /**
@@ -159,15 +159,15 @@ function postMockData(endpoint, data) {
   }
 
   if (endpoint === '/voice') {
-    return { transcript: 'मुझे पेंशन योजना चाहिए', confidence: 0.92 };
+    return { transcript: 'I need a pension scheme', confidence: 0.92 };
   }
 
   // ── Member 2 AI Service mocks ──────────────────────────────────
   if (endpoint === '/explain') {
     const scheme = data?.scheme || {};
     return {
-      explanationHindi: scheme.benefitDescription ||
-        'यह एक सरकारी योजना है जो आपके परिवार को लाभ दे सकती है। अधिक जानकारी के लिए अपने ग्राम पंचायत कार्यालय से संपर्क करें।',
+      explanationHindi: scheme.benefitDescriptionEn || scheme.benefitDescription ||
+        'This is a government scheme that can benefit your family. Contact your Gram Panchayat office for more information.',
       audioUrl: null, // No audio in mock mode — uses browser TTS fallback
       schemeId: scheme.id || 'unknown',
     };
@@ -176,15 +176,15 @@ function postMockData(endpoint, data) {
   if (endpoint === '/lex') {
     // Simulate Lex bot conversation
     const msg = data?.message?.toLowerCase() || '';
-    if (msg.includes('योजना') || msg.includes('scheme') || msg.includes('find')) {
+    if (msg.includes('scheme') || msg.includes('find') || msg.includes('help')) {
       return {
-        message: 'नमस्ते! मैं सारथी हूँ। आपकी सरकारी योजनाएं ढूंढने में मदद करूंगा। आपका नाम बताइए?',
+        message: 'Hello! I am Sarathi. I will help you find government schemes. Please tell me your name?',
         sessionState: 'ElicitSlot',
         slotToElicit: 'citizenName',
       };
     }
     return {
-      message: 'मुझे समझ नहीं आया। कृपया "योजनाएं ढूंढें" बोलिए।',
+      message: 'I didn\'t understand. Please say "Find schemes" to get started.',
       sessionState: 'ElicitIntent',
     };
   }
@@ -201,4 +201,3 @@ function postMockData(endpoint, data) {
 }
 
 export default api;
-

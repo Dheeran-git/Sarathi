@@ -1,13 +1,7 @@
-import { useLanguage } from '../../context/LanguageContext';
-import { localizeNum } from '../../utils/formatters';
-
 /**
  * AlertsPanel — priority action alerts for the Panchayat dashboard.
  */
 function AlertsPanel({ alerts = [] }) {
-    const { language } = useLanguage();
-    const isHi = language === 'hi';
-
     const borderColors = {
         urgent: 'border-l-danger',
         warning: 'border-l-warning',
@@ -18,10 +12,10 @@ function AlertsPanel({ alerts = [] }) {
         <div className="bg-white rounded-xl shadow-card p-4 lg:p-5 h-full">
             <div className="flex items-center justify-between mb-4">
                 <h3 className="font-body text-lg font-bold text-gray-900">
-                    {isHi ? 'प्राथमिकता कार्य' : 'Priority Actions'}
+                    Priority Actions
                 </h3>
                 <span className="w-6 h-6 rounded-full bg-danger text-white text-xs font-body font-bold flex items-center justify-center">
-                    {localizeNum(alerts.length, language)}
+                    {alerts.length}
                 </span>
             </div>
 
@@ -35,17 +29,17 @@ function AlertsPanel({ alerts = [] }) {
                             <span className="text-sm shrink-0">{alert.icon}</span>
                             <div className="flex-1 min-w-0">
                                 <p className="font-body text-sm font-bold text-gray-900 leading-snug">
-                                    {isHi ? alert.title : alert.titleEnglish}
+                                    {alert.titleEnglish || alert.title}
                                 </p>
                                 <p className="font-body text-xs text-gray-600 mt-1 leading-relaxed">
-                                    {isHi ? alert.description : alert.descriptionEnglish}
+                                    {alert.descriptionEnglish || alert.description}
                                 </p>
                                 <div className="flex items-center justify-between mt-2">
                                     <button className="font-body text-xs font-medium text-saffron hover:underline">
-                                        {isHi ? alert.action : alert.actionEnglish} →
+                                        {alert.actionEnglish || alert.action} →
                                     </button>
                                     <span className="font-body text-[10px] text-gray-400">
-                                        {isHi ? alert.time : alert.timeEnglish}
+                                        {alert.timeEnglish || alert.time}
                                     </span>
                                 </div>
                             </div>

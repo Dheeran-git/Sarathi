@@ -1,9 +1,8 @@
 import { Link } from 'react-router-dom';
 import { motion, useInView } from 'framer-motion';
 import { useRef, useState, useEffect } from 'react';
-import { ArrowRight, Home, Heart, Wheat, GraduationCap, Baby, Briefcase, Lock, Globe, Zap } from 'lucide-react';
-import { animateCounter, localizeNum } from '../utils/formatters';
-import { useLanguage } from '../context/LanguageContext';
+import { ArrowRight, Home, Heart, Wheat, GraduationCap, Baby, Briefcase } from 'lucide-react';
+import { animateCounter } from '../utils/formatters';
 import { t } from '../utils/translations';
 
 /* ── Framer helpers ──────────────────────────────────────────────────────── */
@@ -114,7 +113,6 @@ function AnimatedCounter({ target, prefix = '', suffix = '', duration = 1500 }) 
   const [value, setValue] = useState(0);
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: '-100px' });
-  const { language } = useLanguage();
 
   useEffect(() => {
     if (inView) {
@@ -122,7 +120,7 @@ function AnimatedCounter({ target, prefix = '', suffix = '', duration = 1500 }) 
     }
   }, [inView, target, duration]);
 
-  return <span ref={ref}>{localizeNum(`${prefix}${value.toLocaleString('en-IN')}${suffix}`, language)}</span>;
+  return <span ref={ref}>{`${prefix}${value.toLocaleString('en-IN')}${suffix}`}</span>;
 }
 
 /* ── Problem Card ────────────────────────────────────────────────────────── */
@@ -146,7 +144,7 @@ function ProblemCard({ emoji, title, desc, stat, delay }) {
 }
 
 /* ── Feature Block ───────────────────────────────────────────────────────── */
-function FeatureBlock({ step, title, desc, reverse, children, language }) {
+function FeatureBlock({ step, title, desc, reverse, children }) {
   return (
     <motion.div
       initial={{ opacity: 0, x: reverse ? 30 : -30 }}
@@ -156,7 +154,7 @@ function FeatureBlock({ step, title, desc, reverse, children, language }) {
       className={`flex flex-col lg:flex-row items-center gap-8 lg:gap-16 py-12 ${reverse ? 'lg:flex-row-reverse' : ''}`}
     >
       <div className="flex-1">
-        <span className="font-display text-[80px] lg:text-[96px] text-navy/10 font-bold leading-none">{localizeNum(step, language)}</span>
+        <span className="font-display text-[80px] lg:text-[96px] text-navy/10 font-bold leading-none">{step}</span>
         <h3 className="font-display text-[24px] lg:text-[28px] text-navy -mt-6 lg:-mt-8">{title}</h3>
         <p className="font-body text-base text-gray-700 mt-3 max-w-[360px] leading-relaxed">{desc}</p>
       </div>
@@ -186,8 +184,7 @@ function PersonaCard({ name, detail, quote, outcome }) {
 /*  LANDING PAGE                                                            */
 /* ══════════════════════════════════════════════════════════════════════════ */
 function LandingPage() {
-  const { language } = useLanguage();
-  const T = (key) => t(key, language);
+  const T = (key) => t(key);
 
   return (
     <div className="overflow-hidden">
@@ -260,27 +257,27 @@ function LandingPage() {
             {T('howTitle')}
           </motion.h2>
 
-          <FeatureBlock step="01" title={T('step1Title')} desc={T('step1Desc')} language={language}>
+          <FeatureBlock step="01" title={T('step1Title')} desc={T('step1Desc')}>
             <div className="bg-off-white rounded-2xl p-6 shadow-card">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-saffron/10 flex items-center justify-center"><span className="font-display text-lg text-saffron">{language === 'hi' ? 'स' : 'S'}</span></div>
-                <span className="font-body text-sm text-gray-500">{language === 'hi' ? 'सारथी चैट' : 'Sarathi Chat'}</span>
+                <div className="w-10 h-10 rounded-full bg-saffron/10 flex items-center justify-center"><span className="font-display text-lg text-saffron">S</span></div>
+                <span className="font-body text-sm text-gray-500">Sarathi Chat</span>
               </div>
               <div className="bg-white rounded-xl p-3 border-l-[3px] border-saffron shadow-sm mb-3">
-                <p className="font-body text-sm text-gray-900">{language === 'hi' ? 'नमस्ते! मैं सारथी हूँ। बताइए, आपको क्या सहायता चाहिए?' : 'Hello! I am Sarathi. Tell me, how can I help you?'}</p>
+                <p className="font-body text-sm text-gray-900">Hello! I am Sarathi. Tell me, how can I help you?</p>
               </div>
               <div className="flex justify-end">
-                <div className="bg-saffron text-white px-4 py-2 rounded-[14px_14px_4px_14px] font-body text-sm">{language === 'hi' ? 'मुझे पेंशन योजना चाहिए' : 'I need a pension scheme'}</div>
+                <div className="bg-saffron text-white px-4 py-2 rounded-[14px_14px_4px_14px] font-body text-sm">I need a pension scheme</div>
               </div>
             </div>
           </FeatureBlock>
 
-          <FeatureBlock step="02" title={T('step2Title')} desc={T('step2Desc')} reverse language={language}>
+          <FeatureBlock step="02" title={T('step2Title')} desc={T('step2Desc')} reverse>
             <div className="space-y-2">
               {[
-                { name: language === 'hi' ? 'पीएम-किसान' : 'PM-KISAN', cat: language === 'hi' ? 'कृषि' : 'Agriculture', amt: language === 'hi' ? '₹६,०००' : '₹6,000', color: '#4CAF50' },
-                { name: language === 'hi' ? 'आयुष्मान भारत' : 'Ayushman Bharat', cat: language === 'hi' ? 'स्वास्थ्य' : 'Health', amt: language === 'hi' ? '₹५ लाख' : '₹5L', color: '#F44336' },
-                { name: language === 'hi' ? 'पीएम उज्ज्वला' : 'PM Ujjwala', cat: language === 'hi' ? 'महिला' : 'Women', amt: language === 'hi' ? '₹९,६००' : '₹9,600', color: '#E91E63' },
+                { name: 'PM-KISAN', cat: 'Agriculture', amt: '₹6,000', color: '#4CAF50' },
+                { name: 'Ayushman Bharat', cat: 'Health', amt: '₹5L', color: '#F44336' },
+                { name: 'PM Ujjwala', cat: 'Women', amt: '₹9,600', color: '#E91E63' },
               ].map((s, i) => (
                 <motion.div key={s.name} initial={{ x: 40, opacity: 0 }} whileInView={{ x: 0, opacity: 1 }} transition={{ delay: i * 0.12 }} viewport={{ once: true }} className="flex items-center gap-3 bg-white rounded-xl p-3 shadow-card border-l-4" style={{ borderColor: s.color }}>
                   <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${s.color}15` }}>
@@ -296,17 +293,17 @@ function LandingPage() {
             </div>
           </FeatureBlock>
 
-          <FeatureBlock step="03" title={T('step3Title')} desc={T('step3Desc')} language={language}>
+          <FeatureBlock step="03" title={T('step3Title')} desc={T('step3Desc')}>
             <div className="bg-off-white rounded-2xl p-5 shadow-card">
               <svg viewBox="0 0 300 120" className="w-full">
                 <line x1="30" y1="90" x2="280" y2="90" stroke="#E5E2DA" strokeWidth="1" />
                 <line x1="30" y1="40" x2="280" y2="40" stroke="#C0392B" strokeWidth="1" strokeDasharray="6 3" />
-                <text x="278" y="33" fill="#C0392B" fontSize="8" fontFamily="DM Sans" textAnchor="end">{language === 'hi' ? 'गरीबी रेखा' : 'Poverty Line'}</text>
+                <text x="278" y="33" fill="#C0392B" fontSize="8" fontFamily="DM Sans" textAnchor="end">Poverty Line</text>
                 <path d="M30 85 Q80 80 120 65 Q160 50 200 35 Q240 25 270 18" stroke="#E8740C" strokeWidth="2.5" fill="none" />
                 <path d="M30 85 Q80 80 120 65 Q160 50 200 35 Q240 25 270 18 L270 90 L30 90 Z" fill="#E8740C" opacity="0.06" />
-                <text x="135" y="110" fill="#8A8578" fontSize="8" fontFamily="DM Sans" textAnchor="middle">{language === 'hi' ? 'वर्ष १ → वर्ष २ → वर्ष ३' : 'Year 1 → Year 2 → Year 3'}</text>
+                <text x="135" y="110" fill="#8A8578" fontSize="8" fontFamily="DM Sans" textAnchor="middle">Year 1 → Year 2 → Year 3</text>
               </svg>
-              <p className="font-body text-xs text-center text-gray-500 mt-2">{language === 'hi' ? 'सर्वोत्तम मार्ग: २.४ वर्षों में गरीबी रेखा पार' : 'Best path: Cross poverty line in 2.4 years'}</p>
+              <p className="font-body text-xs text-center text-gray-500 mt-2">Best path: Cross poverty line in 2.4 years</p>
             </div>
           </FeatureBlock>
         </div>
@@ -320,22 +317,22 @@ function LandingPage() {
           </motion.h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
             <PersonaCard
-              name={language === 'hi' ? 'कमला देवी, उत्तर प्रदेश' : 'Kamla Devi, Uttar Pradesh'}
-              detail={language === 'hi' ? '५५ वर्ष, विधवा' : '55 yrs, Widow'}
-              quote={language === 'hi' ? 'मुझे पता ही नहीं था कि मुझे विधवा पेंशन मिल सकती है।' : "I didn't even know I could get a widow's pension."}
-              outcome={language === 'hi' ? '🎯 सारथी ने ६ योजनाएं ढूंढी | ₹२४,००० सालाना' : '🎯 Sarathi found 6 schemes | ₹24,000/year'}
+              name="Kamla Devi, Uttar Pradesh"
+              detail="55 yrs, Widow"
+              quote="I didn't even know I could get a widow's pension."
+              outcome="🎯 Sarathi found 6 schemes | ₹24,000/year"
             />
             <PersonaCard
-              name={language === 'hi' ? 'रामू प्रसाद, बिहार' : 'Ramu Prasad, Bihar'}
-              detail={language === 'hi' ? '३८ वर्ष, प्रवासी कामगार' : '38 yrs, Migrant Worker'}
-              quote={language === 'hi' ? 'मुंबई आया तो बिहार की सारी सुविधाएं बंद हो गईं।' : 'Came to Mumbai, all Bihar benefits stopped.'}
-              outcome={language === 'hi' ? '🔄 राज्यों के बीच लाभ हस्तांतरित। ० दिन का अंतर।' : '🔄 Benefits carried across states. 0 days gap.'}
+              name="Ramu Prasad, Bihar"
+              detail="38 yrs, Migrant Worker"
+              quote="Came to Mumbai, all Bihar benefits stopped."
+              outcome="🔄 Benefits carried across states. 0 days gap."
             />
             <PersonaCard
-              name={language === 'hi' ? 'सरपंच मीना, राजस्थान' : 'Sarpanch Meena, Rajasthan'}
-              detail={language === 'hi' ? '४२ वर्ष, ग्राम पंचायत सचिव' : '42 yrs, Village Panchayat Secretary'}
-              quote={language === 'hi' ? 'हर घर को जांचना मुश्किल था। अब सारथी बताता है।' : 'Checking every household was hard. Now Sarathi tells us.'}
-              outcome={language === 'hi' ? '📊 ८७ परिवार ३० दिनों में जुड़े।' : '📊 87 households enrolled in 30 days.'}
+              name="Sarpanch Meena, Rajasthan"
+              detail="42 yrs, Village Panchayat Secretary"
+              quote="Checking every household was hard. Now Sarathi tells us."
+              outcome="📊 87 households enrolled in 30 days."
             />
           </div>
         </div>
@@ -359,8 +356,8 @@ function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
             <div>
               <Link to="/" className="inline-block">
-                <span className="font-display text-2xl text-saffron block">सारथी</span>
-                <span className="font-body text-xs text-gray-300">Sarathi</span>
+                <span className="font-display text-2xl text-saffron block">Sarathi</span>
+                <span className="font-body text-xs text-gray-300">AI Welfare Engine</span>
               </Link>
               <p className="font-body text-sm text-gray-400 mt-3">{T('footerTagline')}</p>
             </div>
@@ -368,10 +365,10 @@ function LandingPage() {
               <h4 className="font-body text-sm font-bold text-white mb-3">{T('footerQuickLinks')}</h4>
               <div className="space-y-2">
                 {[
-                  { to: '/chat', label: language === 'hi' ? 'नागरिक' : 'Citizens' },
-                  { to: '/panchayat', label: language === 'hi' ? 'पंचायत' : 'Panchayat' },
-                  { to: '/schemes', label: language === 'hi' ? 'योजनाएं' : 'Schemes' },
-                  { to: '/twin', label: language === 'hi' ? 'डिजिटल ट्विन' : 'Digital Twin' },
+                  { to: '/chat', label: 'Citizens' },
+                  { to: '/panchayat', label: 'Panchayat' },
+                  { to: '/schemes', label: 'Schemes' },
+                  { to: '/twin', label: 'Digital Twin' },
                 ].map((l) => (
                   <Link key={l.to} to={l.to} className="block font-body text-sm text-gray-400 hover:text-saffron transition-colors">{l.label}</Link>
                 ))}
