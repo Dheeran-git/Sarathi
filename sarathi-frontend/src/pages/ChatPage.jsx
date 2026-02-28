@@ -9,8 +9,8 @@ import { useCitizen } from '../context/CitizenContext';
 import { useLanguage } from '../context/LanguageContext';
 import useVoiceInput from '../hooks/useVoiceInput';
 
-// Slots matching the Lex bot configuration
-const LEX_SLOT_ORDER = ['age', 'monthlyIncome', 'citizenState', 'GenderType'];
+// Slots matching the actual Lex bot slot names (en_US CollectProfile intent)
+const LEX_SLOT_ORDER = ['citizenAge', 'monthlyIncome', 'citizenState', 'gender'];
 const STEP_LABELS_EN = ['Age', 'Income', 'State', 'Gender'];
 const STEP_LABELS_HI = ['आयु', 'आय', 'राज्य', 'लिंग'];
 
@@ -50,10 +50,11 @@ function ChatPage() {
 
   const updateProfileFromSlots = useCallback((slots) => {
     const updates = {};
-    if (slots.age) updates.age = parseInt(slots.age, 10) || 0;
+    // Actual Lex bot slot names: citizenAge, monthlyIncome, citizenState, gender
+    if (slots.citizenAge) updates.age = parseInt(slots.citizenAge, 10) || 0;
     if (slots.monthlyIncome) updates.income = parseInt(slots.monthlyIncome, 10) || 5000;
     if (slots.citizenState) updates.state = slots.citizenState;
-    if (slots.GenderType) updates.gender = slots.GenderType?.toLowerCase();
+    if (slots.gender) updates.gender = slots.gender?.toLowerCase();
 
     if (slots.citizenName) updates.name = slots.citizenName;
     if (slots.category) updates.category = slots.category;
@@ -166,8 +167,8 @@ function ChatPage() {
     setIsThinking(true);
 
     try {
-      // Pass Hindi locale so Lex bot responds in Hindi when toggled
-      const locale = overrideLocale || (isHi ? 'hi_IN' : 'en_US');
+      // Bot only has en_US locale built; UI stays bilingual via isHi
+      const locale = overrideLocale || 'en_US';
       const result = await sendToLex(text, sessionIdRef.current, locale);
 
       setIsThinking(false);
