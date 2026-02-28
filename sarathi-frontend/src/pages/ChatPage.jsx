@@ -6,6 +6,7 @@ import ResultsPanel from '../components/chat/ResultsPanel';
 import { schemes } from '../data/mockSchemes';
 import { checkEligibility, notifyPanchayat, sendToLex } from '../utils/api';
 import { useCitizen } from '../context/CitizenContext';
+import useVoiceInput from '../hooks/useVoiceInput';
 
 /**
  * ChatPage — Uses the REAL Amazon Lex SarathiBot for conversation.
@@ -24,7 +25,6 @@ function ChatPage() {
 
   const [messages, setMessages] = useState([]);
   const [isThinking, setIsThinking] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
   const [matchedSchemes, setMatchedSchemes] = useState([]);
   const [showResults, setShowResults] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
@@ -32,9 +32,22 @@ function ChatPage() {
 
   // Lex session ID — unique per user session
   const sessionIdRef = useRef('web-' + Date.now());
-  const hasInitRef = useRef(false); // guard against React StrictMode double-fire
 
   const addMessage = (msg) => setMessages((prev) => [...prev, msg]);
+
+  // Voice Hook
+  const handleVoiceTranscript = useCallback((text) => {
+    if (text && !conversationDone) {
+      sendMessageToLex(text);
+    }
+  }, [conversationDone, sendMessageToLex]);
+
+  const { state: voiceState, toggleListening } = useVoiceInput({
+    onTranscript: handleVoiceTranscript,
+    language: 'en-IN'
+  });
+
+  const isRecording = voiceState === 'listening';
 
   // Calculate current step from Lex slot state
   const updateStep = useCallback((slots) => {
@@ -173,15 +186,6 @@ function ChatPage() {
     sendMessageToLex(text);
   };
 
-  // Start conversation — send initial trigger to Lex
-  useEffect(() => {
-    if (hasInitRef.current) return; // prevent double-fire from StrictMode
-    hasInitRef.current = true;
-    // Use en_US locale since the trigger is in English
-    sendMessageToLex('I want to find schemes', false, 'en_US');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const stepLabels = STEP_LABELS_EN;
   const totalSteps = LEX_SLOT_ORDER.length;
 
@@ -202,7 +206,7 @@ function ChatPage() {
         <InputBar
           onSend={handleSend}
           isRecording={isRecording}
-          onToggleRecording={() => setIsRecording(!isRecording)}
+          onToggleRecording={toggleListening}
           disabled={conversationDone}
         />
       </div>

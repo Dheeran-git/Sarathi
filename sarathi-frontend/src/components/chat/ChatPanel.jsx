@@ -1,10 +1,20 @@
 import { useRef, useEffect } from 'react';
+import { Volume2 } from 'lucide-react';
 
 /**
  * ChatPanel — renders the chat message list + auto-scroll.
  */
 function ChatPanel({ messages = [], isThinking = false }) {
     const bottomRef = useRef(null);
+
+    // Text to Speech
+    const speakMessage = (text) => {
+        if (!('speechSynthesis' in window)) return;
+        window.speechSynthesis.cancel(); // Stop current speech
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-IN';
+        window.speechSynthesis.speak(utterance);
+    };
 
     // Auto-scroll to bottom when new messages arrive
     useEffect(() => {
@@ -37,14 +47,24 @@ function ChatPanel({ messages = [], isThinking = false }) {
                         )}
                         <div
                             className={`max-w-[80%] px-4 py-3 whitespace-pre-wrap leading-relaxed font-body text-sm ${msg.type === 'user'
-                                    ? 'bg-saffron text-white rounded-[14px_14px_4px_14px]'
-                                    : msg.isFinal
-                                        ? 'bg-success-light text-gray-900 rounded-[14px_14px_14px_4px] border border-success/20'
-                                        : 'bg-white text-gray-900 rounded-[14px_14px_14px_4px] border border-gray-100 shadow-sm'
+                                ? 'bg-saffron text-white rounded-[14px_14px_4px_14px]'
+                                : msg.isFinal
+                                    ? 'bg-success-light text-gray-900 rounded-[14px_14px_14px_4px] border border-success/20'
+                                    : 'bg-white text-gray-900 rounded-[14px_14px_14px_4px] border border-gray-100 shadow-sm'
                                 }`}
                         >
                             {msg.text}
                         </div>
+                        {msg.type === 'sarathi' && (
+                            <button
+                                onClick={() => speakMessage(msg.text)}
+                                className="ml-2 mt-auto mb-1 p-1.5 rounded-full text-gray-400 hover:text-saffron hover:bg-saffron/10 transition-colors"
+                                aria-label="Listen to message"
+                                title="Listen to message"
+                            >
+                                <Volume2 size={16} />
+                            </button>
+                        )}
                     </div>
                 ))}
 
