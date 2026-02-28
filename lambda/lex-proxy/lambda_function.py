@@ -31,7 +31,7 @@ def lambda_handler(event, context):
 
         # Extract bot messages
         messages = lex_response.get('messages', [])
-        bot_message = messages[0]['content'] if messages else ''
+        bot_message = messages[0].get('content', '') if messages else ''
 
         # Extract session state
         session_state = lex_response.get('sessionState', {})

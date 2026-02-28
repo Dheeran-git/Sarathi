@@ -38,7 +38,7 @@ def lambda_handler(event, context):
 
         # Build dynamic alerts from data
         alerts = []
-        widows_unserved = [c for c in eligible if c.get('isWidow') == 'true']
+        widows_unserved = [c for c in eligible if c.get('isWidow') in (True, 'true', 'yes', '1')]
         if widows_unserved:
             alerts.append({
                 'type': 'widow_pension',

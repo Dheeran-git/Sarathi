@@ -119,7 +119,7 @@ function Tooltip({ dot, mapEl }) {
     >
       <p className="font-semibold text-sm">{dot.name}</p>
       <p className="text-gray-300">
-        Ward: {dot.ward.replace(/\D/g, '')}
+        Ward: {dot.ward?.replace(/\D/g, '') || ''}
       </p>
       <p>
         Status:{' '}
