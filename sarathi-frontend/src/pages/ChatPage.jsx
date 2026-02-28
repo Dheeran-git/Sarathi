@@ -35,19 +35,7 @@ function ChatPage() {
 
   const addMessage = (msg) => setMessages((prev) => [...prev, msg]);
 
-  // Voice Hook
-  const handleVoiceTranscript = useCallback((text) => {
-    if (text && !conversationDone) {
-      sendMessageToLex(text);
-    }
-  }, [conversationDone, sendMessageToLex]);
 
-  const { state: voiceState, toggleListening } = useVoiceInput({
-    onTranscript: handleVoiceTranscript,
-    language: 'en-IN'
-  });
-
-  const isRecording = voiceState === 'listening';
 
   // Calculate current step from Lex slot state
   const updateStep = useCallback((slots) => {
@@ -126,6 +114,20 @@ function ChatPage() {
       });
     }
   }, [updateProfileFromSlots, updateStep]);
+
+  // Voice Hook
+  const handleVoiceTranscript = useCallback((text) => {
+    if (text && !conversationDone) {
+      sendMessageToLex(text);
+    }
+  }, [conversationDone, sendMessageToLex]);
+
+  const { state: voiceState, toggleListening } = useVoiceInput({
+    onTranscript: handleVoiceTranscript,
+    language: 'en-IN'
+  });
+
+  const isRecording = voiceState === 'listening';
 
   // Run eligibility check after Lex collects all 8 fields
   const runEligibilityCheck = useCallback(async () => {
