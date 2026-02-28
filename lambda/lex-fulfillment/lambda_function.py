@@ -18,7 +18,7 @@ import uuid
 lambda_client = boto3.client('lambda')
 dynamodb = boto3.resource('dynamodb')
 
-ELIGIBILITY_LAMBDA = os.environ.get('ELIGIBILITY_LAMBDA', 'eligibility-engine')
+ELIGIBILITY_LAMBDA = os.environ.get('ELIGIBILITY_LAMBDA', 'sarathi-eligibility-engine')
 CITIZENS_TABLE = os.environ.get('CITIZENS_TABLE', 'SarathiCitizens')
 
 
@@ -50,7 +50,10 @@ def lambda_handler(event, context):
             Payload=json.dumps(citizen_profile),
         )
         elig_result = json.loads(elig_response['Payload'].read())
-        body = elig_result if isinstance(elig_result, dict) else json.loads(elig_result.get('body', '{}'))
+        if isinstance(elig_result.get('body'), str):
+            body = json.loads(elig_result['body'])
+        else:
+            body = elig_result.get('body', elig_result)
 
         matched_schemes = body.get('matchedSchemes', [])
         total_benefit = body.get('totalAnnualBenefit', 0)
@@ -79,7 +82,7 @@ def lambda_handler(event, context):
         # ── Fallback: return a helpful response even without the engine ──
         message = (
             f"🙏 {citizen_profile['name']}, your details have been successfully recorded.\n"
-            f"📋 Age: {citizen_profile['age']}, Income: ₹{citizen_profile['income']}\n"
+            f"📋 Age: {citizen_profile['age']}, Income: ₹{citizen_profile['monthlyIncome']}\n"
             f"We will soon share your scheme eligibility with your Panchayat."
         )
 
@@ -112,7 +115,7 @@ def extract_profile(slots):
         'name': get_slot(slots, 'citizenName') or 'Unknown',
         'age': safe_int(get_slot(slots, 'citizenAge')),
         'state': get_slot(slots, 'citizenState') or '',
-        'income': safe_int(get_slot(slots, 'monthlyIncome')),
+        'monthlyIncome': safe_int(get_slot(slots, 'monthlyIncome')),
         'category': get_slot(slots, 'category') or 'General',
         'gender': get_slot(slots, 'gender') or 'any',
         'isWidow': (get_slot(slots, 'isWidow') or '').lower() in ('yes', 'हाँ', 'haan'),
@@ -147,11 +150,12 @@ def save_citizen(profile, matched_schemes):
         'name': profile['name'],
         'age': profile['age'],
         'state': profile['state'],
-        'monthlyIncome': profile['income'],
+        'monthlyIncome': profile['monthlyIncome'],
         'category': profile['category'],
         'gender': profile['gender'],
         'isWidow': profile['isWidow'],
         'occupation': profile['occupation'],
+        'panchayatId': 'rampur-barabanki-up',
         'matchedSchemes': [s.get('schemeId', s.get('id', '')) for s in matched_schemes],
         'status': 'eligible' if matched_schemes else 'none',
     }

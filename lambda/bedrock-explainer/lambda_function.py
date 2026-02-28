@@ -3,7 +3,7 @@ Sarathi — Bedrock Explainer Lambda
 Member 2 · AWS AI Services
 
 Takes scheme data → generates a 2-sentence Hindi explanation using
-Claude Haiku on Amazon Bedrock → converts to audio using Amazon Polly
+Amazon Nova Pro on Amazon Bedrock → converts to audio using Amazon Polly
 → stores audio in S3 → returns text + pre-signed audio URL.
 """
 
@@ -25,7 +25,7 @@ CACHE_TABLE = os.environ.get('CACHE_TABLE', 'SarathiExplanationCache')
 USE_CACHE = os.environ.get('USE_CACHE', 'true').lower() == 'true'
 
 # ── Bedrock model ID ──────────────────────────────────────────────────
-MODEL_ID = os.environ.get('BEDROCK_MODEL_ID', 'anthropic.claude-3-haiku-20240307-v1:0')
+MODEL_ID = os.environ.get('BEDROCK_MODEL_ID', 'us.amazon.nova-lite-v1:0')
 
 
 def lambda_handler(event, context):
@@ -71,7 +71,7 @@ def lambda_handler(event, context):
 
 
 def generate_explanation(scheme):
-    """Call Claude Haiku to generate a 2-sentence Hindi explanation."""
+    """Call Amazon Nova Lite to generate a 2-sentence Hindi explanation."""
     name = scheme.get('nameHindi', scheme.get('nameEnglish', 'योजना'))
     benefit = scheme.get('annualBenefit', 0)
     description = scheme.get('benefitDescription', scheme.get('benefitDescriptionEn', ''))
@@ -96,19 +96,12 @@ Eligibility: {json.dumps(eligibility, ensure_ascii=False)}
 Write ONLY the 2-sentence explanation in Hindi. Nothing else."""
 
     try:
-        response = bedrock.invoke_model(
+        response = bedrock.converse(
             modelId=MODEL_ID,
-            contentType='application/json',
-            accept='application/json',
-            body=json.dumps({
-                'anthropic_version': 'bedrock-2023-05-31',
-                'max_tokens': 250,
-                'temperature': 0.3,
-                'messages': [{'role': 'user', 'content': prompt}],
-            }),
+            messages=[{'role': 'user', 'content': [{'text': prompt}]}],
+            inferenceConfig={'maxTokens': 250, 'temperature': 0.3},
         )
-        result = json.loads(response['body'].read())
-        explanation = result['content'][0]['text'].strip()
+        explanation = response['output']['message']['content'][0]['text'].strip()
         print(f"[BedrockExplainer] Generated: {explanation}")
         return explanation
 
