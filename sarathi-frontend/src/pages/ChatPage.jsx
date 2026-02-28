@@ -10,14 +10,11 @@ import useVoiceInput from '../hooks/useVoiceInput';
 
 /**
  * ChatPage — Uses the REAL Amazon Lex SarathiBot for conversation.
- * Lex bot has 8 slots: citizenName, citizenAge, citizenState, monthlyIncome,
- * category, gender, isWidow, occupation.
- * Falls back to local flow if Lex API is unavailable.
+ * Lex bot has 8 slots. 
  */
 
 // Slots matching the en_US Lex bot configuration
 const LEX_SLOT_ORDER = ['age', 'monthlyIncome', 'citizenState', 'GenderType'];
-
 const STEP_LABELS_EN = ['Age', 'Income', 'State', 'Gender'];
 
 function ChatPage() {
@@ -28,16 +25,21 @@ function ChatPage() {
   const [matchedSchemes, setMatchedSchemes] = useState([]);
   const [showResults, setShowResults] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
-  const [conversationDone, setConversationDone] = useState(false);
 
-  // Lex session ID — unique per user session
+  // Sync state and ref so callbacks don't go stale
+  const [conversationDone, setConversationDoneState] = useState(false);
+  const conversationDoneRef = useRef(false);
+  const setConversationDone = (val) => {
+    conversationDoneRef.current = val;
+    setConversationDoneState(val);
+  };
+
   const sessionIdRef = useRef('web-' + Date.now());
+  const isLiveModeRef = useRef(false);
+  const sendMessageRef = useRef(null);
 
   const addMessage = (msg) => setMessages((prev) => [...prev, msg]);
 
-
-
-  // Calculate current step from Lex slot state
   const updateStep = useCallback((slots) => {
     let step = 0;
     for (const slotName of LEX_SLOT_ORDER) {
@@ -47,89 +49,71 @@ function ChatPage() {
     setCurrentStep(step);
   }, []);
 
-  // Map Lex slots to citizen profile
   const updateProfileFromSlots = useCallback((slots) => {
     const updates = {};
     if (slots.age) updates.age = parseInt(slots.age, 10) || 0;
     if (slots.monthlyIncome) updates.income = parseInt(slots.monthlyIncome, 10) || 5000;
     if (slots.citizenState) updates.state = slots.citizenState;
     if (slots.GenderType) updates.gender = slots.GenderType?.toLowerCase();
-    // Legacy slot names (if added later)
+
+    // Legacy names
     if (slots.citizenName) updates.name = slots.citizenName;
     if (slots.category) updates.category = slots.category;
     if (slots.isWidow) updates.isWidow = ['yes'].includes(slots.isWidow?.toLowerCase());
     if (slots.occupation) updates.occupation = slots.occupation;
+
     updateProfile(updates);
   }, [updateProfile]);
 
-  // Send message to Lex bot
-  const sendMessageToLex = useCallback(async (text, showUserMsg = true, overrideLocale = null) => {
-    // Add user message (skip for auto-trigger)
-    if (showUserMsg) {
-      addMessage({ type: 'user', text, timestamp: 'JUST_NOW' });
-    }
-    setIsThinking(true);
-
-    try {
-      // Always use en_US
-      const locale = overrideLocale || 'en_US';
-      const result = await sendToLex(text, sessionIdRef.current, locale);
-
-      setIsThinking(false);
-
-      // Update profile with slots collected so far
-      if (result.slots) {
-        updateProfileFromSlots(result.slots);
-        updateStep(result.slots);
-      }
-
-      // Check if conversation is complete (only for CollectProfile intent, not FallbackIntent)
-      const isFullfilled = result.intentState === 'ReadyForFulfillment' && result.intentName === 'CollectProfile';
-      const isClosed = result.dialogState === 'Close' && result.intentName === 'CollectProfile' && result.intentState !== 'Failed';
-
-      if (isFullfilled || isClosed) {
-        // Lex finished collecting all slots — run eligibility
-        addMessage({
-          type: 'sarathi',
-          text: result.message || 'Great! Finding your schemes...',
-          timestamp: 'JUST_NOW',
-        });
-        setCurrentStep(LEX_SLOT_ORDER.length);
-        runEligibilityCheck();
-      } else {
-        // Lex is asking for the next slot
-        addMessage({
-          type: 'sarathi',
-          text: result.message,
-          timestamp: 'JUST_NOW',
-        });
-      }
-    } catch (err) {
-      console.warn('[ChatPage] Lex API failed:', err);
-      setIsThinking(false);
-      addMessage({
-        type: 'sarathi',
-        text: 'Sorry, connection issue. Please try again.',
-        timestamp: 'JUST_NOW',
-      });
-    }
-  }, [updateProfileFromSlots, updateStep]);
-
-  // Voice Hook
+  // Handle transcript from the voice hook
   const handleVoiceTranscript = useCallback((text) => {
-    if (text && !conversationDone) {
-      sendMessageToLex(text);
+    if (text && !conversationDoneRef.current && sendMessageRef.current) {
+      sendMessageRef.current(text);
     }
-  }, [conversationDone, sendMessageToLex]);
+  }, []);
 
-  const { state: voiceState, transcript: liveTranscript, toggleListening } = useVoiceInput({
+  const { state: voiceState, transcript: liveTranscript, startListening, toggleListening } = useVoiceInput({
     onTranscript: handleVoiceTranscript,
     language: 'en-IN'
   });
 
   const isRecording = voiceState === 'listening';
 
-  // Run eligibility check after Lex collects all 8 fields
+  // Explicit tracking for starting/stopping Live Mode
+  const handleToggleRecording = () => {
+    if (voiceState === 'idle') {
+      isLiveModeRef.current = true;
+    } else {
+      isLiveModeRef.current = false;
+    }
+    toggleListening();
+  };
+
+  // Speaks the bot message out loud and resumes the microphone
+  const speakAndResume = useCallback((text, shouldResume = true) => {
+    if (!('speechSynthesis' in window)) return;
+
+    window.speechSynthesis.cancel();
+    // Strip emojis out of text to prevent weird TTS reading
+    const cleanText = text.replace(/[\u{1F600}-\u{1F6FF}\u2728]/gu, '');
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = 'en-IN';
+
+    const onComplete = () => {
+      // If we are in live mode, automatically turn mic back on!
+      if (shouldResume && isLiveModeRef.current && !conversationDoneRef.current) {
+        startListening();
+      }
+    };
+
+    utterance.onend = onComplete;
+    utterance.onerror = onComplete;
+
+    window.speechSynthesis.speak(utterance);
+  }, [startListening]);
+
+  // Run eligibility check after Lex collects all fields
   const runEligibilityCheck = useCallback(async () => {
     setIsThinking(true);
     setConversationDone(true);
@@ -143,48 +127,113 @@ function ChatPage() {
       category: citizenProfile.category || 'General',
     };
 
-    try {
-      const result = await checkEligibility(apiProfile);
-      const matched = result.matchedSchemes || schemes.slice(0, 6);
-      setMatchedSchemes(matched);
-      setEligibleSchemes(matched);
+    const flushResults = (matchedSchemesParam, totalBenefit) => {
+      setMatchedSchemes(matchedSchemesParam);
+      setEligibleSchemes(matchedSchemesParam);
       setIsThinking(false);
 
+      const msg = `Great! I found ${matchedSchemesParam.length} schemes for you. 🎉\n\nTotal estimated annual benefit: ₹${totalBenefit.toLocaleString('en-IN')}`;
       addMessage({
         type: 'sarathi',
         isFinal: true,
-        text: `Great! I found ${matched.length} schemes for you. 🎉\n\nTotal estimated annual benefit: ₹${(result.totalAnnualBenefit || matched.reduce((s, sc) => s + (sc.annualBenefit || 0), 0)).toLocaleString('en-IN')}`,
+        text: msg,
         timestamp: 'JUST_NOW',
       });
 
-      // Notify panchayat in background
+      if (isLiveModeRef.current) {
+        speakAndResume(msg, false); // Audio loop completes here, no resume
+      }
+      setTimeout(() => setShowResults(true), 500);
+    };
+
+    try {
+      const result = await checkEligibility(apiProfile);
+      const matched = result.matchedSchemes || schemes.slice(0, 6);
+      const totalBenefit = result.totalAnnualBenefit || matched.reduce((s, sc) => s + (sc.annualBenefit || 0), 0);
+
+      flushResults(matched, totalBenefit);
+
       notifyPanchayat({
         citizenName: citizenProfile.name || 'Unknown',
         panchayatId: 'rampur-barabanki-up',
         matchedSchemes: matched,
-        totalAnnualBenefit: result.totalAnnualBenefit || matched.reduce((s, sc) => s + (sc.annualBenefit || 0), 0),
+        totalAnnualBenefit: totalBenefit,
       }).catch(() => { });
 
-      setTimeout(() => setShowResults(true), 500);
     } catch {
       const matched = schemes.slice(0, 6);
-      setMatchedSchemes(matched);
-      setEligibleSchemes(matched);
+      const totalBenefit = matched.reduce((s, sc) => s + sc.annualBenefit, 0);
+      flushResults(matched, totalBenefit);
+    }
+  }, [citizenProfile, setEligibleSchemes, speakAndResume]);
+
+  const sendMessageToLex = useCallback(async (text, showUserMsg = true, overrideLocale = null) => {
+    if (showUserMsg) {
+      addMessage({ type: 'user', text, timestamp: 'JUST_NOW' });
+    }
+    setIsThinking(true);
+
+    try {
+      const locale = overrideLocale || 'en_US';
+      const result = await sendToLex(text, sessionIdRef.current, locale);
+
       setIsThinking(false);
 
+      if (result.slots) {
+        updateProfileFromSlots(result.slots);
+        updateStep(result.slots);
+      }
+
+      const isFullfilled = result.intentState === 'ReadyForFulfillment' && result.intentName === 'CollectProfile';
+      const isClosed = result.dialogState === 'Close' && result.intentName === 'CollectProfile' && result.intentState !== 'Failed';
+
+      if (isFullfilled || isClosed) {
+        const msg = result.message || 'Great! Finding your schemes...';
+        addMessage({
+          type: 'sarathi',
+          text: msg,
+          timestamp: 'JUST_NOW',
+        });
+        setCurrentStep(LEX_SLOT_ORDER.length);
+
+        if (isLiveModeRef.current) {
+          speakAndResume(msg, false); // Let it read before running eligibility checks
+        }
+
+        runEligibilityCheck();
+      } else {
+        addMessage({
+          type: 'sarathi',
+          text: result.message,
+          timestamp: 'JUST_NOW',
+        });
+
+        if (isLiveModeRef.current) {
+          speakAndResume(result.message, true); // True: Resume Mic!
+        }
+      }
+    } catch (err) {
+      console.warn('[ChatPage] Lex API failed:', err);
+      setIsThinking(false);
+      const msg = 'Sorry, connection issue. Please try again.';
       addMessage({
         type: 'sarathi',
-        isFinal: true,
-        text: `Great! I found ${matched.length} schemes for you. 🎉\n\nTotal estimated annual benefit: ₹${matched.reduce((s, sc) => s + sc.annualBenefit, 0).toLocaleString('en-IN')}`,
+        text: msg,
         timestamp: 'JUST_NOW',
       });
-
-      setTimeout(() => setShowResults(true), 500);
+      if (isLiveModeRef.current) speakAndResume(msg, false);
     }
-  }, [citizenProfile, setEligibleSchemes]);
+  }, [updateProfileFromSlots, updateStep, runEligibilityCheck, speakAndResume]);
 
+  // Update ref so handleVoiceTranscript always has latest function
+  useEffect(() => {
+    sendMessageRef.current = sendMessageToLex;
+  }, [sendMessageToLex]);
+
+  // Override live mode if user manually types
   const handleSend = (text) => {
-    if (conversationDone) return;
+    if (conversationDoneRef.current) return;
+    isLiveModeRef.current = false;
     sendMessageToLex(text);
   };
 
@@ -208,7 +257,7 @@ function ChatPage() {
         <InputBar
           onSend={handleSend}
           isRecording={isRecording}
-          onToggleRecording={toggleListening}
+          onToggleRecording={handleToggleRecording}
           disabled={conversationDone}
           liveTranscript={liveTranscript}
         />

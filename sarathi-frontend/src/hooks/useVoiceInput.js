@@ -11,6 +11,7 @@ export function useVoiceInput({ onTranscript, language = 'en-IN' } = {}) {
   const [transcript, setTranscript] = useState('');
   const recognitionRef = useRef(null);
   const timeoutRef = useRef(null);
+  const silenceTimerRef = useRef(null);
   const fullTranscriptRef = useRef('');
 
   // Check for Web Speech API support
@@ -65,6 +66,15 @@ export function useVoiceInput({ onTranscript, language = 'en-IN' } = {}) {
         if (displayText) {
           recognitionRef.current.latestInterim = currentInterim;
         }
+
+        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+
+        // 2-second pause automatically hits submit for a faster rhythm
+        silenceTimerRef.current = setTimeout(() => {
+          if (recognitionRef.current) {
+            recognitionRef.current.stop();
+          }
+        }, 2000);
       };
 
       recognition.onerror = (event) => {
@@ -125,6 +135,9 @@ export function useVoiceInput({ onTranscript, language = 'en-IN' } = {}) {
 
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
+    }
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
     }
   }, [state, onTranscript]);
 
