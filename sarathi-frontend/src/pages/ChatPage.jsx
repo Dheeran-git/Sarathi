@@ -122,7 +122,7 @@ function ChatPage() {
     }
   }, [conversationDone, sendMessageToLex]);
 
-  const { state: voiceState, toggleListening } = useVoiceInput({
+  const { state: voiceState, transcript: liveTranscript, toggleListening } = useVoiceInput({
     onTranscript: handleVoiceTranscript,
     language: 'en-IN'
   });
@@ -210,6 +210,7 @@ function ChatPage() {
           isRecording={isRecording}
           onToggleRecording={toggleListening}
           disabled={conversationDone}
+          liveTranscript={liveTranscript}
         />
       </div>
 

@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { Send, Mic, MicOff } from 'lucide-react';
 
-function InputBar({ onSend, isRecording = false, onToggleRecording, disabled = false }) {
+function InputBar({ onSend, isRecording = false, onToggleRecording, disabled = false, liveTranscript = "" }) {
     const [text, setText] = useState('');
     const inputRef = useRef(null);
 
@@ -26,9 +26,9 @@ function InputBar({ onSend, isRecording = false, onToggleRecording, disabled = f
             <form onSubmit={handleSubmit} className="flex items-center gap-2 max-w-2xl mx-auto">
                 <input
                     ref={inputRef}
-                    value={text}
+                    value={isRecording && liveTranscript ? liveTranscript : text}
                     onChange={(e) => setText(e.target.value)}
-                    placeholder="Type here or press mic..."
+                    placeholder="Type here or press mic to speak..."
                     disabled={disabled}
                     className="flex-1 h-11 px-4 rounded-xl border border-gray-200 bg-off-white font-body text-sm focus:outline-none focus:border-saffron focus:ring-1 focus:ring-saffron/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 />
@@ -39,8 +39,8 @@ function InputBar({ onSend, isRecording = false, onToggleRecording, disabled = f
                     onClick={onToggleRecording}
                     disabled={disabled}
                     className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${isRecording
-                            ? 'bg-red-500 text-white'
-                            : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                        ? 'bg-red-500 text-white'
+                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                         } disabled:opacity-50 disabled:cursor-not-allowed`}
                     aria-label={isRecording ? 'Stop recording' : 'Start recording'}
                 >

@@ -11,6 +11,7 @@ export function useVoiceInput({ onTranscript, language = 'en-IN' } = {}) {
   const [transcript, setTranscript] = useState('');
   const recognitionRef = useRef(null);
   const timeoutRef = useRef(null);
+  const silenceTimerRef = useRef(null);
 
   // Check for Web Speech API support
   const SpeechRecognition =
@@ -31,8 +32,8 @@ export function useVoiceInput({ onTranscript, language = 'en-IN' } = {}) {
       recognitionRef.current = recognition;
 
       recognition.lang = language; // 'en-IN' for English
-      recognition.continuous = false;
-      recognition.interimResults = false;
+      recognition.continuous = true;
+      recognition.interimResults = true;
       recognition.maxAlternatives = 1;
 
       recognition.onstart = () => {
@@ -40,16 +41,29 @@ export function useVoiceInput({ onTranscript, language = 'en-IN' } = {}) {
       };
 
       recognition.onresult = (event) => {
-        setState('processing');
-        const result = event.results[0][0];
-        const text = result.transcript;
-        const confidence = result.confidence;
+        let finalStr = '';
+        let interimStr = '';
 
-        console.log(`[VoiceInput] Transcript: "${text}" (confidence: ${confidence.toFixed(2)})`);
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalStr += event.results[i][0].transcript;
+          } else {
+            interimStr += event.results[i][0].transcript;
+          }
+        }
 
-        setTranscript(text);
-        setState('idle');
-        onTranscript?.(text, confidence);
+        const currentText = finalStr || interimStr;
+        setTranscript(currentText);
+
+        // Reset the silence timer on every new word detected
+        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+
+        silenceTimerRef.current = setTimeout(() => {
+          // Once user pauses for 1.5s, finalize 
+          if (recognitionRef.current) {
+            recognitionRef.current.stop();
+          }
+        }, 1500);
       };
 
       recognition.onerror = (event) => {
@@ -62,8 +76,15 @@ export function useVoiceInput({ onTranscript, language = 'en-IN' } = {}) {
       };
 
       recognition.onend = () => {
-        if (state === 'listening') {
+        if (state === 'listening' || state === 'processing') {
           setState('idle');
+          // Flush the current transcript out to the parent when mic shuts off
+          setTranscript((current) => {
+            if (current.trim()) {
+              onTranscript?.(current.trim(), 1.0);
+            }
+            return ''; // Clear it out for next time
+          });
         }
       };
 
@@ -82,9 +103,12 @@ export function useVoiceInput({ onTranscript, language = 'en-IN' } = {}) {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+    }
     if (state === 'listening') {
       setState('processing');
-      setTimeout(() => setState('idle'), 500);
+      // The onend handler will fire and submit the text
     }
   }, [state]);
 
