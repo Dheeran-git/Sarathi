@@ -1,46 +1,25 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Filter, Loader2 } from 'lucide-react';
+import { Search } from 'lucide-react';
 import SchemeCard from '../components/ui/SchemeCard';
 import EmptyState from '../components/ui/EmptyState';
-import { fetchAllSchemes } from '../utils/api';
-import { useLanguage } from '../context/LanguageContext';
+import { schemes } from '../data/mockSchemes';
 import { t } from '../utils/translations';
-import { localizeNum } from '../utils/formatters';
 
 const categories = [
-  { key: 'all', label: 'सभी', labelEn: 'All', emoji: '📋', color: '#0F2240' },
-  { key: 'agriculture', label: 'कृषि', labelEn: 'Agriculture', emoji: '🌾', color: '#4CAF50' },
-  { key: 'housing', label: 'आवास', labelEn: 'Housing', emoji: '🏠', color: '#FF9800' },
-  { key: 'health', label: 'स्वास्थ्य', labelEn: 'Health', emoji: '❤️', color: '#F44336' },
-  { key: 'education', label: 'शिक्षा', labelEn: 'Education', emoji: '📚', color: '#2196F3' },
-  { key: 'women', label: 'महिला एवं बाल', labelEn: 'Women & Child', emoji: '👩', color: '#E91E63' },
-  { key: 'employment', label: 'रोजगार', labelEn: 'Employment', emoji: '💼', color: '#9C27B0' },
+  { key: 'all', label: 'All', emoji: '📋', color: '#0F2240' },
+  { key: 'agriculture', label: 'Agriculture', emoji: '🌾', color: '#4CAF50' },
+  { key: 'housing', label: 'Housing', emoji: '🏠', color: '#FF9800' },
+  { key: 'health', label: 'Health', emoji: '❤️', color: '#F44336' },
+  { key: 'education', label: 'Education', emoji: '📚', color: '#2196F3' },
+  { key: 'women', label: 'Women & Child', emoji: '👩', color: '#E91E63' },
+  { key: 'employment', label: 'Employment', emoji: '💼', color: '#9C27B0' },
 ];
 
 function SchemesPage() {
-  const { language } = useLanguage();
-  const T = (key) => t(key, language);
-  const isHi = language === 'hi';
+  const T = (key) => t(key);
   const [category, setCategory] = useState('all');
   const [search, setSearch] = useState('');
-  const [schemes, setSchemes] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  // Fetch all schemes from live API on mount
-  useEffect(() => {
-    setLoading(true);
-    setError(null);
-    fetchAllSchemes()
-      .then((data) => {
-        setSchemes(data);
-      })
-      .catch((err) => {
-        setError(isHi ? 'सर्वर से कनेक्ट नहीं हो पा रहा' : 'Could not connect to server');
-      })
-      .finally(() => setLoading(false));
-  }, []);
 
   const filtered = useMemo(() => {
     let results = schemes;
@@ -51,13 +30,12 @@ function SchemesPage() {
       const q = search.toLowerCase();
       results = results.filter(
         (s) =>
-          (s.nameHindi || '').toLowerCase().includes(q) ||
-          (s.nameEnglish || '').toLowerCase().includes(q) ||
-          (s.ministry || '').toLowerCase().includes(q)
+          s.nameEnglish.toLowerCase().includes(q) ||
+          s.ministry.toLowerCase().includes(q)
       );
     }
     return results;
-  }, [category, search, schemes]);
+  }, [category, search]);
 
   return (
     <div className="min-h-screen bg-off-white">
@@ -72,9 +50,7 @@ function SchemesPage() {
             {T('schemesTitle')}
           </motion.h1>
           <p className="font-body text-sm text-gray-300 mt-1">
-            {isHi
-              ? `सरकारी कल्याणकारी योजनाएं • कुल ${localizeNum(schemes.length, language)} योजनाएं`
-              : `Government Welfare Schemes • ${schemes.length} Total`}
+            Government Welfare Schemes • {schemes.length} Total
           </p>
         </div>
       </div>
@@ -87,7 +63,7 @@ function SchemesPage() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder={isHi ? 'योजना का नाम या मंत्रालय खोजें...' : 'Search scheme name or ministry...'}
+              placeholder="Search scheme name or ministry..."
               className="w-full h-11 pl-10 pr-4 rounded-xl border border-gray-200 bg-white font-body text-sm focus:outline-none focus:border-saffron focus:ring-1 focus:ring-saffron/30 transition-colors"
             />
           </div>
@@ -106,40 +82,17 @@ function SchemesPage() {
               style={category === cat.key ? { backgroundColor: cat.color } : {}}
             >
               <span className="text-sm">{cat.emoji}</span>
-              {isHi ? cat.label : cat.labelEn}
+              {cat.label}
             </button>
           ))}
         </div>
 
-        {/* Loading state */}
-        {loading && (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="animate-spin text-saffron mr-3" size={24} />
-            <span className="font-body text-sm text-gray-500">
-              {isHi ? 'योजनाएं लोड हो रही हैं...' : 'Loading schemes...'}
-            </span>
-          </div>
-        )}
-
-        {/* Error state */}
-        {error && !loading && (
-          <div className="text-center py-16">
-            <p className="text-red-500 font-body text-sm mb-2">🔴 {error}</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="text-saffron font-body text-sm hover:underline"
-            >
-              {isHi ? 'पुनः प्रयास करें' : 'Try Again'}
-            </button>
-          </div>
-        )}
-
         {/* Results */}
-        {!loading && !error && filtered.length > 0 && (
+        {filtered.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filtered.map((scheme, i) => (
               <motion.div
-                key={scheme.schemeId || scheme.id || i}
+                key={scheme.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05, duration: 0.3 }}
@@ -148,13 +101,11 @@ function SchemesPage() {
               </motion.div>
             ))}
           </div>
-        )}
-
-        {!loading && !error && filtered.length === 0 && schemes.length > 0 && (
+        ) : (
           <EmptyState
-            title={isHi ? "कोई योजना नहीं मिली" : "No Schemes Found"}
-            subtitle={isHi ? "कृपया अन्य श्रेणी या खोज शब्द प्रयोग करें।" : "Please try a different category or search term."}
-            ctaLabel={isHi ? "सभी योजनाएं" : "All Schemes"}
+            title="No Schemes Found"
+            subtitle="Please try a different category or search term."
+            ctaLabel="All Schemes"
             onCtaClick={() => { setCategory('all'); setSearch(''); }}
           />
         )}

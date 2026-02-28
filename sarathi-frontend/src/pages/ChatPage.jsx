@@ -1,233 +1,219 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import ProgressSteps from '../components/chat/ProgressSteps';
 import ChatPanel from '../components/chat/ChatPanel';
 import InputBar from '../components/chat/InputBar';
 import ResultsPanel from '../components/chat/ResultsPanel';
-import { checkEligibility, saveCitizen } from '../utils/api';
-import { stateChips, categoryChips } from '../data/citizenConfig';
+import { schemes } from '../data/mockSchemes';
+import { checkEligibility, notifyPanchayat, sendToLex } from '../utils/api';
 import { useCitizen } from '../context/CitizenContext';
 import { useLanguage } from '../context/LanguageContext';
-import { t } from '../utils/translations';
-import { useVoiceInput } from '../hooks/useVoiceInput';
+import useVoiceInput from '../hooks/useVoiceInput';
 
-/**
- * ChatPage — full citizen chat interface with simulated conversation.
- */
-const FLOW_QUESTIONS = {
-  hi: [
-    { key: 'name', question: 'नमस्ते! मैं सारथी हूँ। आपकी सहायता करूंगा।\n\nसबसे पहले, आपका शुभ नाम क्या है?', options: null },
-    { key: 'age', question: 'धन्यवाद! अब बताइए — आपकी उम्र कितनी है?', options: null },
-    { key: 'state', question: 'अच्छा! आप किस राज्य में रहते हैं?', options: stateChips },
-    { key: 'income', question: 'आपकी मासिक आय लगभग कितनी है? (₹ में)', options: ['₹0-₹3,000', '₹3,000-₹8,000', '₹8,000-₹15,000', '₹15,000+'] },
-    { key: 'category', question: 'आपका सामाजिक वर्ग क्या है?', options: categoryChips },
-    { key: 'family', question: 'परिवार में कौन-कौन है? (उदाहरण: पत्नी, 2 बच्चे)', options: ['अकेला/अकेली', 'पति-पत्नी', 'पति-पत्नी + बच्चे', 'विधवा + बच्चे'] },
-  ],
-  en: [
-    { key: 'name', question: 'Hello! I am Sarathi. I will help you.\n\nFirst, what is your name?', options: null },
-    { key: 'age', question: 'Thank you! Now tell me — how old are you?', options: null },
-    { key: 'state', question: 'Great! Which state do you live in?', options: stateChips },
-    { key: 'income', question: 'What is your approximate monthly income? (in ₹)', options: ['₹0-₹3,000', '₹3,000-₹8,000', '₹8,000-₹15,000', '₹15,000+'] },
-    { key: 'category', question: 'What is your social category?', options: categoryChips },
-    { key: 'family', question: 'Who is in your family? (e.g., spouse, 2 children)', options: ['Single', 'Married', 'Married + Children', 'Widow + Children'] },
-  ],
-};
+// Slots matching the Lex bot configuration
+const LEX_SLOT_ORDER = ['age', 'monthlyIncome', 'citizenState', 'GenderType'];
+const STEP_LABELS_EN = ['Age', 'Income', 'State', 'Gender'];
+const STEP_LABELS_HI = ['आयु', 'आय', 'राज्य', 'लिंग'];
 
 function ChatPage() {
-  // Bug fix: use real context hooks instead of stub variables
   const { citizenProfile, updateProfile, setEligibleSchemes } = useCitizen();
   const { language } = useLanguage();
-  const T = (key) => t(key, language);
-  // Bug fix: derive questions from actual language, not hardcoded 'hi'
-  const questions = FLOW_QUESTIONS[language] || FLOW_QUESTIONS.en;
+  const isHi = language === 'hi';
 
-  const [step, setStep] = useState(0);
   const [messages, setMessages] = useState([]);
   const [isThinking, setIsThinking] = useState(false);
   const [matchedSchemes, setMatchedSchemes] = useState([]);
   const [showResults, setShowResults] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
+
+  // Sync state and ref so callbacks don't go stale
+  const [conversationDone, setConversationDoneState] = useState(false);
+  const conversationDoneRef = useRef(false);
+  const setConversationDone = (val) => {
+    conversationDoneRef.current = val;
+    setConversationDoneState(val);
+  };
+
+  const sessionIdRef = useRef('web-' + Date.now());
+  const isLiveModeRef = useRef(false);
+  const sendMessageRef = useRef(null);
 
   const addMessage = (msg) => setMessages((prev) => [...prev, msg]);
 
-  // Bug fix: wire voice input hook so mic button actually works
-  const { state: voiceState, toggleListening } = useVoiceInput({
-    onTranscript: (text) => {
-      if (text && text.trim()) {
-        handleSend(text.trim());
-      }
-    },
-    language: language === 'hi' ? 'hi-IN' : 'en-IN',
-  });
-  const isRecording = voiceState === 'listening' || voiceState === 'processing';
-
-  // Re-translate messages when language changes
-  useEffect(() => {
-    setMessages((prev) =>
-      prev.map((msg) => {
-        if (msg.stepKey) {
-          const q = questions.find((q) => q.key === msg.stepKey);
-          if (q) {
-            return {
-              ...msg,
-              text: msg.options ? undefined : q.question,
-              question: msg.options ? q.question : undefined,
-              options: msg.options ? q.options : undefined,
-            };
-          }
-        }
-        if (msg.isFinal) {
-          return {
-            ...msg,
-            text: language === 'hi'
-              ? `बहुत बढ़िया! मैंने आपके लिए ${matchedSchemes.length} योजनाएं ढूंढी हैं। 🎉\n\nकुल अनुमानित वार्षिक लाभ: ₹${matchedSchemes.reduce((s, sc) => s + (sc.annualBenefit || 0), 0).toLocaleString('en-IN')}`
-              : `Great! I found ${matchedSchemes.length} schemes for you. 🎉\n\nTotal estimated annual benefit: ₹${matchedSchemes.reduce((s, sc) => s + (sc.annualBenefit || 0), 0).toLocaleString('en-IN')}`,
-          };
-        }
-        return msg;
-      })
-    );
-  }, [language, questions, matchedSchemes]);
-
-  const processAnswer = useCallback(
-    (answer) => {
-      // 1. Capture current flow state directly
-      const currentStep = step;
-      const currentQuestion = questions[currentStep];
-      if (!currentQuestion) return;
-
-      // 2. Compute Context Updates
-      const updates = {};
-      switch (currentQuestion.key) {
-        case 'name': updates.name = answer; break;
-        case 'age': updates.age = parseInt(answer, 10) || 0; break;
-        case 'state': updates.state = answer; break;
-        case 'income': {
-          const incomeMap = { '₹0-₹3,000': 2000, '₹3,000-₹8,000': 5000, '₹8,000-₹15,000': 12000, '₹15,000+': 20000 };
-          updates.income = incomeMap[answer] || parseInt(answer.replace(/[^\d]/g, ''), 10) || 5000;
-          break;
-        }
-        case 'category': updates.category = answer; break;
-        case 'family': {
-          // Bug fix: check both Hindi and English family option strings
-          const isAlone = answer.includes('अकेला') || answer === 'Single';
-          const hasChildren = answer.includes('बच्चे') || answer.includes('Children');
-          const isWidow = answer.includes('विधवा') || answer.includes('Widow');
-          updates.familySize = isAlone ? 1 : hasChildren ? 4 : 2;
-          if (isWidow) { updates.isWidow = true; updates.gender = 'female'; }
-          break;
-        }
-        default: break;
-      }
-
-      // 3. Fire all side-effects *outside* of any React state updater callback
-      updateProfile(updates);
-      addMessage({ type: 'user', text: answer, timestamp: 'JUST_NOW' });
-      setIsThinking(true);
-
-      // 4. Update core progression state
-      const nextStep = currentStep + 1;
-      setStep(nextStep);
-
-      // 5. Defer the Sarathi response
-      setTimeout(() => {
-        setIsThinking(false);
-        if (nextStep < questions.length) {
-          // Ask next question
-          const next = questions[nextStep];
-          const msgType = next.options ? 'sarathi-question' : 'sarathi';
-          addMessage({
-            type: msgType,
-            text: next.options ? undefined : next.question,
-            question: next.options ? next.question : undefined,
-            options: next.options,
-            onOptionSelect: () => {
-              // remove chips from the current question so it can't be clicked again
-              setMessages((prev) =>
-                prev.map((m, i) =>
-                  i === prev.length - 1 ? { ...m, options: null } : m
-                )
-              );
-            },
-            stepKey: next.key,
-            timestamp: 'JUST_NOW',
-          });
-        } else {
-          // Done! Call live eligibility API
-          setIsThinking(true);
-          const apiProfile = {
-            age: updates.age ?? citizenProfile.age ?? 30,
-            gender: updates.gender ?? citizenProfile.gender ?? 'any',
-            monthlyIncome: updates.income ?? citizenProfile.income ?? 5000,
-            isWidow: updates.isWidow ?? citizenProfile.isWidow ?? false,
-            occupation: updates.occupation ?? citizenProfile.occupation ?? 'any',
-            category: updates.category ?? citizenProfile.category ?? 'General',
-          };
-
-          checkEligibility(apiProfile)
-            .then((result) => {
-              // Bug fix: 'schemes' was undefined — use empty array as fallback
-              const matched = result.matchedSchemes || [];
-              setMatchedSchemes(matched);
-              setEligibleSchemes(matched);
-              setIsThinking(false);
-
-              addMessage({
-                type: 'sarathi',
-                isFinal: true,
-                text: language === 'hi'
-                  ? `बहुत बढ़िया! मैंने आपके लिए ${matched.length} योजनाएं ढूंढी हैं। 🎉\n\nकुल अनुमानित वार्षिक लाभ: ₹${(result.totalAnnualBenefit || matched.reduce((s, sc) => s + (sc.annualBenefit || 0), 0)).toLocaleString('en-IN')}`
-                  : `Great! I found ${matched.length} schemes for you. 🎉\n\nTotal estimated annual benefit: ₹${(result.totalAnnualBenefit || matched.reduce((s, sc) => s + (sc.annualBenefit || 0), 0)).toLocaleString('en-IN')}`,
-                timestamp: 'JUST_NOW',
-              });
-
-              setTimeout(() => setShowResults(true), 500);
-
-              // Save citizen profile to DynamoDB (fire and forget)
-              saveCitizen({
-                name: updates.name ?? citizenProfile.name,
-                age: updates.age ?? citizenProfile.age,
-                gender: updates.gender ?? citizenProfile.gender ?? 'any',
-                state: updates.state ?? citizenProfile.state ?? '',
-                monthlyIncome: updates.income ?? citizenProfile.income ?? 0,
-                category: updates.category ?? citizenProfile.category ?? 'General',
-                isWidow: updates.isWidow ?? citizenProfile.isWidow ?? false,
-                occupation: updates.occupation ?? citizenProfile.occupation ?? 'any',
-                matchedSchemes: matched,
-              }).catch(() => { /* background save — non-critical */ });
-            })
-            .catch(() => {
-              setIsThinking(false);
-              addMessage({
-                type: 'sarathi',
-                isFinal: false,
-                text: language === 'hi'
-                  ? '🔴 सर्वर से कनेक्ट नहीं हो पा रहा। कृपया कुछ देर बाद पुनः प्रयास करें।'
-                  : '🔴 Could not connect to server. Please try again later.',
-                timestamp: 'JUST_NOW',
-              });
-            });
-        }
-      }, 1200);
-    },
-    [questions, language, updateProfile, setEligibleSchemes, citizenProfile, step]
-  );
-
-  const handleSend = (text) => processAnswer(text);
-
-  // Show the first question on mount — guard against StrictMode double-invoke
-  useEffect(() => {
-    if (messages.length === 0 && questions.length > 0) {
-      const first = questions[0];
-      setMessages([{ type: 'sarathi', text: first.question, stepKey: first.key, timestamp: 'JUST_NOW' }]);
+  const updateStep = useCallback((slots) => {
+    let step = 0;
+    for (const slotName of LEX_SLOT_ORDER) {
+      if (slots[slotName]) step++;
+      else break;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setCurrentStep(step);
   }, []);
 
-  const handleQuickStart = () => {
-    if (messages.length === 0 && questions.length > 0) {
-      const first = questions[0];
-      setMessages([{ type: 'sarathi', text: first.question, stepKey: first.key, timestamp: 'JUST_NOW' }]);
+  const updateProfileFromSlots = useCallback((slots) => {
+    const updates = {};
+    if (slots.age) updates.age = parseInt(slots.age, 10) || 0;
+    if (slots.monthlyIncome) updates.income = parseInt(slots.monthlyIncome, 10) || 5000;
+    if (slots.citizenState) updates.state = slots.citizenState;
+    if (slots.GenderType) updates.gender = slots.GenderType?.toLowerCase();
+
+    if (slots.citizenName) updates.name = slots.citizenName;
+    if (slots.category) updates.category = slots.category;
+    if (slots.isWidow) updates.isWidow = ['yes'].includes(slots.isWidow?.toLowerCase());
+    if (slots.occupation) updates.occupation = slots.occupation;
+
+    updateProfile(updates);
+  }, [updateProfile]);
+
+  const handleVoiceTranscript = useCallback((text) => {
+    if (text && !conversationDoneRef.current && sendMessageRef.current) {
+      sendMessageRef.current(text);
     }
+  }, []);
+
+  const { state: voiceState, transcript: liveTranscript, startListening, toggleListening } = useVoiceInput({
+    onTranscript: handleVoiceTranscript,
+    language: isHi ? 'hi-IN' : 'en-IN',
+  });
+
+  const isRecording = voiceState === 'listening';
+
+  const handleToggleRecording = () => {
+    if (voiceState === 'idle') {
+      isLiveModeRef.current = true;
+    } else {
+      isLiveModeRef.current = false;
+    }
+    toggleListening();
   };
+
+  const speakAndResume = useCallback((text, shouldResume = true) => {
+    if (!('speechSynthesis' in window)) return;
+
+    window.speechSynthesis.cancel();
+    const cleanText = text.replace(/[\u{1F600}-\u{1F6FF}\u2728]/gu, '');
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = isHi ? 'hi-IN' : 'en-IN';
+
+    window.__utterances = window.__utterances || [];
+    window.__utterances.push(utterance);
+
+    const onComplete = () => {
+      const index = window.__utterances.indexOf(utterance);
+      if (index !== -1) window.__utterances.splice(index, 1);
+      if (shouldResume && isLiveModeRef.current && !conversationDoneRef.current) {
+        startListening();
+      }
+    };
+
+    utterance.onend = onComplete;
+    utterance.onerror = onComplete;
+    window.speechSynthesis.speak(utterance);
+  }, [startListening, isHi]);
+
+  const runEligibilityCheck = useCallback(async () => {
+    setIsThinking(true);
+    setConversationDone(true);
+
+    const apiProfile = {
+      age: citizenProfile.age || 30,
+      gender: citizenProfile.gender || 'any',
+      monthlyIncome: citizenProfile.income || 5000,
+      isWidow: citizenProfile.isWidow || false,
+      occupation: citizenProfile.occupation || 'any',
+      category: citizenProfile.category || 'General',
+    };
+
+    const flushResults = (matchedSchemesParam, totalBenefit) => {
+      setMatchedSchemes(matchedSchemesParam);
+      setEligibleSchemes(matchedSchemesParam);
+      setIsThinking(false);
+
+      const msg = isHi
+        ? `बढ़िया! मुझे आपके लिए ${matchedSchemesParam.length} योजनाएं मिलीं। 🎉\n\nकुल अनुमानित वार्षिक लाभ: ₹${totalBenefit.toLocaleString('en-IN')}`
+        : `Great! I found ${matchedSchemesParam.length} schemes for you. 🎉\n\nTotal estimated annual benefit: ₹${totalBenefit.toLocaleString('en-IN')}`;
+
+      addMessage({ type: 'sarathi', isFinal: true, text: msg, timestamp: 'JUST_NOW' });
+
+      if (isLiveModeRef.current) speakAndResume(msg, false);
+      setTimeout(() => setShowResults(true), 500);
+    };
+
+    try {
+      const result = await checkEligibility(apiProfile);
+      const matched = result.matchedSchemes || schemes.slice(0, 6);
+      const totalBenefit = result.totalAnnualBenefit || matched.reduce((s, sc) => s + (sc.annualBenefit || 0), 0);
+
+      flushResults(matched, totalBenefit);
+
+      notifyPanchayat({
+        citizenName: citizenProfile.name || 'Unknown',
+        panchayatId: 'rampur-barabanki-up',
+        matchedSchemes: matched,
+        totalAnnualBenefit: totalBenefit,
+      }).catch(() => {});
+
+    } catch {
+      const matched = schemes.slice(0, 6);
+      const totalBenefit = matched.reduce((s, sc) => s + (sc.annualBenefit || 0), 0);
+      flushResults(matched, totalBenefit);
+    }
+  }, [citizenProfile, setEligibleSchemes, speakAndResume, isHi]);
+
+  const sendMessageToLex = useCallback(async (text, showUserMsg = true, overrideLocale = null) => {
+    if (showUserMsg) {
+      addMessage({ type: 'user', text, timestamp: 'JUST_NOW' });
+    }
+    setIsThinking(true);
+
+    try {
+      // Pass Hindi locale so Lex bot responds in Hindi when toggled
+      const locale = overrideLocale || (isHi ? 'hi_IN' : 'en_US');
+      const result = await sendToLex(text, sessionIdRef.current, locale);
+
+      setIsThinking(false);
+
+      if (result.slots) {
+        updateProfileFromSlots(result.slots);
+        updateStep(result.slots);
+      }
+
+      const isFullfilled = result.intentState === 'ReadyForFulfillment' && result.intentName === 'CollectProfile';
+      const isClosed = result.dialogState === 'Close' && result.intentName === 'CollectProfile' && result.intentState !== 'Failed';
+
+      if (isFullfilled || isClosed) {
+        const msg = result.message || (isHi ? 'बढ़िया! आपकी योजनाएं खोज रहे हैं...' : 'Great! Finding your schemes...');
+        addMessage({ type: 'sarathi', text: msg, timestamp: 'JUST_NOW' });
+        setCurrentStep(LEX_SLOT_ORDER.length);
+
+        if (isLiveModeRef.current) speakAndResume(msg, false);
+        runEligibilityCheck();
+      } else {
+        addMessage({ type: 'sarathi', text: result.message, timestamp: 'JUST_NOW' });
+        if (isLiveModeRef.current) speakAndResume(result.message, true);
+      }
+    } catch (err) {
+      console.warn('[ChatPage] Lex API failed:', err);
+      setIsThinking(false);
+      const msg = isHi
+        ? 'माफ करें, कनेक्शन में समस्या है। कृपया पुनः प्रयास करें।'
+        : 'Sorry, connection issue. Please try again.';
+      addMessage({ type: 'sarathi', text: msg, timestamp: 'JUST_NOW' });
+      if (isLiveModeRef.current) speakAndResume(msg, false);
+    }
+  }, [updateProfileFromSlots, updateStep, runEligibilityCheck, speakAndResume, isHi]);
+
+  useEffect(() => {
+    sendMessageRef.current = sendMessageToLex;
+  }, [sendMessageToLex]);
+
+  const handleSend = (text) => {
+    if (conversationDoneRef.current) return;
+    isLiveModeRef.current = false;
+    sendMessageToLex(text);
+  };
+
+  const stepLabels = isHi ? STEP_LABELS_HI : STEP_LABELS_EN;
+  const totalSteps = LEX_SLOT_ORDER.length;
 
   return (
     <div className="flex h-[calc(100vh-64px)]">
@@ -238,17 +224,14 @@ function ChatPage() {
 
       {/* Main chat area */}
       <div className="flex-1 flex flex-col bg-off-white">
-        <ProgressSteps currentStep={step} />
-        <ChatPanel
-          messages={messages}
-          isThinking={isThinking}
-          onQuickStart={handleQuickStart}
-        />
-        {/* Bug fix: voice is now wired through useVoiceInput hook */}
+        <ProgressSteps currentStep={currentStep} labels={stepLabels} totalSteps={totalSteps} />
+        <ChatPanel messages={messages} isThinking={isThinking} />
         <InputBar
           onSend={handleSend}
           isRecording={isRecording}
-          onToggleRecording={toggleListening}
+          onToggleRecording={handleToggleRecording}
+          disabled={conversationDone}
+          liveTranscript={liveTranscript}
         />
       </div>
 

@@ -20,8 +20,6 @@ const api = axios.create({
 
 /**
  * Check eligibility — POST /eligibility
- * @param {Object} profile — { age, gender, monthlyIncome, isWidow, occupation, category }
- * @returns {{ matchedSchemes, totalAnnualBenefit, schemesCount }}
  */
 export async function checkEligibility(profile) {
   const res = await api.post('/eligibility', profile);
@@ -30,8 +28,6 @@ export async function checkEligibility(profile) {
 
 /**
  * Get digital twin projections — POST /twin
- * @param {{ monthlyIncome, matchedSchemes }} data
- * @returns {{ pathways: { best, medium, minimum }, monthsToPovertyExit }}
  */
 export async function getDigitalTwin(data) {
   const res = await api.post('/twin', data);
@@ -40,8 +36,6 @@ export async function getDigitalTwin(data) {
 
 /**
  * Fetch single scheme — GET /scheme/{schemeId}
- * @param {string} schemeId
- * @returns {Object} scheme details
  */
 export async function fetchScheme(schemeId) {
   const res = await api.get(`/scheme/${schemeId}`);
@@ -49,8 +43,7 @@ export async function fetchScheme(schemeId) {
 }
 
 /**
- * Fetch all schemes — GET /scheme/all 
- * @returns {Array} all scheme objects
+ * Fetch all schemes — GET /scheme/all
  */
 export async function fetchAllSchemes() {
   const res = await api.get('/scheme/all');
@@ -60,8 +53,6 @@ export async function fetchAllSchemes() {
 
 /**
  * Get panchayat stats — GET /panchayat/{panchayatId}
- * @param {string} panchayatId
- * @returns {{ totalHouseholds, enrolled, eligibleNotEnrolled, zeroBenefits, alerts, households }}
  */
 export async function getPanchayatStats(panchayatId = 'rampur-barabanki-up') {
   const res = await api.get(`/panchayat/${panchayatId}`);
@@ -70,8 +61,6 @@ export async function getPanchayatStats(panchayatId = 'rampur-barabanki-up') {
 
 /**
  * Detect scheme conflicts — POST /conflicts
- * @param {{ matchedSchemes }} data
- * @returns {{ conflicts, optimalBundle, totalOptimalValue }}
  */
 export async function detectConflicts(data) {
   const res = await api.post('/conflicts', data);
@@ -80,11 +69,40 @@ export async function detectConflicts(data) {
 
 /**
  * Save citizen profile — POST /citizen
- * @param {Object} profile — citizen data to save
- * @returns {{ citizenId, status }}
  */
 export async function saveCitizen(profile) {
   const res = await api.post('/citizen', profile);
+  return typeof res.data.body === 'string' ? JSON.parse(res.data.body) : res.data;
+}
+
+/* ── AI / Lex services (Member 2) ─────────────────────────────────────── */
+
+/**
+ * Send a message to the Lex bot — POST /lex
+ * @param {string} message - User message
+ * @param {string} sessionId - Lex session ID
+ * @param {string} locale - 'en_US' or 'hi_IN'
+ */
+export async function sendToLex(message, sessionId = 'default', locale = 'en_US') {
+  const res = await api.post('/lex', { message, sessionId, locale });
+  return typeof res.data.body === 'string' ? JSON.parse(res.data.body) : res.data;
+}
+
+/**
+ * Get AI explanation + audio for a scheme via Bedrock + Polly — POST /explain
+ * @param {Object} scheme - The scheme object to explain
+ */
+export async function explainScheme(scheme) {
+  const res = await api.post('/explain', { scheme });
+  return typeof res.data.body === 'string' ? JSON.parse(res.data.body) : res.data;
+}
+
+/**
+ * Notify Panchayat about a newly eligible citizen via SNS — POST /notify
+ * @param {Object} notificationData - { citizenName, panchayatId, matchedSchemes, totalAnnualBenefit }
+ */
+export async function notifyPanchayat(notificationData) {
+  const res = await api.post('/notify', notificationData);
   return typeof res.data.body === 'string' ? JSON.parse(res.data.body) : res.data;
 }
 

@@ -1,8 +1,8 @@
 import { useParams, Link } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, ExternalLink, Check, FileText, Users, Coins, ClipboardList, Loader2 } from 'lucide-react';
-import { fetchScheme } from '../utils/api';
+import { ArrowLeft, ExternalLink, Check, FileText, Users, Coins, ClipboardList, Loader2, Volume2, VolumeX, Sparkles } from 'lucide-react';
+import { fetchScheme, explainScheme } from '../utils/api';
 import { useLanguage } from '../context/LanguageContext';
 import { localizeNum } from '../utils/formatters';
 
@@ -38,12 +38,19 @@ function SchemeDetailPage() {
   const [activeTab, setActiveTab] = useState('eligibility');
   const { language } = useLanguage();
   const isHi = language === 'hi';
-  const tabs = tabsData[language] || tabsData.hi;
+  const tabs = tabsData[language] || tabsData.en;
   const catLabels = isHi ? categoryLabelsHi : categoryLabelsEn;
 
   const [scheme, setScheme] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // AI Explanation state (Bedrock + Polly)
+  const [explanation, setExplanation] = useState(null);
+  const [isExplaining, setIsExplaining] = useState(false);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+  const audioRef = useRef(null);
 
   // Fetch live scheme data from API
   useEffect(() => {
@@ -62,6 +69,55 @@ function SchemeDetailPage() {
       })
       .finally(() => setLoading(false));
   }, [schemeId]);
+
+  /** Fetch AI explanation from Bedrock + Polly */
+  const handleExplain = async () => {
+    if (explanation || !scheme) return;
+    setIsExplaining(true);
+    try {
+      const result = await explainScheme(scheme);
+      setExplanation(result);
+    } catch (err) {
+      console.warn('[SchemeDetail] Explain API failed, using fallback:', err);
+      setExplanation({
+        explanationHindi: scheme.benefitType || (isHi ? 'यह एक सरकारी योजना है जो आपके परिवार को लाभ दे सकती है।' : 'This government scheme can benefit your family.'),
+        audioUrl: null,
+        schemeId: scheme.schemeId,
+      });
+    } finally {
+      setIsExplaining(false);
+    }
+  };
+
+  /** Play/stop audio explanation */
+  const toggleAudio = () => {
+    if (isPlayingAudio) {
+      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      setIsPlayingAudio(false);
+      return;
+    }
+    setIsLoadingAudio(true);
+    const text = explanation?.explanationHindi || scheme?.benefitType || '';
+    if (explanation?.audioUrl) {
+      const audio = new Audio(explanation.audioUrl);
+      audioRef.current = audio;
+      audio.onended = () => { setIsPlayingAudio(false); audioRef.current = null; };
+      audio.onerror = () => { setIsPlayingAudio(false); audioRef.current = null; };
+      setIsLoadingAudio(false);
+      setIsPlayingAudio(true);
+      audio.play();
+    } else if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = isHi ? 'hi-IN' : 'en-IN';
+      utterance.rate = 0.9;
+      utterance.onend = () => setIsPlayingAudio(false);
+      utterance.onerror = () => setIsPlayingAudio(false);
+      setIsLoadingAudio(false);
+      setIsPlayingAudio(true);
+      window.speechSynthesis.speak(utterance);
+    }
+  };
 
   if (loading) {
     return (
@@ -124,7 +180,6 @@ function SchemeDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
           {/* Main content */}
           <div>
-            {/* Tabs */}
             <div className="bg-white rounded-xl shadow-card overflow-hidden">
               <div className="flex border-b border-gray-200">
                 {tabs.map((tab) => {
@@ -194,11 +249,13 @@ function SchemeDetailPage() {
                         )}
                       </p>
                     </div>
-                    <div className="p-4 bg-off-white rounded-lg">
-                      <p className="font-body text-sm text-gray-700">
-                        {scheme.benefitType && <><span className="font-medium">{isHi ? 'लाभ का प्रकार:' : 'Benefit Type:'}</span> {scheme.benefitType}</>}
-                      </p>
-                    </div>
+                    {scheme.benefitType && (
+                      <div className="p-4 bg-off-white rounded-lg">
+                        <p className="font-body text-sm text-gray-700">
+                          <span className="font-medium">{isHi ? 'लाभ का प्रकार:' : 'Benefit Type:'}</span> {scheme.benefitType}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -251,6 +308,58 @@ function SchemeDetailPage() {
               <Link to="/chat" className="flex items-center justify-center h-10 w-full mt-2 rounded-lg border border-gray-200 text-gray-600 font-body text-sm hover:bg-gray-50 transition-colors">
                 {isHi ? '💬 सारथी से पूछें' : '💬 Ask Sarathi'}
               </Link>
+            </div>
+
+            {/* AI Explanation — Bedrock + Polly */}
+            <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl shadow-card p-5 border border-orange-100">
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles size={16} className="text-saffron" />
+                <h4 className="font-body text-sm font-bold text-gray-900">
+                  {isHi ? 'AI स्पष्टीकरण' : 'AI Explanation'}
+                </h4>
+              </div>
+
+              {!explanation && !isExplaining && (
+                <button
+                  onClick={handleExplain}
+                  className="w-full flex items-center justify-center gap-2 h-10 rounded-lg bg-saffron text-white font-body text-sm font-medium hover:bg-saffron-light transition-colors"
+                >
+                  <Volume2 size={16} />
+                  {isHi ? 'सरल भाषा में समझाएं' : 'Explain in Simple Terms'}
+                </button>
+              )}
+
+              {isExplaining && (
+                <div className="flex items-center justify-center gap-2 py-4">
+                  <Loader2 size={20} className="animate-spin text-saffron" />
+                  <span className="font-body text-sm text-gray-600">
+                    {isHi ? 'AI उत्पन्न कर रहा है...' : 'AI is generating...'}
+                  </span>
+                </div>
+              )}
+
+              {explanation && (
+                <div className="space-y-3">
+                  <p className="font-body text-sm text-gray-800 leading-relaxed bg-white/70 p-3 rounded-lg">
+                    {explanation.explanationHindi}
+                  </p>
+                  <button
+                    onClick={toggleAudio}
+                    className={`w-full flex items-center justify-center gap-2 h-10 rounded-lg font-body text-sm font-medium transition-all ${isPlayingAudio
+                      ? 'bg-red-500 text-white'
+                      : 'bg-saffron/10 text-saffron hover:bg-saffron/20 border border-saffron/20'
+                    }`}
+                  >
+                    {isLoadingAudio ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : isPlayingAudio ? (
+                      <><VolumeX size={16} /> {isHi ? 'रोकें' : 'Stop'}</>
+                    ) : (
+                      <><Volume2 size={16} /> 🔊 {isHi ? 'सुनें' : 'Listen'}</>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Eligibility checker widget */}

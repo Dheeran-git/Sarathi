@@ -23,10 +23,10 @@ function EmptyState({ title, subtitle, ctaLabel, onCtaClick }) {
             </svg>
 
             <h3 className="font-body text-xl font-medium text-gray-700 mb-2">
-                {title || 'कोई परिणाम नहीं मिला'}
+                {title || 'No results found'}
             </h3>
             <p className="font-body text-[15px] text-gray-500 max-w-sm">
-                {subtitle || 'कृपया अपनी खोज बदलकर पुनः प्रयास करें।'}
+                {subtitle || 'Please try modifying your search and try again.'}
             </p>
 
             {ctaLabel && (

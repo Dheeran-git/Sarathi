@@ -1,6 +1,4 @@
 import { useState, useMemo } from 'react';
-import { useLanguage } from '../../context/LanguageContext';
-import { localizeNum } from '../../utils/formatters';
 
 /* ── Status → color mapping ───────────────────────────────────────────── */
 const STATUS_COLOR = {
@@ -11,23 +9,18 @@ const STATUS_COLOR = {
 };
 
 const STATUS_LABEL = {
-  hi: { enrolled: 'लाभान्वित', eligible: 'योग्य लेकिन वंचित', none: 'शून्य लाभ', unknown: 'डेटा नहीं' },
-  en: { enrolled: 'Enrolled', eligible: 'Eligible But Unserved', none: 'Zero Benefits', unknown: 'No Data' },
+  enrolled: 'Enrolled',
+  eligible: 'Eligible But Unserved',
+  none: 'Zero Benefits',
+  unknown: 'No Data',
 };
 
 /* ── Filter chip definitions ──────────────────────────────────────────── */
-const FILTERS = {
-  hi: [
-    { key: 'all', label: 'सभी' },
-    { key: 'eligible', label: 'योग्य लेकिन वंचित' },
-    { key: 'none', label: 'शून्य लाभ' },
-  ],
-  en: [
-    { key: 'all', label: 'All' },
-    { key: 'eligible', label: 'Eligible But Unserved' },
-    { key: 'none', label: 'Zero Benefits' },
-  ],
-};
+const FILTERS = [
+  { key: 'all', label: 'All' },
+  { key: 'eligible', label: 'Eligible But Unserved' },
+  { key: 'none', label: 'Zero Benefits' },
+];
 
 /* ── Ward layout generator ────────────────────────────────────────────── *
  * Groups households by ward, then positions each ward cluster on a
@@ -42,12 +35,10 @@ function buildLayout(households) {
     (a, b) => Number(a.replace(/\D/g, '')) - Number(b.replace(/\D/g, ''))
   );
 
-  // Each ward cluster: cols determined by sqrt of household count,
-  // placed in a meta-grid of ward blocks.
   const wardCols = Math.ceil(Math.sqrt(wards.length));
   const dotSize = 16;
   const dotGap = 4;
-  const wardPadding = 32; // space between ward clusters
+  const wardPadding = 32;
   const roadWidth = 2;
 
   const positioned = [];
@@ -61,8 +52,6 @@ function buildLayout(households) {
     const wardRow = Math.floor(wi / wardCols);
     const wardCol = wi % wardCols;
 
-    // Estimate previous ward widths/heights for offset.
-    // Use a fixed cell budget so wards align reasonably.
     const clusterW = cols * (dotSize + dotGap);
     const clusterH = Math.ceil(members.length / cols) * (dotSize + dotGap);
 
@@ -85,13 +74,11 @@ function buildLayout(households) {
     if (endX > maxX) maxX = endX;
     if (endY > maxY) maxY = endY;
 
-    // Horizontal road below each ward row
     if (wardRow < Math.ceil(wards.length / wardCols) - 1 && wardCol === 0) {
       const roadY = originY + clusterH + wardPadding / 2 - roadWidth;
       roads.push({ x1: 0, y1: roadY, x2: maxX + wardPadding, y2: roadY });
     }
 
-    // Vertical road to the right of each column (except last)
     if (wardCol < wardCols - 1) {
       const roadX = originX + clusterW + wardPadding / 2 - roadWidth;
       roads.push({ x1: roadX, y1: originY - 8, x2: roadX, y2: originY + clusterH + 8 });
@@ -102,12 +89,10 @@ function buildLayout(households) {
 }
 
 /* ── Tooltip ──────────────────────────────────────────────────────────── */
-function Tooltip({ dot, mapEl, language }) {
+function Tooltip({ dot, mapEl }) {
   if (!dot || !mapEl) return null;
-  const isHi = language === 'hi';
-  const labels = STATUS_LABEL[language] || STATUS_LABEL.hi;
 
-  const dotLeft = dot.x + 16; // 16px is map padding
+  const dotLeft = dot.x + 16;
   const dotTop = dot.y + 16;
 
   let left = dotLeft + 24;
@@ -115,14 +100,12 @@ function Tooltip({ dot, mapEl, language }) {
   let transformY = '-100%';
   let transformX = '0';
 
-  // Prevent top edge clipping
   const tooltipApproxHeight = 100;
   if (top - tooltipApproxHeight < mapEl.scrollTop) {
-    top = dotTop + 24; // Show below the dot
+    top = dotTop + 24;
     transformY = '0';
   }
 
-  // Prevent right edge clipping
   const tooltipApproxWidth = 160;
   if (left + tooltipApproxWidth > mapEl.scrollLeft + mapEl.clientWidth) {
     left = dotLeft - 8;
@@ -136,16 +119,16 @@ function Tooltip({ dot, mapEl, language }) {
     >
       <p className="font-semibold text-sm">{dot.name}</p>
       <p className="text-gray-300">
-        {isHi ? 'वार्ड:' : 'Ward:'} {localizeNum(dot.ward.replace(/\D/g, ''), language)}
+        Ward: {dot.ward.replace(/\D/g, '')}
       </p>
       <p>
-        {isHi ? 'स्थिति:' : 'Status:'}{' '}
+        Status:{' '}
         <span style={{ color: STATUS_COLOR[dot.status] }}>
-          {labels[dot.status]}
+          {STATUS_LABEL[dot.status]}
         </span>
       </p>
       {dot.schemesCount !== undefined && (
-        <p className="text-gray-300">{isHi ? 'योजनाएं:' : 'Schemes:'} {dot.schemesCount}</p>
+        <p className="text-gray-300">Schemes: {dot.schemesCount}</p>
       )}
     </div>
   );
@@ -156,9 +139,6 @@ function VillageMap({ households = [] }) {
   const [filter, setFilter] = useState('all');
   const [hoveredDot, setHoveredDot] = useState(null);
   const [mapEl, setMapEl] = useState(null);
-  const { language } = useLanguage();
-  const filters = FILTERS[language] || FILTERS.hi;
-  const labels = STATUS_LABEL[language] || STATUS_LABEL.hi;
 
   const { positioned, roads, width, height } = useMemo(
     () => buildLayout(households),
@@ -178,7 +158,7 @@ function VillageMap({ households = [] }) {
     <div className="flex flex-col gap-4">
       {/* Filter Chips */}
       <div className="flex flex-wrap gap-2">
-        {filters.map((f) => (
+        {FILTERS.map((f) => (
           <button
             key={f.key}
             onClick={() => setFilter(f.key)}
@@ -281,7 +261,7 @@ function VillageMap({ households = [] }) {
 
           {/* Tooltip */}
           {hoveredDot && (
-            <Tooltip dot={hoveredDot} mapEl={mapEl} language={language} />
+            <Tooltip dot={hoveredDot} mapEl={mapEl} />
           )}
         </div>
       </div>
@@ -295,7 +275,7 @@ function VillageMap({ households = [] }) {
               style={{ backgroundColor: color }}
             />
             <span className="font-body text-xs text-gray-700">
-              {labels[status]}
+              {STATUS_LABEL[status]}
             </span>
           </div>
         ))}

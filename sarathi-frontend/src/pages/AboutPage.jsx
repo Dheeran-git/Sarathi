@@ -1,164 +1,137 @@
-import { motion } from 'framer-motion';
-import { useLanguage } from '../context/LanguageContext';
-import { Shield, Sparkles, Code2, Users, Heart, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { Github, Linkedin, Twitter } from 'lucide-react';
+
+const team = [
+    {
+        name: 'Dheeran Dhiren Khandal',
+        role: 'Full-Stack & AI Lead',
+        avatar: '🧑‍💻',
+        links: { github: '#', linkedin: '#' },
+    },
+    {
+        name: 'Mohit Lakhara',
+        role: 'Backend & Cloud Lead',
+        avatar: '👨‍💻',
+        links: { github: '#', linkedin: '#' },
+    },
+    {
+        name: 'Himanshu Parmar',
+        role: 'Frontend Lead',
+        avatar: '🎨',
+        links: { github: '#', linkedin: '#' },
+    },
+    {
+        name: 'Jaimin Patel',
+        role: 'ML & Data Lead',
+        avatar: '🤖',
+        links: { github: '#', linkedin: '#' },
+    },
+];
+
+const values = [
+    { emoji: '🎯', title: 'Inclusion First', desc: 'Every citizen, regardless of literacy or connectivity, deserves access to welfare.' },
+    { emoji: '🔒', title: 'Privacy by Design', desc: 'We never store personal data beyond the session. Anonymized analytics only.' },
+    { emoji: '🌍', title: 'Open Source', desc: 'Built to be replicated across states and countries. MIT licensed.' },
+    { emoji: '⚡', title: 'AI for Good', desc: 'Responsible AI — explainable, auditable, and bias-checked.' },
+];
 
 function AboutPage() {
-    const { language } = useLanguage();
-    const isHi = language === 'hi';
-
-    const fadeIn = {
-        initial: { opacity: 0, y: 20 },
-        animate: { opacity: 1, y: 0 },
-        transition: { duration: 0.5 }
-    };
-
-    const team = [
-        {
-            name: 'Dheeran',
-            nameHi: 'धीरन',
-        },
-        {
-            name: 'Mohith',
-            nameHi: 'मोहित',
-        },
-        {
-            name: 'Tentan',
-            nameHi: 'टेंटन',
-        },
-        {
-            name: 'Revanth',
-            nameHi: 'रेवंत',
-        }
-    ];
-
     return (
         <div className="min-h-screen bg-off-white">
-            {/* Hero Section */}
-            <section className="bg-navy pt-20 pb-32 px-4 relative overflow-hidden">
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-saffron/20 via-navy to-navy pointer-events-none" />
-                <div className="max-w-4xl mx-auto text-center relative z-10">
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.5 }}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-saffron/10 border border-saffron/20 text-saffron mb-8"
-                    >
-                        <Heart size={16} />
-                        <span className="font-body text-sm font-medium">Built for India. Built with Love.</span>
-                    </motion.div>
-
+            {/* Hero */}
+            <div className="bg-navy py-12 lg:py-16">
+                <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                     <motion.h1
-                        {...fadeIn}
-                        className="font-display text-4xl lg:text-6xl text-white mb-6 leading-tight"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="font-display text-[32px] lg:text-[42px] text-white"
                     >
-                        {isHi ? 'प्रौद्योगिकी से ' : 'Bridging the Gap with '}<br />
-                        <span className="text-saffron">{isHi ? 'कल्याणकारी योजनाओं' : 'Welfare Tech'}</span> {isHi ? ' को जोड़ना' : ''}
+                        About Sarathi
                     </motion.h1>
-
                     <motion.p
-                        {...fadeIn}
-                        transition={{ delay: 0.1 }}
-                        className="font-body text-lg lg:text-xl text-gray-300 mb-12 max-w-2xl mx-auto leading-relaxed"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.2 }}
+                        className="font-body text-base lg:text-lg text-gray-300 mt-4 max-w-[600px] mx-auto"
                     >
-                        {isHi
-                            ? 'सारथी भारत का पहला AI-संचालित कल्याण वितरण इंजन है जिसे यह सुनिश्चित करने के लिए डिज़ाइन किया गया है कि कोई भी पात्र नागरिक पीछे न छूटे।'
-                            : "Sarathi is India's first AI-powered welfare delivery engine designed to ensure no eligible citizen is left behind."}
+                        AI-powered welfare delivery engine that ensures every eligible citizen gets their rightful benefits — regardless of literacy, language, or digital access.
                     </motion.p>
                 </div>
-            </section>
+            </div>
 
-            {/* Mission Section */}
-            <section className="max-w-5xl mx-auto px-4 -mt-16 relative z-20 mb-20">
-                <div className="bg-white rounded-2xl shadow-card p-8 lg:p-12 border border-gray-100">
-                    <div className="grid md:grid-cols-2 gap-12 items-center">
-                        <div>
-                            <h2 className="font-display text-3xl text-gray-900 mb-6">
-                                {isHi ? 'हमारा मिशन' : 'Our Mission'}
-                            </h2>
-                            <p className="font-body text-gray-600 leading-relaxed mb-6">
-                                {isHi
-                                    ? 'भारत में ७०० से अधिक कल्याणकारी योजनाएं हैं, लेकिन एक औसत पात्र परिवार हर साल ३०,००० रुपये से अधिक के लाभों से वंचित रह जाता है। क्यों? जटिलता, जागरूकता की कमी और पहुंच में बाधाओं के कारण।'
-                                    : 'India has over 700+ welfare schemes, yet the average eligible family misses out on ₹30,000+ in benefits annually. Why? Because of complexity, lack of awareness, and accessibility barriers.'}
-                            </p>
-                            <p className="font-body text-gray-600 leading-relaxed">
-                                {isHi
-                                    ? 'हम उस प्रतिमान को बदल रहे हैं। AI, ध्वनि इंटरफेस और डिजिटल ट्विन तकनीक का लाभ उठाकर, हम सिस्टम को उलटने के लिए डिज़ाइन किया गया एक मंच बना रहे हैं: अब नागरिकों को सिस्टम को खोजने की आवश्यकता नहीं होगी, सिस्टम उन्हें खोज लेगा।'
-                                    : 'We are changing that paradigm. By leveraging AI, voice interfaces, and digital twin technology, we are building a platform designed to invert the system: citizens no longer have to seek out the system, the system seeks them out.'}
-                            </p>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="bg-orange-50 p-6 rounded-xl">
-                                <Sparkles className="text-saffron mb-4" size={32} />
-                                <h3 className="font-bold text-gray-900 mb-2">{isHi ? 'AI-संचालित मिलान' : 'AI-Powered Matching'}</h3>
-                                <p className="text-sm text-gray-600">{isHi ? 'सटीक योजना खोजना' : 'Precise scheme discovery'}</p>
-                            </div>
-                            <div className="bg-blue-50 p-6 rounded-xl">
-                                <Shield className="text-navy mb-4" size={32} />
-                                <h3 className="font-bold text-gray-900 mb-2">{isHi ? 'सार्वभौमिक पहुंच' : 'Universal Access'}</h3>
-                                <p className="text-sm text-gray-600">{isHi ? 'आवाज और २२ भाषाएं' : 'Voice-first in 22 languages'}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* Team Section */}
-            <section className="py-20 bg-white">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                    <h2 className="font-display text-3xl lg:text-4xl text-gray-900 mb-4">
-                        {isHi ? 'सारथी के पीछे की टीम' : 'The Team Behind Sarathi'}
-                    </h2>
-                    <p className="font-body text-gray-600 mb-12 max-w-2xl mx-auto">
-                        {isHi
-                            ? 'सारथी को AWS AI for Bharat हैकथॉन २०२५ के दौरान भावुक डेवलपर्स और एआई शोधकर्ताओं की एक टीम द्वारा बनाया गया था।'
-                            : 'Sarathi was built by a team of passionate developers and AI researchers during the AWS AI for Bharat Hackathon 2025.'}
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-12">
+                {/* Mission */}
+                <section className="text-center">
+                    <h2 className="font-display text-[26px] lg:text-[32px] text-navy">Our Mission</h2>
+                    <p className="font-body text-base text-gray-700 mt-3 max-w-[560px] mx-auto leading-relaxed">
+                        700+ government schemes exist, yet the average eligible family accesses only 2-3.
+                        Sarathi bridges this gap using voice AI, digital twins, and intelligent scheme matching — so no benefit goes unclaimed.
                     </p>
+                </section>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6 lg:gap-8">
-                        {team.map((member, idx) => (
+                {/* Values */}
+                <section>
+                    <h2 className="font-display text-[24px] lg:text-[28px] text-navy text-center mb-8">Our Values</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {values.map((v, i) => (
                             <motion.div
-                                key={member.name}
+                                key={v.title}
                                 initial={{ opacity: 0, y: 20 }}
                                 whileInView={{ opacity: 1, y: 0 }}
-                                transition={{ delay: idx * 0.1 }}
+                                transition={{ delay: i * 0.1 }}
                                 viewport={{ once: true }}
-                                className="group"
+                                className="bg-white rounded-xl shadow-card p-5"
                             >
-                                <div className="aspect-square bg-gray-50 rounded-2xl mb-4 overflow-hidden border border-gray-100 flex items-center justify-center transition-transform duration-300 group-hover:-translate-y-2">
-                                    <Users size={48} className="text-gray-300" />
-                                </div>
-                                <h3 className="font-bold text-gray-900">{isHi ? member.nameHi : member.name}</h3>
+                                <span className="text-2xl">{v.emoji}</span>
+                                <h3 className="font-body text-base font-bold text-gray-900 mt-2">{v.title}</h3>
+                                <p className="font-body text-sm text-gray-600 mt-1 leading-relaxed">{v.desc}</p>
                             </motion.div>
                         ))}
                     </div>
-                </div>
-            </section>
+                </section>
 
-            {/* CTA Section */}
-            <section className="bg-navy py-20">
-                <div className="max-w-4xl mx-auto px-4 text-center">
-                    <h2 className="font-display text-3xl text-white mb-6">
-                        {isHi ? 'कल्याण के भविष्य का अनुभव करें' : 'Experience the Future of Welfare'}
-                    </h2>
-                    <div className="flex flex-wrap justify-center gap-4">
-                        <Link
-                            to="/chat"
-                            className="h-12 px-8 bg-saffron text-white rounded-lg flex items-center gap-2 font-medium hover:bg-saffron-light transition-colors"
-                        >
-                            {isHi ? 'उपयोगकर्ता के रूप में देखें' : 'Try as Citizen'}
-                            <ArrowRight size={18} />
+                {/* Team */}
+                <section>
+                    <h2 className="font-display text-[24px] lg:text-[28px] text-navy text-center mb-2">Team Boolean Bandits</h2>
+                    <p className="font-body text-sm text-gray-500 text-center mb-8">AWS AI for Bharat Hackathon 2025</p>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        {team.map((member, i) => (
+                            <motion.div
+                                key={member.name}
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                whileInView={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: i * 0.08 }}
+                                viewport={{ once: true }}
+                                className="bg-white rounded-xl shadow-card p-5 text-center"
+                            >
+                                <div className="w-16 h-16 rounded-full bg-saffron/10 flex items-center justify-center mx-auto text-3xl">
+                                    {member.avatar}
+                                </div>
+                                <h4 className="font-body text-sm font-bold text-gray-900 mt-3">{member.name}</h4>
+                                <p className="font-body text-xs text-gray-500 mt-0.5">{member.role}</p>
+                                <div className="flex items-center justify-center gap-2 mt-3">
+                                    <a href={member.links.github} className="text-gray-400 hover:text-gray-600 transition-colors"><Github size={16} /></a>
+                                    <a href={member.links.linkedin} className="text-gray-400 hover:text-gray-600 transition-colors"><Linkedin size={16} /></a>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </div>
+                </section>
+
+                {/* CTA */}
+                <section className="text-center py-8">
+                    <h2 className="font-display text-[24px] text-navy">Ready to find your benefits?</h2>
+                    <div className="flex flex-wrap items-center justify-center gap-4 mt-6">
+                        <Link to="/chat" className="inline-flex items-center h-12 px-6 rounded-xl bg-saffron text-white font-body text-base font-semibold hover:bg-saffron-light transition-colors shadow-saffron">
+                            Start Now →
                         </Link>
-                        <Link
-                            to="/panchayat"
-                            className="h-12 px-8 border border-white/20 text-white rounded-lg flex items-center gap-2 font-medium hover:bg-white/10 transition-colors"
-                        >
-                            <Code2 size={18} />
-                            {isHi ? 'पंचायत के रूप में देखें' : 'View as Panchayat'}
+                        <Link to="/schemes" className="inline-flex items-center h-12 px-6 rounded-xl border-2 border-saffron text-saffron font-body text-base font-semibold hover:bg-saffron/5 transition-colors">
+                            View All Schemes
                         </Link>
                     </div>
-                </div>
-            </section>
+                </section>
+            </div>
         </div>
     );
 }
