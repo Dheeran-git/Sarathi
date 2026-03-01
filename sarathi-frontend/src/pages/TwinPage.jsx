@@ -63,8 +63,8 @@ function TwinPage() {
         if (conflicts) setConflictData(conflicts);
       })
       .finally(() => setLoading(false));
-  // Bug fix: depend on eligibleSchemes (stable useState ref) not matchedSchemes.length
-  // matchedSchemes.length misses changes where scheme content changes but count stays same
+    // Bug fix: depend on eligibleSchemes (stable useState ref) not matchedSchemes.length
+    // matchedSchemes.length misses changes where scheme content changes but count stays same
   }, [monthlyIncome, eligibleSchemes]);
 
   // Compute display values from live data
@@ -81,24 +81,24 @@ function TwinPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-off-white flex items-center justify-center">
-        <Loader2 className="animate-spin text-saffron mr-3" size={24} />
+      <div className="min-h-screen bg-[#020617] flex items-center justify-center">
+        <Loader2 className="animate-spin text-indigo-500 mr-3" size={24} />
         <span className="font-body text-sm text-gray-500">{isHi ? 'प्रोजेक्शन लोड हो रहा है...' : 'Loading projections...'}</span>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-off-white">
+    <div className="min-h-screen bg-[#020617]">
       {/* Header */}
-      <div className="bg-navy py-8 lg:py-10" style={{ background: 'radial-gradient(ellipse at bottom center, rgba(232,116,12,0.08), #0F2240 70%)' }}>
+      <div className="bg-[#0f172a] border-b border-slate-800 py-8 lg:py-10" style={{ background: 'radial-gradient(ellipse at bottom center, rgba(99,102,241,0.08), #0f172a 70%)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex items-center gap-1 font-body text-xs text-gray-400 mb-3" aria-label="Breadcrumb">
-            <Link to="/" className="hover:text-white transition-colors">{isHi ? 'होम' : 'Home'}</Link>
+          <nav className="flex items-center gap-1 font-body text-xs text-slate-400 mb-3" aria-label="Breadcrumb">
+            <Link to="/" className="hover:text-[#f8fafc] transition-colors">{isHi ? 'होम' : 'Home'}</Link>
             <ChevronRight size={12} />
-            <Link to="/chat" className="hover:text-white transition-colors">{isHi ? 'चैट' : 'Chat'}</Link>
+            <Link to="/chat" className="hover:text-[#f8fafc] transition-colors">{isHi ? 'चैट' : 'Chat'}</Link>
             <ChevronRight size={12} />
-            <span className="text-gray-300">{isHi ? 'आपका रोडमैप' : 'Your Roadmap'}</span>
+            <span className="text-slate-300">{isHi ? 'आपका रोडमैप' : 'Your Roadmap'}</span>
           </nav>
 
           <motion.div
@@ -106,22 +106,22 @@ function TwinPage() {
             animate={{ opacity: 1, y: 0 }}
             className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-8"
           >
-            <div className="w-16 h-16 rounded-full bg-saffron/20 flex items-center justify-center shrink-0">
-              <span className="font-display text-2xl text-saffron">{citizenName[0]}</span>
+            <div className="w-16 h-16 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
+              <span className="font-display text-2xl text-indigo-400">{citizenName[0]}</span>
             </div>
 
             <div className="flex-1">
-              <h1 className="font-display text-[28px] lg:text-[36px] text-white">{T('twinTitle')}</h1>
-              <p className="font-body text-sm text-gray-300 mt-1">
+              <h1 className="font-display text-[28px] lg:text-[36px] text-[#f8fafc]">{T('twinTitle')}</h1>
+              <p className="font-body text-sm text-slate-400 mt-1">
                 {isHi ? `अगले ${localizeNum(3, language)} वर्षों में आप गरीबी रेखा से ऊपर आ सकते हैं।` : 'In the next 3 years, you can rise above the poverty line.'}
               </p>
             </div>
 
             <div className="flex flex-col items-end gap-2">
-              <span className="px-4 py-1.5 rounded-full bg-navy-light text-white font-body text-xs font-medium">
+              <span className="px-4 py-1.5 rounded-full bg-[#020617] border border-slate-700 text-[#f8fafc] font-body text-xs font-medium">
                 {citizenName} | {localizeNum(citizenAge, language)} {isHi ? 'वर्ष' : 'years'} | {citizenState} | {citizenCategory}
               </span>
-              <Link to="/chat" className="font-body text-xs text-saffron hover:underline" aria-label="Change profile">
+              <Link to="/chat" className="font-body text-xs text-indigo-400 hover:underline" aria-label="Change profile">
                 {T('twinChangeProfile')}
               </Link>
             </div>
@@ -167,7 +167,7 @@ function TwinPage() {
         {/* Pathway Chart */}
         {bestPathway.length > 0 && (
           <div className="mb-8">
-            <h2 className="font-body text-xl font-bold text-gray-900 mb-4">{T('twinIncomeChart')}</h2>
+            <h2 className="font-body text-xl font-bold text-[#f8fafc] mb-4">{T('twinIncomeChart')}</h2>
             <PathwayChart pathways={pathways} />
           </div>
         )}
@@ -175,11 +175,11 @@ function TwinPage() {
         {/* Two column: timeline + conflict */}
         <div className="grid grid-cols-1 lg:grid-cols-[55%_45%] gap-6">
           <div>
-            <h2 className="font-body text-xl font-bold text-gray-900 mb-4">{T('twinSchemeSequence')}</h2>
+            <h2 className="font-body text-xl font-bold text-[#f8fafc] mb-4">{T('twinSchemeSequence')}</h2>
             <SchemeTimeline bestPathway={bestPathway} />
           </div>
           <div>
-            <h2 className="font-body text-xl font-bold text-gray-900 mb-4">{T('twinConflict')}</h2>
+            <h2 className="font-body text-xl font-bold text-[#f8fafc] mb-4">{T('twinConflict')}</h2>
             <ConflictResolver conflictData={conflictData} />
           </div>
         </div>

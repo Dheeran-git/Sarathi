@@ -3,12 +3,12 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Check, ExternalLink } from 'lucide-react';
 
 const categoryColors = {
-  agriculture: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: '#4CAF50' },
-  housing: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: '#FF9800' },
-  health: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: '#F44336' },
-  education: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', dot: '#2196F3' },
-  women: { bg: 'bg-pink-50', text: 'text-pink-700', border: 'border-pink-200', dot: '#E91E63' },
-  employment: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: '#9C27B0' },
+  agriculture: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20', dot: '#10b981' },
+  housing: { bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/20', dot: '#f59e0b' },
+  health: { bg: 'bg-rose-500/10', text: 'text-rose-400', border: 'border-rose-500/20', dot: '#e11d48' },
+  education: { bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/20', dot: '#3b82f6' },
+  women: { bg: 'bg-pink-500/10', text: 'text-pink-400', border: 'border-pink-500/20', dot: '#ec4899' },
+  employment: { bg: 'bg-purple-500/10', text: 'text-purple-400', border: 'border-purple-500/20', dot: '#a855f7' },
 };
 
 const categoryLabels = {
@@ -29,40 +29,40 @@ function SchemeCard({ scheme, isEligible = false }) {
   return (
     <motion.div
       whileHover={{ y: -2 }}
-      className="bg-white rounded-xl shadow-card overflow-hidden border border-gray-100 hover:shadow-lg transition-shadow duration-300 flex flex-col h-full"
+      className="bg-[#0f172a] rounded-xl shadow-2xl overflow-hidden border border-slate-800 hover:border-slate-700 hover:shadow-[0_8px_30px_rgba(0,0,0,0.5)] transition-all duration-300 flex flex-col h-full"
     >
       {/* Header */}
       <div className="p-4 pb-3">
         <div className="flex items-start justify-between gap-2 mb-2">
-          <span className={`px-2 py-0.5 rounded-full text-[10px] font-body font-medium ${cat.bg} ${cat.text}`}>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-body font-medium border ${cat.bg} ${cat.text} ${cat.border}`}>
             {categoryLabels[scheme.category]}
           </span>
           {isEligible && (
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-light text-success text-[10px] font-body font-medium">
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-body font-medium">
               <Check size={10} /> Eligible
             </span>
           )}
         </div>
-        <h3 className="font-body text-base font-bold text-gray-900 leading-snug line-clamp-2">{name}</h3>
-        <p className="font-body text-xs text-gray-500 mt-0.5">{ministry}</p>
+        <h3 className="font-body text-base font-bold text-[#f8fafc] leading-snug line-clamp-2 mt-1">{name}</h3>
+        <p className="font-body text-xs text-slate-400 mt-1">{ministry}</p>
       </div>
 
       {/* Benefit amount */}
-      <div className="px-4 py-3 bg-saffron-pale/50">
-        <p className="font-body text-[10px] text-gray-500 uppercase tracking-wider">Annual Benefit</p>
-        <p className="font-mono text-xl font-bold text-saffron">{benefitAmt}</p>
+      <div className="px-4 py-3 bg-[#020617] border-y border-slate-800/50">
+        <p className="font-body text-[10px] text-slate-500 uppercase tracking-wider">Annual Benefit</p>
+        <p className="font-mono text-xl font-bold text-indigo-400">{benefitAmt}</p>
       </div>
 
       {/* Tags */}
       <div className="px-4 py-3 flex-1">
         <div className="flex flex-wrap gap-1">
           {eligTags.slice(0, 3).map((tag, i) => (
-            <span key={i} className="px-1.5 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-body rounded">
+            <span key={i} className="px-1.5 py-0.5 bg-slate-800 text-slate-300 border border-slate-700 text-[10px] font-body rounded">
               {tag}
             </span>
           ))}
           {eligTags.length > 3 && (
-            <span className="px-1.5 py-0.5 text-gray-400 text-[10px] font-body">
+            <span className="px-1.5 py-0.5 text-slate-500 text-[10px] font-body">
               +{eligTags.length - 3} more
             </span>
           )}
@@ -70,10 +70,10 @@ function SchemeCard({ scheme, isEligible = false }) {
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-3 border-t border-gray-100 flex items-center gap-2">
+      <div className="px-4 py-3 border-t border-slate-800 flex items-center gap-2">
         <Link
           to={`/schemes/${scheme.id}`}
-          className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-lg bg-navy text-white font-body text-xs font-medium hover:bg-navy-mid transition-colors"
+          className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-lg bg-indigo-600 text-white font-body text-xs font-medium hover:bg-indigo-500 transition-colors shadow-[0_0_15px_rgba(79,70,229,0.2)]"
         >
           View Details <ArrowRight size={12} />
         </Link>
@@ -82,7 +82,7 @@ function SchemeCard({ scheme, isEligible = false }) {
             href={scheme.applyUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center w-9 h-9 rounded-lg border border-saffron text-saffron hover:bg-saffron/5 transition-colors"
+            className="flex items-center justify-center w-9 h-9 rounded-lg border border-indigo-500 text-indigo-400 hover:bg-indigo-500/10 transition-colors"
             title="Apply Now"
           >
             <ExternalLink size={14} />

@@ -14,7 +14,7 @@ function InputBar({ onSend, isRecording = false, onToggleRecording, disabled = f
     };
 
     return (
-        <div className="border-t border-gray-200 bg-white px-4 py-3">
+        <div className="border-t border-slate-800 bg-[#0f172a] px-4 py-3">
             {/* Recording indicator */}
             {isRecording && (
                 <div className="flex items-center gap-2 mb-2">
@@ -30,7 +30,7 @@ function InputBar({ onSend, isRecording = false, onToggleRecording, disabled = f
                     onChange={(e) => setText(e.target.value)}
                     placeholder="Type here or press mic to speak..."
                     disabled={disabled}
-                    className="flex-1 h-11 px-4 rounded-xl border border-gray-200 bg-off-white font-body text-sm focus:outline-none focus:border-saffron focus:ring-1 focus:ring-saffron/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="flex-1 h-11 px-4 rounded-xl border border-slate-700 bg-[#020617] text-[#f8fafc] placeholder-slate-500 font-body text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 />
 
                 {/* Mic button */}
@@ -39,9 +39,9 @@ function InputBar({ onSend, isRecording = false, onToggleRecording, disabled = f
                     onClick={onToggleRecording}
                     disabled={disabled}
                     className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${isRecording
-                        ? 'bg-red-500 text-white'
-                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        ? 'bg-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)]'
+                        : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-300'
+                        } disabled:opacity-50 disabled:cursor-not-allowed border border-slate-700 md:border-none`}
                     aria-label={isRecording ? 'Stop recording' : 'Start recording'}
                 >
                     {isRecording ? <MicOff size={18} /> : <Mic size={18} />}
@@ -51,7 +51,7 @@ function InputBar({ onSend, isRecording = false, onToggleRecording, disabled = f
                 <button
                     type="submit"
                     disabled={disabled || !text.trim()}
-                    className="w-11 h-11 rounded-xl bg-saffron text-white flex items-center justify-center hover:bg-saffron-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-11 h-11 rounded-xl bg-indigo-500 text-white flex items-center justify-center hover:bg-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.3)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     aria-label="Send message"
                 >
                     <Send size={18} />

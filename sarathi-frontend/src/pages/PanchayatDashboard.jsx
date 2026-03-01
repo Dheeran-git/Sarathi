@@ -10,6 +10,7 @@ import VillageMap from '../components/panchayat/VillageMap';
 import AlertsPanel from '../components/panchayat/AlertsPanel';
 import CitizenTable from '../components/panchayat/CitizenTable';
 import GovernanceHeatmap from '../components/panchayat/GovernanceHeatmap';
+import AIInsights from '../components/panchayat/AIInsights';
 import { getPanchayatStats } from '../utils/api';
 
 /**
@@ -99,6 +100,37 @@ function PanchayatDashboard() {
   };
 
   useEffect(() => { fetchData(); }, []);
+
+  // Compute AI Insights dynamically from stats and active alerts
+  const computedInsights = [];
+  if (stats.receivingPercent < 40) {
+    computedInsights.push({
+      severity: 'high',
+      text: 'Overall scheme penetration is critically low (under 40%). Urgent outreach required for PM-KISAN and PMAY.',
+      actionText: 'Launch Campaign'
+    });
+  }
+  if (stats.eligibleNotEnrolled > stats.enrolled) {
+    computedInsights.push({
+      severity: 'medium',
+      text: 'Deprived households exceed actively enrolled households. Consider organizing a multi-village registration camp.',
+      actionText: 'Schedule Camp'
+    });
+  }
+  if (stats.zeroBenefits > 10) {
+    computedInsights.push({
+      severity: 'high',
+      text: `Critical Alert: ${stats.zeroBenefits} households are currently receiving absolutely zero welfare benefits.`,
+      actionText: 'View Unserved'
+    });
+  }
+  if (computedInsights.length === 0) {
+    computedInsights.push({
+      severity: 'low',
+      text: 'Demographic enrollment is stable. Suggest conducting follow-up KYC validations for older beneficiaries.',
+      actionText: 'Generate KYC List'
+    });
+  }
 
   // Build eligible citizens for CitizenTable from households data
   let eligibleCitizens = households
@@ -207,19 +239,19 @@ function PanchayatDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-off-white flex items-center justify-center">
-        <Loader2 className="animate-spin text-saffron mr-3" size={24} />
-        <span className="font-body text-sm text-gray-500">{isHi ? 'डेटा लोड हो रहा है...' : 'Loading data...'}</span>
+      <div className="min-h-screen bg-[#020617] flex items-center justify-center">
+        <Loader2 className="animate-spin text-indigo-400 mr-3" size={24} />
+        <span className="font-body text-sm text-slate-500">{isHi ? 'डेटा लोड हो रहा है...' : 'Loading data...'}</span>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-off-white flex items-center justify-center">
+      <div className="min-h-screen bg-[#020617] flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-500 font-body text-sm mb-2">🔴 {error}</p>
-          <button onClick={fetchData} className="text-saffron font-body text-sm hover:underline">
+          <button onClick={fetchData} className="text-indigo-400 font-body text-sm hover:underline">
             {isHi ? 'पुनः प्रयास करें' : 'Try Again'}
           </button>
         </div>
@@ -228,9 +260,9 @@ function PanchayatDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-off-white">
+    <div className="min-h-screen bg-[#020617]">
       {/* Header */}
-      <div className="bg-gradient-to-r from-navy to-navy-mid py-6 lg:py-8">
+      <div className="bg-[#0f172a] border-b border-slate-800 py-6 lg:py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -269,8 +301,7 @@ function PanchayatDashboard() {
                     `Location: ${stats.panchayatName}, ${stats.district}, ${stats.state}\n` +
                     `Total Households: ${stats.totalHouseholds}\n` +
                     `Enrolled Citizens: ${stats.enrolled} (${stats.receivingPercent || 0}%)\n` +
-                    `Eligible but Deprived: ${stats.eligibleNotEnrolled} (${
-                      stats.totalHouseholds ? Math.round((stats.eligibleNotEnrolled / stats.totalHouseholds) * 100) : 0
+                    `Eligible but Deprived: ${stats.eligibleNotEnrolled} (${stats.totalHouseholds ? Math.round((stats.eligibleNotEnrolled / stats.totalHouseholds) * 100) : 0
                     }%)\n\n` +
                     `Top Priority Action: ${alerts[0]?.title || 'None'}`;
 
@@ -283,7 +314,7 @@ function PanchayatDashboard() {
                   link.click();
                   document.body.removeChild(link);
                 }}
-                className="hidden md:flex items-center gap-1.5 h-9 px-4 rounded-lg border border-saffron/40 text-saffron font-body text-xs font-medium hover:bg-saffron/10 transition-colors"
+                className="hidden md:flex items-center gap-1.5 h-9 px-4 rounded-lg border border-indigo-400/40 text-indigo-400 font-body text-xs font-medium hover:bg-indigo-400/10 transition-colors"
               >
                 <Download size={14} /> {T('panchDownload')}
               </button>
@@ -294,17 +325,23 @@ function PanchayatDashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Stats Row */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
           <StatCard icon="🏠" value={stats.totalHouseholds} label={T('panchTotalHouseholds')} variant="primary" />
           <StatCard icon="✅" value={`${stats.enrolled} (${stats.receivingPercent || 0}%)`} label={T('panchReceiving')} variant="success" progress={stats.receivingPercent} />
           <StatCard icon="⚠️" value={stats.eligibleNotEnrolled} label={T('panchEligibleNot')} variant="warning" />
-          <StatCard icon="🔴" value={stats.zeroBenefits} label={T('panchZero')} variant="primary" />
+          <StatCard icon="🔴" value={stats.zeroBenefits} label={T('panchZero')} variant="danger" />
         </div>
 
+        {/* AI Insights - New Block */}
+        <AIInsights insights={computedInsights} />
+
         {/* Village Map + Alerts */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6 mb-6">
-          <div>
-            <h2 className="font-body text-lg font-bold text-gray-900 mb-3">{T('panchMapTitle')}</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6 mb-8">
+          <div className="bg-[#0f172a] rounded-xl border border-slate-800 p-5 shadow-2xl">
+            <h2 className="font-body text-lg font-bold text-[#f8fafc] mb-4 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+              {T('panchMapTitle')}
+            </h2>
             <VillageMap households={households} />
           </div>
           <AlertsPanel alerts={alerts} onViewList={handleViewAlertList} />
@@ -312,8 +349,9 @@ function PanchayatDashboard() {
 
         {/* Citizen Table */}
         {eligibleCitizens.length > 0 && (
-          <div id="citizen-table-section" className="mb-6">
-            <h2 className="font-body text-lg font-bold text-gray-900 mb-3">
+          <div id="citizen-table-section" className="mb-8">
+            <h2 className="font-body text-lg font-bold text-[#f8fafc] mb-4 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-red-500"></span>
               {activeAlertFilter ? (isHi ? 'फ़िल्टर की गई सूची' : 'Filtered Action List') : (isHi ? 'पात्र नागरिक' : 'Eligible Citizens')}
             </h2>
             <CitizenTable citizens={eligibleCitizens} />

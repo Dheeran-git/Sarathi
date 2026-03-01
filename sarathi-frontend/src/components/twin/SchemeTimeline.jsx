@@ -5,8 +5,8 @@ import { localizeNum } from '../../utils/formatters';
  * SchemeTimeline — vertical timeline of scheme enrollments.
  */
 const categoryColors = {
-    agriculture: '#4CAF50', housing: '#FF9800', health: '#F44336',
-    education: '#2196F3', women: '#E91E63', employment: '#9C27B0', general: '#E8740C',
+    agriculture: '#10b981', housing: '#f59e0b', health: '#e11d48',
+    education: '#3b82f6', women: '#ec4899', employment: '#a855f7', general: '#4f46e5',
 };
 
 function SchemeTimeline({ bestPathway = [] }) {
@@ -32,24 +32,23 @@ function SchemeTimeline({ bestPathway = [] }) {
 
     if (timelineData.length === 0) {
         return (
-            <div className="bg-white rounded-xl shadow-card p-4 lg:p-6 text-center">
-                <p className="font-body text-sm text-gray-500">{isHi ? 'कोई योजना अनुक्रम उपलब्ध नहीं है।' : 'No scheme sequence available.'}</p>
+            <div className="bg-[#0f172a] rounded-xl shadow-xl border border-slate-800 p-4 lg:p-6 text-center">
+                <p className="font-body text-sm text-slate-500">{isHi ? 'कोई योजना अनुक्रम उपलब्ध नहीं है।' : 'No scheme sequence available.'}</p>
             </div>
         );
     }
 
     return (
-        <div className="bg-white rounded-xl shadow-card p-4 lg:p-6">
-            <h3 className="font-body text-lg font-bold text-gray-900 mb-4">
+        <div className="bg-[#0f172a] rounded-xl shadow-xl border border-slate-800 p-4 lg:p-6">
+            <h3 className="font-body text-lg font-bold text-[#f8fafc] mb-4">
                 {isHi ? 'योजना क्रम' : 'Scheme Sequence'}
             </h3>
 
             <div className="relative">
-                {/* Vertical line */}
-                <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200" />
+                <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-slate-700" />
 
                 {timelineData.map((entry, i) => {
-                    const color = categoryColors[entry.category] || '#E8740C';
+                    const color = categoryColors[entry.category] || '#4f46e5';
                     const isPast = entry.year <= 1;
                     const impact = isHi ? entry.impactHi : entry.impactEn;
 
@@ -59,7 +58,7 @@ function SchemeTimeline({ bestPathway = [] }) {
                             <div className="relative z-10 shrink-0">
                                 <div
                                     className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-mono font-bold"
-                                    style={{ backgroundColor: isPast ? color : '#C8C3B8' }}
+                                    style={{ backgroundColor: isPast ? color : '#334155' }}
                                 >
                                     {localizeNum(entry.year, language)}
                                 </div>
@@ -69,10 +68,10 @@ function SchemeTimeline({ bestPathway = [] }) {
                             <div className="flex-1 pb-2">
                                 <div className="flex items-start justify-between gap-2">
                                     <div>
-                                        <p className="font-body text-sm font-bold text-gray-900">
+                                        <p className="font-body text-sm font-bold text-[#f8fafc]">
                                             {isHi ? entry.schemeHindi : entry.scheme}
                                         </p>
-                                        <p className="font-body text-xs text-gray-500">
+                                        <p className="font-body text-xs text-slate-500">
                                             {isHi ? `वर्ष ${localizeNum(entry.year, language)}, माह ${localizeNum(entry.month, language)}` : `Year ${entry.year}, Month ${entry.month}`}
                                         </p>
                                     </div>
@@ -83,7 +82,7 @@ function SchemeTimeline({ bestPathway = [] }) {
                                         {localizeNum(impact.split(' ')[0], language)}
                                     </span>
                                 </div>
-                                <p className="font-body text-xs text-gray-600 mt-1">
+                                <p className="font-body text-xs text-slate-400 mt-1">
                                     {localizeNum(impact, language)}
                                 </p>
                             </div>

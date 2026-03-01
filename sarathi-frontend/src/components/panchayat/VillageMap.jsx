@@ -157,14 +157,14 @@ function VillageMap({ households = [] }) {
   return (
     <div className="flex flex-col gap-4">
       {/* Filter Chips */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 mb-2">
         {FILTERS.map((f) => (
           <button
             key={f.key}
             onClick={() => setFilter(f.key)}
             className={`px-3 py-1.5 rounded-full font-body text-xs font-medium transition-colors duration-200 ${filter === f.key
-              ? 'bg-saffron text-white'
-              : 'bg-white text-gray-700 border border-gray-200 hover:border-saffron/40'
+              ? 'bg-indigo-500 text-white border-transparent'
+              : 'bg-[#0f172a] text-slate-300 border border-slate-700 hover:border-indigo-500/50 hover:text-[#f8fafc]'
               }`}
           >
             {f.label}
@@ -175,7 +175,7 @@ function VillageMap({ households = [] }) {
       {/* Map Container */}
       <div
         ref={setMapEl}
-        className="relative overflow-auto rounded-xl border border-gray-200 bg-gray-100"
+        className="relative overflow-auto rounded-xl border border-slate-800 bg-[#020617] shadow-inner"
         style={{ maxHeight: 480 }}
       >
         {/* Subtle grid background */}
@@ -267,14 +267,14 @@ function VillageMap({ households = [] }) {
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap items-center gap-4 px-1">
+      <div className="flex flex-wrap items-center gap-4 px-1 mt-2">
         {Object.entries(STATUS_COLOR).map(([status, color]) => (
           <div key={status} className="flex items-center gap-1.5">
             <span
               className="w-3 h-3 rounded-full inline-block"
               style={{ backgroundColor: color }}
             />
-            <span className="font-body text-xs text-gray-700">
+            <span className="font-body text-xs text-slate-300">
               {STATUS_LABEL[status]}
             </span>
           </div>

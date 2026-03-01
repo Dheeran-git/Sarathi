@@ -9,28 +9,30 @@ import { localizeNum } from '../../utils/formatters';
 function StatCard({ value, label, icon, trend, variant = 'primary', progress }) {
     const { language } = useLanguage();
     const base = {
-        primary: 'bg-white text-gray-900',
-        dark: 'bg-navy text-white',
-        success: 'bg-success-light text-gray-900',
-        warning: 'bg-warning-light text-gray-900',
+        primary: 'bg-[#0f172a] text-[#f8fafc] border border-slate-800',
+        dark: 'bg-[#0f172a] text-white border border-slate-800',
+        success: 'bg-[#0f172a] text-[#f8fafc] border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.1)]',
+        warning: 'bg-[#0f172a] text-[#f8fafc] border border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.1)]',
+        danger: 'bg-[#0f172a] text-[#f8fafc] border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.1)]',
     };
 
     const iconColor = {
-        primary: 'text-saffron',
-        dark: 'text-saffron',
-        success: 'text-success',
-        warning: 'text-warning',
+        primary: 'text-indigo-400',
+        dark: 'text-indigo-400',
+        success: 'text-emerald-400',
+        warning: 'text-amber-400',
+        danger: 'text-red-400',
     };
 
     const trendColor =
-        trend > 0 ? 'text-success' : trend < 0 ? 'text-danger' : 'text-gray-500';
+        trend > 0 ? 'text-emerald-400' : trend < 0 ? 'text-red-400' : 'text-slate-500';
 
     const TrendIcon =
         trend > 0 ? TrendingUp : trend < 0 ? TrendingDown : Minus;
 
     return (
         <div
-            className={`relative rounded-[12px] p-4 shadow-card overflow-hidden ${base[variant]}`}
+            className={`relative rounded-xl p-5 overflow-hidden transition-transform duration-200 hover:scale-105 hover:z-10 cursor-default flex flex-col justify-between ${base[variant]}`}
         >
             {/* Top row — icon and trend */}
             <div className="flex items-start justify-between mb-2">
@@ -46,20 +48,21 @@ function StatCard({ value, label, icon, trend, variant = 'primary', progress }) 
             </div>
 
             {/* Big number */}
-            <p className={`font-mono text-[32px] font-bold leading-tight ${variant === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+            <p className="font-mono text-[32px] font-bold leading-tight text-[#f8fafc]">
                 {localizeNum(String(value), language)}
             </p>
 
             {/* Label */}
-            <p className={`font-body text-[13px] mt-1 ${variant === 'dark' ? 'text-gray-300' : 'text-gray-500'}`}>
+            <p className="font-body text-sm mt-1 text-slate-400 font-medium">
                 {label}
             </p>
 
             {/* Optional progress bar */}
             {progress !== undefined && (
-                <div className="mt-3 h-1.5 rounded-full bg-gray-200 overflow-hidden">
+                <div className="mt-4 h-1.5 rounded-full bg-slate-800 overflow-hidden">
                     <div
-                        className="h-full rounded-full bg-saffron transition-all duration-700 ease-out"
+                        className={`h-full rounded-full transition-all duration-700 ease-out ${variant === 'success' ? 'bg-emerald-500' : 'bg-indigo-500'
+                            }`}
                         style={{ width: `${Math.min(progress, 100)}%` }}
                     />
                 </div>

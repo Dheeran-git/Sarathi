@@ -40,9 +40,9 @@ function SchemesPage() {
   }, [category, search]);
 
   return (
-    <div className="min-h-screen bg-off-white">
+    <div className="min-h-screen bg-[#020617]">
       {/* Header */}
-      <div className="bg-navy py-6 lg:py-8">
+      <div className="bg-[#0f172a] border-b border-slate-800 py-6 lg:py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.h1
             initial={{ opacity: 0, y: 10 }}
@@ -51,7 +51,7 @@ function SchemesPage() {
           >
             {T('schemesTitle')}
           </motion.h1>
-          <p className="font-body text-sm text-gray-300 mt-1">
+          <p className="font-body text-sm text-slate-400 mt-1">
             Government Welfare Schemes • {schemes.length} Total
           </p>
         </div>
@@ -61,12 +61,12 @@ function SchemesPage() {
         {/* Search + Filters */}
         <div className="flex flex-wrap gap-3 mb-6">
           <div className="relative flex-1 min-w-[260px]">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search scheme name or ministry..."
-              className="w-full h-11 pl-10 pr-4 rounded-xl border border-gray-200 bg-white font-body text-sm focus:outline-none focus:border-saffron focus:ring-1 focus:ring-saffron/30 transition-colors"
+              className="w-full h-11 pl-10 pr-4 rounded-xl border border-slate-700 bg-[#020617] font-body text-sm text-[#f8fafc] placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-colors"
             />
           </div>
         </div>
@@ -78,8 +78,8 @@ function SchemesPage() {
               key={cat.key}
               onClick={() => setCategory(cat.key)}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-full font-body text-sm font-medium transition-all duration-200 ${category === cat.key
-                ? 'text-white shadow-sm'
-                : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300'
+                ? 'text-[#f8fafc] shadow-sm'
+                : 'bg-[#0f172a] text-slate-300 border border-slate-700 hover:border-slate-500'
                 }`}
               style={category === cat.key ? { backgroundColor: cat.color } : {}}
             >
