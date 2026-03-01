@@ -151,7 +151,7 @@ function ChatPage() {
         panchayatId: 'rampur-barabanki-up',
         matchedSchemes: matched,
         totalAnnualBenefit: totalBenefit,
-      }).catch(() => {});
+      }).catch(() => { });
 
     } catch {
       const matched = schemes.slice(0, 6);
@@ -224,7 +224,7 @@ function ChatPage() {
       </div>
 
       {/* Main chat area */}
-      <div className="flex-1 flex flex-col bg-off-white">
+      <div className="flex-1 flex flex-col bg-[#020617]">
         <ProgressSteps currentStep={currentStep} labels={stepLabels} totalSteps={totalSteps} />
         <ChatPanel messages={messages} isThinking={isThinking} language={language} />
         <InputBar
@@ -238,7 +238,7 @@ function ChatPage() {
 
       {/* Results panel — mobile bottom sheet */}
       {showResults && (
-        <div className="lg:hidden fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-2xl shadow-2xl max-h-[60vh] overflow-y-auto">
+        <div className="lg:hidden fixed inset-x-0 bottom-0 z-50 bg-[#0f172a] border border-slate-800 rounded-t-2xl shadow-2xl max-h-[60vh] overflow-y-auto">
           <div className="w-12 h-1.5 rounded-full bg-gray-300 mx-auto mt-2 mb-1" />
           <ResultsPanel schemes={matchedSchemes} visible={showResults} />
         </div>
