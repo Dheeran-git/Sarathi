@@ -4,7 +4,13 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { Globe } from 'lucide-react';
 
-const navLinks = [
+// Public-only nav (shown when not logged in)
+const PUBLIC_NAV_LINKS = [
+  { to: '/about', label: 'About' },
+];
+
+// Full nav (shown when logged in)
+const AUTH_NAV_LINKS = [
   { to: '/chat', label: 'Citizens' },
   { to: '/panchayat', label: 'Panchayat' },
   { to: '/schemes', label: 'Schemes' },
@@ -25,14 +31,17 @@ function Navbar() {
     setMobileOpen(false);
   };
 
-  const currentNavLinks = [
-    { to: '/chat', label: 'Citizens' },
-    { to: '/panchayat', label: 'Panchayat' },
-    ...(isAuthenticated ? [{ to: '/dashboard', label: 'Dashboard' }] : []),
-    { to: '/schemes', label: 'Schemes' },
-    { to: '/twin', label: 'Digital Twin' },
-    { to: '/about', label: 'About' },
-  ];
+  const currentNavLinks = isAuthenticated
+    ? [
+      { to: '/chat', label: 'Citizens' },
+      { to: '/panchayat', label: 'Panchayat' },
+      { to: '/dashboard', label: 'Dashboard' },
+      { to: '/profile', label: 'My Profile' },
+      { to: '/schemes', label: 'Schemes' },
+      { to: '/twin', label: 'Digital Twin' },
+      { to: '/about', label: 'About' },
+    ]
+    : PUBLIC_NAV_LINKS;
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);

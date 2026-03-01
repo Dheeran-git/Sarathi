@@ -69,9 +69,21 @@ export async function detectConflicts(data) {
 
 /**
  * Save citizen profile — POST /citizen
+ * @param {Object} profile - Citizen profile object
+ * @param {string} [cognitoUserId] - Cognito user ID to map profile to
  */
-export async function saveCitizen(profile) {
-  const res = await api.post('/citizen', profile);
+export async function saveCitizen(profile, cognitoUserId) {
+  const payload = cognitoUserId ? { ...profile, cognitoUserId } : profile;
+  const res = await api.post('/citizen', payload);
+  return typeof res.data.body === 'string' ? JSON.parse(res.data.body) : res.data;
+}
+
+/**
+ * Get citizen profile — GET /citizen/{userId}
+ * @param {string} userId - Cognito user ID
+ */
+export async function getCitizenProfile(userId) {
+  const res = await api.get(`/citizen/${userId}`);
   return typeof res.data.body === 'string' ? JSON.parse(res.data.body) : res.data;
 }
 

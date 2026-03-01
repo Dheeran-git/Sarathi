@@ -9,6 +9,7 @@ import SchemesPage from './pages/SchemesPage';
 import SchemeDetailPage from './pages/SchemeDetailPage';
 import ApplyPage from './pages/ApplyPage';
 import AboutPage from './pages/AboutPage';
+import ProfilePage from './pages/ProfilePage';
 
 // Auth & Dashboard Pages
 import LoginPage from './pages/LoginPage';
@@ -44,19 +45,20 @@ function App() {
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
             <Route path="/" element={<PageTransition><LandingPage /></PageTransition>} />
-            <Route path="/chat" element={<PageTransition><ChatPage /></PageTransition>} />
-            <Route path="/twin" element={<PageTransition><TwinPage /></PageTransition>} />
-            <Route path="/panchayat" element={<PageTransition><PanchayatDashboard /></PageTransition>} />
+            <Route path="/chat" element={<PrivateRoute><PageTransition><ChatPage /></PageTransition></PrivateRoute>} />
+            <Route path="/twin" element={<PrivateRoute><PageTransition><TwinPage /></PageTransition></PrivateRoute>} />
+            <Route path="/panchayat" element={<PrivateRoute><PageTransition><PanchayatDashboard /></PageTransition></PrivateRoute>} />
 
             {/* Auth Routes */}
             <Route path="/login" element={<PageTransition><LoginPage /></PageTransition>} />
             <Route path="/signup" element={<PageTransition><SignupPage /></PageTransition>} />
             <Route path="/verify" element={<PageTransition><VerifyPage /></PageTransition>} />
             <Route path="/dashboard" element={<PrivateRoute><PageTransition><DashboardPage /></PageTransition></PrivateRoute>} />
+            <Route path="/profile" element={<PrivateRoute><PageTransition><ProfilePage /></PageTransition></PrivateRoute>} />
 
-            <Route path="/schemes" element={<PageTransition><SchemesPage /></PageTransition>} />
-            <Route path="/schemes/:schemeId" element={<PageTransition><SchemeDetailPage /></PageTransition>} />
-            <Route path="/apply/:schemeId" element={<PageTransition><ApplyPage /></PageTransition>} />
+            <Route path="/schemes" element={<PrivateRoute><PageTransition><SchemesPage /></PageTransition></PrivateRoute>} />
+            <Route path="/schemes/:schemeId" element={<PrivateRoute><PageTransition><SchemeDetailPage /></PageTransition></PrivateRoute>} />
+            <Route path="/apply/:schemeId" element={<PrivateRoute><PageTransition><ApplyPage /></PageTransition></PrivateRoute>} />
             <Route path="/about" element={<PageTransition><AboutPage /></PageTransition>} />
             {/* 404 catch-all — prevents blank screen on unknown routes */}
             <Route path="*" element={

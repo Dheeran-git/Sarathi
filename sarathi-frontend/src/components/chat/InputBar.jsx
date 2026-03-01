@@ -1,7 +1,15 @@
 import { useState, useRef } from 'react';
 import { Send, Mic, MicOff } from 'lucide-react';
 
-function InputBar({ onSend, isRecording = false, onToggleRecording, disabled = false, liveTranscript = "" }) {
+function InputBar({
+    onSend,
+    isRecording = false,
+    onToggleRecording,
+    disabled = false,
+    liveTranscript = '',
+    quickReplies = null,
+    language = 'en',
+}) {
     const [text, setText] = useState('');
     const inputRef = useRef(null);
 
@@ -13,6 +21,12 @@ function InputBar({ onSend, isRecording = false, onToggleRecording, disabled = f
         setText('');
     };
 
+    const handleChipClick = (value) => {
+        onSend(value);
+    };
+
+    const isHi = language === 'hi';
+
     return (
         <div className="border-t border-slate-800 bg-[#0f172a] px-4 py-3">
             {/* Recording indicator */}
@@ -23,12 +37,31 @@ function InputBar({ onSend, isRecording = false, onToggleRecording, disabled = f
                 </div>
             )}
 
+            {/* Quick-reply chips */}
+            {quickReplies && quickReplies.length > 0 && !disabled && (
+                <div className="flex flex-wrap gap-2 mb-3 max-w-2xl mx-auto">
+                    {quickReplies.map((chip) => {
+                        const displayLabel = isHi && chip.labelHi ? chip.labelHi : chip.label;
+                        return (
+                            <button
+                                key={chip.value}
+                                type="button"
+                                onClick={() => handleChipClick(displayLabel)}
+                                className="px-3 py-1.5 rounded-full border border-indigo-500/40 bg-indigo-500/10 text-indigo-300 font-body text-xs font-medium hover:bg-indigo-500/25 hover:border-indigo-400/60 transition-all duration-200 whitespace-nowrap"
+                            >
+                                {displayLabel}
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+
             <form onSubmit={handleSubmit} className="flex items-center gap-2 max-w-2xl mx-auto">
                 <input
                     ref={inputRef}
                     value={isRecording && liveTranscript ? liveTranscript : text}
                     onChange={(e) => setText(e.target.value)}
-                    placeholder="Type here or press mic to speak..."
+                    placeholder={isHi ? 'यहाँ टाइप करें या माइक दबाएं...' : 'Type here or press mic to speak...'}
                     disabled={disabled}
                     className="flex-1 h-11 px-4 rounded-xl border border-slate-700 bg-[#020617] text-[#f8fafc] placeholder-slate-500 font-body text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 />
