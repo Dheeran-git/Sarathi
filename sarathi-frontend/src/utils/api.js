@@ -110,12 +110,80 @@ export async function explainScheme(scheme) {
 }
 
 /**
+ * Convert text to speech using Amazon Polly — POST /tts
+ * @param {string} text - The text to synthesize
+ * @param {string} language - 'en' or 'hi'
+ */
+export async function synthesizeSpeech(text, language = 'en') {
+  const res = await api.post('/tts', { text, language });
+  return typeof res.data.body === 'string' ? JSON.parse(res.data.body) : res.data;
+}
+
+/**
  * Notify Panchayat about a newly eligible citizen via SNS — POST /notify
  * @param {Object} notificationData - { citizenName, panchayatId, matchedSchemes, totalAnnualBenefit }
  */
 export async function notifyPanchayat(notificationData) {
   const res = await api.post('/notify', notificationData);
   return typeof res.data.body === 'string' ? JSON.parse(res.data.body) : res.data;
+}
+
+/* ── Document Vault API ──────────────────────────────────────────────── */
+
+export async function setupVault(citizenId, password) {
+  const res = await api.post('/vault', { action: 'setup', citizenId, password });
+  return typeof res.data.body === 'string' ? JSON.parse(res.data.body) : res.data;
+}
+
+export async function verifyVault(citizenId, password) {
+  const res = await api.post('/vault', { action: 'verify', citizenId, password });
+  return typeof res.data.body === 'string' ? JSON.parse(res.data.body) : res.data;
+}
+
+export async function listVaultDocuments(citizenId) {
+  const res = await api.post('/vault', { action: 'list', citizenId });
+  return typeof res.data.body === 'string' ? JSON.parse(res.data.body) : res.data;
+}
+
+export async function getUploadUrl(citizenId, docType, fileName, fileSize, fileType) {
+  const res = await api.post('/vault', { action: 'upload', citizenId, docType, fileName, fileSize, fileType });
+  return typeof res.data.body === 'string' ? JSON.parse(res.data.body) : res.data;
+}
+
+export async function checkVaultStatus(citizenId) {
+  const res = await api.post('/vault', { action: 'status', citizenId });
+  let data = res.data;
+  if (data && typeof data.body === 'string') {
+    try { data = JSON.parse(data.body); } catch (e) { }
+  }
+  return data;
+}
+
+export async function resetVaultPassword(citizenId) {
+  const res = await api.post('/vault', { action: 'reset', citizenId });
+  let data = res.data;
+  if (data && typeof data.body === 'string') {
+    try { data = JSON.parse(data.body); } catch (e) { }
+  }
+  return data;
+}
+
+export async function getDownloadUrl(citizenId, s3Key) {
+  const res = await api.post('/vault', { action: 'download', citizenId, s3Key });
+  let data = res.data;
+  if (data && typeof data.body === 'string') {
+    try { data = JSON.parse(data.body); } catch (e) { }
+  }
+  return data;
+}
+
+export async function deleteDocument(citizenId, docId, s3Key) {
+  const res = await api.post('/vault', { action: 'delete', citizenId, docId, s3Key });
+  let data = res.data;
+  if (data && typeof data.body === 'string') {
+    try { data = JSON.parse(data.body); } catch (e) { }
+  }
+  return data;
 }
 
 export default api;

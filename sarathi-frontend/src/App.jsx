@@ -10,6 +10,7 @@ import SchemeDetailPage from './pages/SchemeDetailPage';
 import ApplyPage from './pages/ApplyPage';
 import AboutPage from './pages/AboutPage';
 import ProfilePage from './pages/ProfilePage';
+import DocumentsPage from './pages/DocumentsPage';
 
 // Auth & Dashboard Pages
 import LoginPage from './pages/LoginPage';
@@ -55,6 +56,7 @@ function App() {
             <Route path="/verify" element={<PageTransition><VerifyPage /></PageTransition>} />
             <Route path="/dashboard" element={<PrivateRoute><PageTransition><DashboardPage /></PageTransition></PrivateRoute>} />
             <Route path="/profile" element={<PrivateRoute><PageTransition><ProfilePage /></PageTransition></PrivateRoute>} />
+            <Route path="/documents" element={<PrivateRoute><PageTransition><DocumentsPage /></PageTransition></PrivateRoute>} />
 
             <Route path="/schemes" element={<PrivateRoute><PageTransition><SchemesPage /></PageTransition></PrivateRoute>} />
             <Route path="/schemes/:schemeId" element={<PrivateRoute><PageTransition><SchemeDetailPage /></PageTransition></PrivateRoute>} />

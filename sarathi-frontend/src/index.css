@@ -1,5 +1,870 @@
-@import './styles/global.css';
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+
+
+/* ============================================
+   KEYFRAME ANIMATIONS
+   ============================================ */
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+
+  33% {
+    transform: translateY(-12px) rotate(1deg);
+  }
+
+  66% {
+    transform: translateY(-6px) rotate(-1deg);
+  }
+}
+
+@keyframes float-slow {
+
+  0%,
+  100% {
+    transform: translateY(0px) translateX(0px);
+  }
+
+  25% {
+    transform: translateY(-20px) translateX(10px);
+  }
+
+  50% {
+    transform: translateY(-10px) translateX(-5px);
+  }
+
+  75% {
+    transform: translateY(-25px) translateX(5px);
+  }
+}
+
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(11, 61, 145, 0.15);
+  }
+
+  50% {
+    box-shadow: 0 0 40px rgba(11, 61, 145, 0.3);
+  }
+}
+
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes count-up {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(1);
+    opacity: 0.4;
+  }
+
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+@keyframes orbit {
+  from {
+    transform: rotate(0deg) translateX(80px) rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg) translateX(80px) rotate(-360deg);
+  }
+}
+
+@keyframes wave {
+  0% {
+    transform: translateX(0) translateZ(0) scaleY(1);
+  }
+
+  50% {
+    transform: translateX(-25%) translateZ(0) scaleY(0.55);
+  }
+
+  100% {
+    transform: translateX(-50%) translateZ(0) scaleY(1);
+  }
+}
+
+@keyframes particle-drift {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 1;
+  }
+
+  90% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(-100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+@keyframes mic-pulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4);
+  }
+
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 20px rgba(220, 38, 38, 0);
+  }
+}
+
+@keyframes progress-fill {
+  from {
+    width: 0%;
+  }
+}
+
+@layer base {
+  :root {
+    --font-scale: 1;
+  }
+
+  .font-scale-sm {
+    --font-scale: 0.875;
+  }
+
+  .font-scale-lg {
+    --font-scale: 1.125;
+  }
+
+  .font-scale-xl {
+    --font-scale: 1.25;
+  }
+
+  .high-contrast {
+    --color-primary: #000080;
+    --color-dark-gray: #000000;
+    --color-light-gray: #FFFFFF;
+    --color-border: #000000;
+  }
+
+  html {
+    font-size: calc(16px * var(--font-scale));
+  }
+
+  body {
+    font-family: var(--font-sans);
+    color: var(--color-dark-gray);
+    background-color: #f0f4f8;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--color-primary);
+  }
+}
+
+@layer components {
+
+  /* ============================================
+     ANIMATED BACKGROUND ELEMENTS
+     ============================================ */
+  .animated-bg {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .animated-bg::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(ellipse at 20% 50%, rgba(255, 153, 51, 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, rgba(11, 61, 145, 0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 80%, rgba(19, 136, 8, 0.05) 0%, transparent 50%);
+    animation: float-slow 20s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .floating-shapes {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .floating-shapes .shape {
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0.07;
+  }
+
+  .floating-shapes .shape:nth-child(1) {
+    width: 300px;
+    height: 300px;
+    background: var(--color-saffron);
+    top: -60px;
+    right: -60px;
+    animation: float 8s ease-in-out infinite;
+  }
+
+  .floating-shapes .shape:nth-child(2) {
+    width: 200px;
+    height: 200px;
+    background: var(--color-primary);
+    bottom: -40px;
+    left: 10%;
+    animation: float 12s ease-in-out infinite 2s;
+  }
+
+  .floating-shapes .shape:nth-child(3) {
+    width: 150px;
+    height: 150px;
+    background: var(--color-green-gov);
+    top: 30%;
+    right: 15%;
+    animation: float 10s ease-in-out infinite 4s;
+  }
+
+  .floating-shapes .shape:nth-child(4) {
+    width: 100px;
+    height: 100px;
+    background: var(--color-accent-cyan);
+    bottom: 20%;
+    left: 30%;
+    animation: float 14s ease-in-out infinite 1s;
+  }
+
+  /* Hero gradient background */
+  .hero-gradient {
+    background: linear-gradient(135deg, #0B3D91 0%, #1a5bc4 30%, #0B3D91 60%, #082a66 100%);
+    background-size: 300% 300%;
+    animation: gradient-shift 12s ease infinite;
+    position: relative;
+  }
+
+  .hero-gradient::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 80px;
+    background: linear-gradient(to top, #f0f4f8, transparent);
+    z-index: 1;
+  }
+
+  /* Wave decoration */
+  .wave-decoration {
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 200%;
+    height: 60px;
+    background: repeat-x;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120' preserveAspectRatio='none'%3E%3Cpath d='M0,60 C200,120 400,0 600,60 C800,120 1000,0 1200,60 L1200,120 L0,120 Z' fill='%23f0f4f8'/%3E%3C/svg%3E");
+    background-size: 1200px 60px;
+    animation: wave 8s linear infinite;
+    z-index: 2;
+  }
+
+  /* ============================================
+     GLASS MORPHISM CARDS
+     ============================================ */
+  .gov-card {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: slide-up 0.5s ease-out;
+    position: relative;
+    z-index: 1;
+  }
+
+  .gov-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(11, 61, 145, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06);
+    border-color: rgba(11, 61, 145, 0.15);
+  }
+
+  .gov-card-highlight {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(240, 244, 248, 0.9));
+    border: 1px solid rgba(11, 61, 145, 0.1);
+    border-top: 3px solid;
+    border-image: linear-gradient(90deg, var(--color-primary), var(--color-saffron), var(--color-green-gov)) 1;
+  }
+
+  /* ============================================
+     BUTTONS
+     ============================================ */
+  .gov-btn-primary {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+    color: white;
+    padding: 0.75rem 1.75rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 14px rgba(11, 61, 145, 0.25);
+  }
+
+  .gov-btn-primary::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    transition: all 0.5s;
+    transform: translate(-50%, -50%);
+  }
+
+  .gov-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(11, 61, 145, 0.35);
+  }
+
+  .gov-btn-primary:hover::before {
+    width: 300px;
+    height: 300px;
+  }
+
+  .gov-btn-primary:active {
+    transform: translateY(0);
+  }
+
+  .gov-btn-secondary {
+    background: linear-gradient(135deg, var(--color-saffron) 0%, #FFB347 100%);
+    color: white;
+    padding: 0.75rem 1.75rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 4px 14px rgba(255, 153, 51, 0.3);
+  }
+
+  .gov-btn-secondary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(255, 153, 51, 0.4);
+  }
+
+  .gov-btn-outline {
+    background-color: transparent;
+    color: var(--color-primary);
+    padding: 0.5rem 1.25rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    font-size: 0.875rem;
+    border: 1.5px solid var(--color-primary);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .gov-btn-outline:hover {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(11, 61, 145, 0.2);
+  }
+
+  /* ============================================
+     TABLES
+     ============================================ */
+  .gov-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.875rem;
+  }
+
+  .gov-table th {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+    color: white;
+    padding: 0.875rem 1rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .gov-table th:first-child {
+    border-radius: 0.5rem 0 0 0;
+  }
+
+  .gov-table th:last-child {
+    border-radius: 0 0.5rem 0 0;
+  }
+
+  .gov-table td {
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid rgba(209, 213, 219, 0.5);
+    transition: all 0.2s;
+  }
+
+  .gov-table tr {
+    transition: all 0.2s;
+  }
+
+  .gov-table tbody tr:hover {
+    background: linear-gradient(90deg, rgba(11, 61, 145, 0.03), rgba(255, 153, 51, 0.03));
+    transform: scale(1.002);
+  }
+
+  .gov-table tr:nth-child(even) td {
+    background-color: rgba(244, 246, 248, 0.5);
+  }
+
+  /* ============================================
+     BADGES
+     ============================================ */
+  .gov-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.3rem 0.875rem;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    transition: all 0.2s;
+  }
+
+  .gov-badge-approved {
+    background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+    color: var(--color-approved);
+    box-shadow: 0 2px 8px rgba(19, 136, 8, 0.15);
+  }
+
+  .gov-badge-pending {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    color: var(--color-pending);
+    box-shadow: 0 2px 8px rgba(217, 119, 6, 0.15);
+  }
+
+  .gov-badge-rejected {
+    background: linear-gradient(135deg, #fee2e2, #fecaca);
+    color: var(--color-rejected);
+    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.15);
+  }
+
+  /* ============================================
+     FORM INPUTS
+     ============================================ */
+  .gov-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1.5px solid var(--color-border);
+    border-radius: 0.5rem;
+    font-size: 0.9375rem;
+    color: var(--color-dark-gray);
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(4px);
+    outline: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .gov-input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(11, 61, 145, 0.1), 0 4px 12px rgba(11, 61, 145, 0.08);
+    transform: translateY(-1px);
+  }
+
+  .gov-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-dark-gray);
+    margin-bottom: 0.375rem;
+  }
+
+  /* ============================================
+     SECTION TITLES
+     ============================================ */
+  .gov-section-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    border-bottom: 3px solid transparent;
+    border-image: linear-gradient(90deg, var(--color-saffron), var(--color-primary), var(--color-green-gov)) 1;
+    padding-bottom: 0.625rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .gov-page-title {
+    font-size: 1.75rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.25rem;
+    animation: slide-up 0.4s ease-out;
+  }
+
+  .gov-page-subtitle {
+    font-size: 0.9375rem;
+    color: var(--color-medium-gray);
+    margin-bottom: 2rem;
+    animation: slide-up 0.5s ease-out 0.1s both;
+  }
+
+  /* ============================================
+     ALERT BOXES
+     ============================================ */
+  .gov-warning-box {
+    background: linear-gradient(135deg, #fef3c7, #fffbeb);
+    border: 1px solid #f59e0b;
+    border-left: 4px solid #f59e0b;
+    padding: 1rem 1.25rem;
+    border-radius: 0.5rem;
+    font-size: 0.9375rem;
+    color: #92400e;
+    backdrop-filter: blur(4px);
+  }
+
+  .gov-info-box {
+    background: linear-gradient(135deg, #dbeafe, #eff6ff);
+    border: 1px solid #3b82f6;
+    border-left: 4px solid #3b82f6;
+    padding: 1rem 1.25rem;
+    border-radius: 0.5rem;
+    font-size: 0.9375rem;
+    color: #1e40af;
+    backdrop-filter: blur(4px);
+  }
+
+  .gov-success-box {
+    background: linear-gradient(135deg, #dcfce7, #f0fdf4);
+    border: 1px solid var(--color-approved);
+    border-left: 4px solid var(--color-approved);
+    padding: 1rem 1.25rem;
+    border-radius: 0.5rem;
+    font-size: 0.9375rem;
+    color: #166534;
+    backdrop-filter: blur(4px);
+  }
+
+  /* ============================================
+     METRIC CARDS
+     ============================================ */
+  .gov-metric-card {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-top: 3px solid transparent;
+    border-image: linear-gradient(90deg, var(--color-primary), var(--color-saffron)) 1;
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    text-align: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: slide-up 0.5s ease-out both;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .gov-metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transition: left 0.5s;
+  }
+
+  .gov-metric-card:hover::before {
+    left: 100%;
+  }
+
+  .gov-metric-card:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 12px 40px rgba(11, 61, 145, 0.15);
+  }
+
+  .gov-metric-value {
+    font-size: 2rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-accent-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+    animation: count-up 0.6s ease-out;
+  }
+
+  .gov-metric-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-medium-gray);
+    margin-top: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* ============================================
+     ANIMATED PROGRESS BARS
+     ============================================ */
+  .progress-bar-animated {
+    height: 0.5rem;
+    border-radius: 9999px;
+    overflow: hidden;
+    background: rgba(209, 213, 219, 0.3);
+  }
+
+  .progress-bar-animated .fill {
+    height: 100%;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, var(--color-primary), var(--color-saffron));
+    animation: progress-fill 1s ease-out;
+    position: relative;
+  }
+
+  .progress-bar-animated .fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.4) 50%, transparent 100%);
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+  }
+
+  /* ============================================
+     SCORE GAUGE
+     ============================================ */
+  .score-gauge {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    animation: pulse-glow 3s ease-in-out infinite;
+  }
+
+  .score-gauge::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, var(--gauge-color, var(--color-primary)) var(--gauge-percent, 50%), rgba(209, 213, 219, 0.2) var(--gauge-percent, 50%));
+    z-index: 0;
+  }
+
+  .score-gauge::after {
+    content: '';
+    position: absolute;
+    inset: 6px;
+    border-radius: 50%;
+    background: white;
+    z-index: 1;
+  }
+
+  .score-gauge .score-value {
+    position: relative;
+    z-index: 2;
+    font-size: 1.5rem;
+    font-weight: 800;
+  }
+
+  /* ============================================
+     MICRO-ANIMATION UTILITIES
+     ============================================ */
+  .animate-slide-up {
+    animation: slide-up 0.5s ease-out both;
+  }
+
+  .animate-slide-up-1 {
+    animation: slide-up 0.5s ease-out 0.1s both;
+  }
+
+  .animate-slide-up-2 {
+    animation: slide-up 0.5s ease-out 0.2s both;
+  }
+
+  .animate-slide-up-3 {
+    animation: slide-up 0.5s ease-out 0.3s both;
+  }
+
+  .animate-slide-up-4 {
+    animation: slide-up 0.5s ease-out 0.4s both;
+  }
+
+  .animate-slide-up-5 {
+    animation: slide-up 0.5s ease-out 0.5s both;
+  }
+
+  .animate-in-right {
+    animation: slide-in-right 0.5s ease-out both;
+  }
+
+  .hover-lift {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Gradient text utility */
+  .gradient-text {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-saffron));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .gradient-text-tricolor {
+    background: linear-gradient(90deg, var(--color-saffron), var(--color-primary), var(--color-green-gov));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Mic pulse animation */
+  .mic-listening {
+    animation: mic-pulse 1.5s ease-in-out infinite;
+  }
+
+  /* Staggered list animations */
+  .stagger-list>*:nth-child(1) {
+    animation-delay: 0s;
+  }
+
+  .stagger-list>*:nth-child(2) {
+    animation-delay: 0.08s;
+  }
+
+  .stagger-list>*:nth-child(3) {
+    animation-delay: 0.16s;
+  }
+
+  .stagger-list>*:nth-child(4) {
+    animation-delay: 0.24s;
+  }
+
+  .stagger-list>*:nth-child(5) {
+    animation-delay: 0.32s;
+  }
+
+  .stagger-list>*:nth-child(6) {
+    animation-delay: 0.4s;
+  }
+
+  .stagger-list>*:nth-child(7) {
+    animation-delay: 0.48s;
+  }
+
+  .stagger-list>*:nth-child(8) {
+    animation-delay: 0.56s;
+  }
+}

@@ -1,320 +1,289 @@
-import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { useCitizen } from '../context/CitizenContext';
-import { useAuth } from '../context/AuthContext';
 import {
-    User, MapPin, Briefcase, IndianRupee, ShieldCheck,
-    MessageSquare, ChevronRight, Loader2, Heart, Home,
-    GraduationCap, Tractor, Factory, Accessibility, Baby,
-    Building2, TreePine, Users, FileCheck,
+    Phone, MapPin, CreditCard, IndianRupee, Users,
+    Edit, Award, FileText, CheckCircle2, Clock,
+    TrendingUp, ShieldCheck
 } from 'lucide-react';
 
-/* ── small helpers ──────────────────────────────────────────────────────── */
-const fadeUp = (delay = 0) => ({
-    initial: { opacity: 0, y: 20 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.4, delay },
-});
-
-const capitalize = (s) => {
-    if (!s) return '';
-    return s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, ' ');
-};
-
-const boolLabel = (val) => {
-    if (val === true) return 'Yes';
-    if (val === false) return 'No';
-    return null;
-};
-
-function InfoRow({ icon: Icon, label, value }) {
-    if (value === null || value === undefined || value === '') return null;
-    return (
-        <div className="flex items-center gap-3 py-3 border-b border-slate-800/60 last:border-0">
-            <div className="w-9 h-9 rounded-lg bg-saffron/10 flex items-center justify-center shrink-0">
-                <Icon size={18} className="text-saffron" />
-            </div>
-            <div className="flex-1 min-w-0">
-                <p className="text-xs text-slate-400 font-body">{label}</p>
-                <p className="text-sm text-white font-body font-medium truncate">
-                    {value || '—'}
-                </p>
-            </div>
-        </div>
-    );
-}
-
-function SectionCard({ title, icon: SectionIcon, children, delay = 0 }) {
-    // Filter out null children (InfoRow returns null when no value)
-    const validChildren = Array.isArray(children) ? children.filter(Boolean) : children ? [children] : [];
-    if (validChildren.length === 0) return null;
-
-    return (
-        <motion.div
-            {...fadeUp(delay)}
-            className="rounded-2xl border border-slate-800 bg-[#0f172a] p-6"
-        >
-            <div className="flex items-center gap-2 mb-4">
-                {SectionIcon && <SectionIcon size={20} className="text-saffron" />}
-                <h3 className="font-display text-lg text-white">{title}</h3>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
-                {validChildren}
-            </div>
-        </motion.div>
-    );
-}
-
-function SchemeCard({ scheme, index }) {
-    return (
-        <motion.div
-            {...fadeUp(0.1 + index * 0.05)}
-            className="group relative p-4 rounded-xl border border-slate-800 bg-slate-900/60 hover:border-saffron/40 transition-all duration-300"
-        >
-            <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                    <h4 className="text-sm font-body font-semibold text-white truncate">
-                        {scheme.name || scheme.nameEnglish || scheme.schemeName || 'Untitled Scheme'}
-                    </h4>
-                    <p className="text-xs text-slate-400 font-body mt-1 line-clamp-2">
-                        {scheme.description || scheme.benefit || ''}
-                    </p>
-                    {scheme.benefitType && (
-                        <span className="inline-block mt-1.5 text-[10px] font-body text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full">
-                            {scheme.benefitType}
-                        </span>
-                    )}
-                </div>
-                {(scheme.annualBenefit != null) && (
-                    <span className="shrink-0 text-xs font-body font-semibold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full">
-                        ₹{Number(scheme.annualBenefit).toLocaleString('en-IN')}/yr
-                    </span>
-                )}
-            </div>
-        </motion.div>
-    );
-}
-
-/* ── main page ──────────────────────────────────────────────────────────── */
 export default function ProfilePage() {
-    const navigate = useNavigate();
-    const { user } = useAuth();
-    const { citizenProfile, eligibleSchemes, isLoadingProfile } = useCitizen();
-
-    const hasProfile = citizenProfile?.name && citizenProfile.name.trim() !== '';
-
-    /* ── Loading state ─────────────────────────────────────────────────── */
-    if (isLoadingProfile) {
-        return (
-            <div className="min-h-screen bg-[#020617] flex items-center justify-center">
-                <Loader2 size={36} className="text-saffron animate-spin" />
-            </div>
-        );
-    }
-
-    /* ── Empty state ───────────────────────────────────────────────────── */
-    if (!hasProfile) {
-        return (
-            <div className="min-h-screen bg-[#020617] flex items-center justify-center px-4">
-                <motion.div {...fadeUp()} className="text-center max-w-md">
-                    <div className="w-20 h-20 rounded-full bg-saffron/10 flex items-center justify-center mx-auto mb-6">
-                        <MessageSquare size={32} className="text-saffron" />
-                    </div>
-                    <h2 className="font-display text-2xl text-white mb-3">
-                        No Profile Yet
-                    </h2>
-                    <p className="font-body text-slate-400 mb-8">
-                        Start a conversation with Sarathi to build your citizen profile and
-                        discover welfare schemes you&apos;re eligible for.
-                    </p>
-                    <button
-                        onClick={() => navigate('/chat')}
-                        className="inline-flex items-center gap-2 h-11 px-6 rounded-lg bg-saffron text-white font-body text-sm font-semibold hover:bg-saffron-light transition-colors duration-200"
-                    >
-                        Start Chat <ChevronRight size={16} />
-                    </button>
-                </motion.div>
-            </div>
-        );
-    }
-
-    /* ── Profile view ──────────────────────────────────────────────────── */
-    const p = citizenProfile;
-    const totalBenefit = eligibleSchemes.reduce(
-        (sum, s) => sum + (Number(s.annualBenefit) || 0),
-        0,
-    );
-
-    const urbanLabel = p.urban === true ? 'Urban' : p.urban === false ? 'Rural' : (p.urban === 'urban' ? 'Urban' : p.urban === 'rural' ? 'Rural' : null);
-
     return (
-        <div className="min-h-screen bg-[#020617] pb-20">
-            {/* Header */}
-            <div className="relative overflow-hidden bg-gradient-to-br from-navy via-[#0f172a] to-[#020617] pt-10 pb-14 px-4">
-                <div className="absolute -top-20 -right-20 w-72 h-72 rounded-full bg-saffron/5 blur-3xl" />
-                <div className="max-w-3xl mx-auto relative z-10">
-                    <motion.div {...fadeUp()} className="flex items-center gap-5">
-                        <div className="w-16 h-16 rounded-full bg-saffron/20 flex items-center justify-center ring-2 ring-saffron/30">
-                            <User size={28} className="text-saffron" />
-                        </div>
-                        <div>
-                            <h1 className="font-display text-2xl md:text-3xl text-white">
-                                {p.name}
-                            </h1>
-                            <p className="font-body text-sm text-slate-400 mt-0.5">
-                                {user?.email || ''}
-                            </p>
-                            {p.persona && (
-                                <span className="inline-block mt-1 text-xs font-body text-indigo-300 bg-indigo-500/15 px-2.5 py-0.5 rounded-full">
-                                    {capitalize(p.persona)}
-                                </span>
-                            )}
-                        </div>
-                    </motion.div>
-
-                    {/* Summary Stats */}
-                    {eligibleSchemes.length > 0 && (
-                        <motion.div {...fadeUp(0.1)} className="flex gap-4 mt-6">
-                            <div className="flex-1 rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-3 text-center">
-                                <p className="text-2xl font-display text-emerald-400">{eligibleSchemes.length}</p>
-                                <p className="text-xs font-body text-slate-400">Schemes Matched</p>
-                            </div>
-                            <div className="flex-1 rounded-xl bg-saffron/10 border border-saffron/20 p-3 text-center">
-                                <p className="text-2xl font-display text-saffron">₹{totalBenefit.toLocaleString('en-IN')}</p>
-                                <p className="text-xs font-body text-slate-400">Total Annual Benefit</p>
-                            </div>
-                        </motion.div>
-                    )}
+        <div className="min-h-screen bg-[#f4f7fb] pb-12 font-sans text-slate-800">
+            {/* Header Section */}
+            <div className="bg-white border-b border-slate-200 pt-8 pb-6 px-4 md:px-8">
+                <div className="max-w-7xl mx-auto">
+                    <h1 className="text-2xl md:text-3xl font-bold text-[#1e3a8a] tracking-tight">
+                        My Welfare Portfolio
+                    </h1>
+                    <p className="text-sm text-slate-500 mt-1">
+                        Your complete welfare profile, enrolled schemes, and benefit history at a glance.
+                    </p>
                 </div>
             </div>
 
-            <div className="max-w-3xl mx-auto px-4 -mt-6 space-y-5">
+            <div className="max-w-7xl mx-auto px-4 md:px-8 mt-6">
+                <div className="flex flex-col lg:flex-row gap-6">
 
-                {/* ─── Core Profile ─────────────────────────────────────────── */}
-                <SectionCard title="Basic Information" icon={User} delay={0.1}>
-                    <InfoRow icon={User} label="Age" value={p.age ? `${p.age} years` : null} />
-                    <InfoRow icon={User} label="Gender" value={capitalize(p.gender)} />
-                    <InfoRow icon={Heart} label="Marital Status" value={capitalize(p.maritalStatus)} />
-                    <InfoRow icon={MapPin} label="State" value={p.state} />
-                    <InfoRow icon={Building2} label="Area Type" value={urbanLabel} />
-                    <InfoRow icon={IndianRupee} label="Annual Income" value={p.income ? `₹${Number(p.income).toLocaleString('en-IN')}` : null} />
-                    <InfoRow icon={ShieldCheck} label="Caste Category" value={p.category} />
-                    <InfoRow icon={Briefcase} label="Occupation" value={capitalize(p.occupation)} />
-                    <InfoRow icon={Accessibility} label="Disability" value={boolLabel(p.disability)} />
-                    <InfoRow icon={FileCheck} label="Ration Card" value={p.bplCard ? p.bplCard.toUpperCase() : null} />
-                </SectionCard>
+                    {/* LEFT SIDEBAR: PROFILE CARD */}
+                    <div className="w-full lg:w-[320px] shrink-0">
+                        <div className="bg-white rounded-xl shadow-sm border border-green-500 overflow-hidden relative">
+                            {/* Top decorative gradient line */}
+                            <div className="h-1 w-full bg-gradient-to-r from-green-400 to-emerald-600"></div>
 
-                {/* ─── Farmer Details ───────────────────────────────────────── */}
-                {(p.persona === 'farmer' || p.occupation === 'farmer') && (
-                    <SectionCard title="Farmer Details" icon={Tractor} delay={0.15}>
-                        <InfoRow icon={Tractor} label="Land Owned" value={boolLabel(p.landOwned)} />
-                        <InfoRow icon={Tractor} label="Land Size" value={p.landSize ? `${p.landSize} acres` : null} />
-                        <InfoRow icon={Tractor} label="Tenant Farmer" value={boolLabel(p.tenantFarmer)} />
-                        <InfoRow icon={Tractor} label="Livestock" value={boolLabel(p.livestock)} />
-                        <InfoRow icon={Tractor} label="Irrigated Land" value={boolLabel(p.irrigatedLand)} />
-                    </SectionCard>
-                )}
+                            <div className="p-6">
+                                {/* User Header */}
+                                <div className="flex items-center gap-4 mb-6">
+                                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center text-white text-xl font-bold shadow-md relative">
+                                        RK
+                                        <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-orange-500 rounded-full border-2 border-white flex items-center justify-center text-white">
+                                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h2 className="text-xl font-bold text-slate-900">Rajesh Kumar</h2>
+                                        <p className="text-xs text-slate-500 mt-0.5">42 yrs • Male</p>
+                                        <div className="flex gap-2 mt-2">
+                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">
+                                                BPL VERIFIED
+                                            </span>
+                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700">
+                                                OBC
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
 
-                {/* ─── Student Details ──────────────────────────────────────── */}
-                {(p.persona === 'student' || p.occupation === 'student') && (
-                    <SectionCard title="Education Details" icon={GraduationCap} delay={0.15}>
-                        <InfoRow icon={GraduationCap} label="Class Level" value={capitalize(p.classLevel)} />
-                        <InfoRow icon={GraduationCap} label="Government School" value={boolLabel(p.govtSchool)} />
-                        <InfoRow icon={GraduationCap} label="Minority Community" value={boolLabel(p.minority)} />
-                    </SectionCard>
-                )}
+                                {/* Info List */}
+                                <div className="space-y-4">
+                                    <div className="flex gap-3 items-start p-2 rounded-lg bg-slate-50 border border-slate-100">
+                                        <Phone size={16} className="text-blue-500 mt-0.5" />
+                                        <div>
+                                            <p className="text-[11px] text-slate-400 font-medium">Phone</p>
+                                            <p className="text-xs font-semibold text-slate-700">+91 98765 43210</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-3 items-start p-2 hover:bg-slate-50 rounded-lg transition-colors">
+                                        <MapPin size={16} className="text-blue-500 mt-0.5" />
+                                        <div>
+                                            <p className="text-[11px] text-slate-400 font-medium">Location</p>
+                                            <p className="text-xs font-semibold text-slate-700">Gram Panchayat Rampur, Meerut</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-3 items-start p-2 hover:bg-slate-50 rounded-lg transition-colors">
+                                        <CreditCard size={16} className="text-blue-500 mt-0.5" />
+                                        <div>
+                                            <p className="text-[11px] text-slate-400 font-medium">Aadhaar</p>
+                                            <p className="text-xs font-semibold text-slate-700">XXXX-XXXX-4521</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-3 items-start p-2 rounded-lg bg-slate-50 border border-slate-100">
+                                        <IndianRupee size={16} className="text-blue-500 mt-0.5" />
+                                        <div>
+                                            <p className="text-[11px] text-slate-400 font-medium">Annual Income</p>
+                                            <p className="text-xs font-semibold text-slate-700">₹85,000</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-3 items-start p-2 hover:bg-slate-50 rounded-lg transition-colors">
+                                        <Users size={16} className="text-blue-500 mt-0.5" />
+                                        <div>
+                                            <p className="text-[11px] text-slate-400 font-medium">Household Members</p>
+                                            <p className="text-xs font-semibold text-slate-700">5</p>
+                                        </div>
+                                    </div>
+                                </div>
 
-                {/* ─── Unemployed / Job Seeker ─────────────────────────────── */}
-                {p.persona === 'unemployed' && (
-                    <SectionCard title="Employment Details" icon={Briefcase} delay={0.15}>
-                        <InfoRow icon={Briefcase} label="Skill Trained" value={boolLabel(p.skillTrained)} />
-                        <InfoRow icon={Briefcase} label="Interested in Training" value={boolLabel(p.interestedInTraining)} />
-                        <InfoRow icon={GraduationCap} label="Education Level" value={capitalize(p.educationLevel)} />
-                    </SectionCard>
-                )}
-
-                {/* ─── Business Owner ──────────────────────────────────────── */}
-                {p.persona === 'business_owner' && (
-                    <SectionCard title="Business Details" icon={Factory} delay={0.15}>
-                        <InfoRow icon={Factory} label="MSME Registered" value={boolLabel(p.msmeRegistered)} />
-                        <InfoRow icon={IndianRupee} label="Annual Turnover" value={p.businessTurnover ? `₹${Number(p.businessTurnover).toLocaleString('en-IN')}` : null} />
-                        <InfoRow icon={Factory} label="Loan Needed" value={boolLabel(p.loanNeeded)} />
-                    </SectionCard>
-                )}
-
-                {/* ─── Senior Citizen ──────────────────────────────────────── */}
-                {p.persona === 'senior' && (
-                    <SectionCard title="Senior Citizen Details" icon={Users} delay={0.15}>
-                        <InfoRow icon={Users} label="Receiving Pension" value={boolLabel(p.pensionReceiving)} />
-                    </SectionCard>
-                )}
-
-                {/* ─── Disability Details ──────────────────────────────────── */}
-                {(p.disability === true || p.persona === 'disabled') && (
-                    <SectionCard title="Disability Details" icon={Accessibility} delay={0.15}>
-                        <InfoRow icon={Accessibility} label="Disability %" value={p.disabilityPercent || null} />
-                        <InfoRow icon={Accessibility} label="Type" value={capitalize(p.disabilityType)} />
-                        <InfoRow icon={FileCheck} label="UDID Certificate" value={boolLabel(p.disabilityCertificate)} />
-                    </SectionCard>
-                )}
-
-                {/* ─── Pregnant / Lactating ─────────────────────────────────── */}
-                {p.persona === 'pregnant' && (
-                    <SectionCard title="Maternity Details" icon={Baby} delay={0.15}>
-                        <InfoRow icon={Baby} label="Currently Pregnant" value={boolLabel(p.pregnant)} />
-                        <InfoRow icon={Baby} label="Lactating Mother" value={boolLabel(p.lactating)} />
-                    </SectionCard>
-                )}
-
-                {/* ─── Female-specific ─────────────────────────────────────── */}
-                {p.gender === 'female' && (p.isWidow || p.shgMember) && (
-                    <SectionCard title="Women-specific Details" icon={Heart} delay={0.15}>
-                        <InfoRow icon={Heart} label="Widow" value={boolLabel(p.isWidow)} />
-                        <InfoRow icon={Users} label="SHG Member" value={boolLabel(p.shgMember)} />
-                    </SectionCard>
-                )}
-
-                {/* ─── Urban / Rural Details ────────────────────────────────── */}
-                {(p.ownHouse !== null || p.streetVendor !== null || p.kutchaHouse !== null || p.mgnregaCard !== null) && (
-                    <SectionCard title={p.urban === true ? 'Urban Details' : 'Rural Details'} icon={p.urban === true ? Building2 : TreePine} delay={0.2}>
-                        <InfoRow icon={Home} label="Own House" value={boolLabel(p.ownHouse)} />
-                        <InfoRow icon={Building2} label="Street Vendor" value={boolLabel(p.streetVendor)} />
-                        <InfoRow icon={Home} label="Kutcha House" value={boolLabel(p.kutchaHouse)} />
-                        <InfoRow icon={FileCheck} label="MGNREGA Card" value={boolLabel(p.mgnregaCard)} />
-                    </SectionCard>
-                )}
-
-                {/* ─── Matched Schemes ──────────────────────────────────────── */}
-                {eligibleSchemes.length > 0 && (
-                    <motion.div
-                        {...fadeUp(0.25)}
-                        className="rounded-2xl border border-slate-800 bg-[#0f172a] p-6"
-                    >
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-display text-lg text-white">
-                                Matched Schemes ({eligibleSchemes.length})
-                            </h3>
-                            <span className="text-xs font-body font-semibold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full">
-                                Total: ₹{totalBenefit.toLocaleString('en-IN')}/yr
-                            </span>
+                                {/* Edit Button */}
+                                <button className="w-full mt-6 py-2.5 rounded-lg border border-[#1e3a8a] text-[#1e3a8a] text-sm font-semibold hover:bg-blue-50 transition-colors flex items-center justify-center gap-2">
+                                    <Edit size={16} /> Edit Profile
+                                </button>
+                            </div>
                         </div>
-                        <div className="space-y-3">
-                            {eligibleSchemes.map((s, i) => (
-                                <SchemeCard key={s.schemeId || s.name || i} scheme={s} index={i} />
-                            ))}
-                        </div>
-                    </motion.div>
-                )}
+                    </div>
 
-                {/* Update CTA */}
-                <motion.div {...fadeUp(0.3)} className="flex justify-center">
-                    <button
-                        onClick={() => navigate('/chat')}
-                        className="inline-flex items-center gap-2 h-11 px-6 rounded-lg border border-saffron text-saffron font-body text-sm font-semibold hover:bg-saffron/10 transition-colors duration-200"
-                    >
-                        Update Profile <ChevronRight size={16} />
-                    </button>
-                </motion.div>
+                    {/* RIGHT MAIN CONTENT */}
+                    <div className="flex-1 space-y-6">
+
+                        {/* 1. Top Stats Cards */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {/* Active Schemes */}
+                            <div className="bg-white rounded-xl shadow-sm border border-blue-500 pt-5 pb-4 px-4 text-center">
+                                <div className="w-10 h-10 mx-auto rounded-full bg-blue-500 text-white flex items-center justify-center mb-2 shadow-sm">
+                                    <Award size={20} />
+                                </div>
+                                <p className="text-2xl font-bold text-[#1e3a8a]">4</p>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Active Schemes</p>
+                            </div>
+                            {/* Total Benefits */}
+                            <div className="bg-white rounded-xl shadow-sm border border-orange-400 pt-5 pb-4 px-4 text-center">
+                                <div className="w-10 h-10 mx-auto rounded-full bg-emerald-500 text-white flex items-center justify-center mb-2 shadow-sm">
+                                    <IndianRupee size={20} />
+                                </div>
+                                <p className="text-2xl font-bold text-blue-600">₹18,400</p>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Total Benefits</p>
+                            </div>
+                            {/* Documents */}
+                            <div className="bg-white rounded-xl shadow-sm border border-orange-400 pt-5 pb-4 px-4 text-center">
+                                <div className="w-10 h-10 mx-auto rounded-full bg-red-400 text-white flex items-center justify-center mb-2 shadow-sm">
+                                    <FileText size={20} />
+                                </div>
+                                <p className="text-2xl font-bold text-[#1e3a8a]">6</p>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Documents</p>
+                            </div>
+                            {/* Welfare Score */}
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-300 pt-5 pb-4 px-4 text-center shadow-[0_4px_14px_rgba(0,0,0,0.05)] relative overflow-hidden">
+                                {/* Orange highlight top line */}
+                                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-400 to-amber-500" />
+                                <div className="w-10 h-10 mx-auto rounded-full bg-purple-500 text-white flex items-center justify-center mb-2 shadow-sm">
+                                    <TrendingUp size={20} />
+                                </div>
+                                <p className="text-2xl font-bold text-[#1e3a8a]">87/100</p>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Welfare Score</p>
+                            </div>
+                        </div>
+
+                        {/* 2. Enrolled Schemes Table */}
+                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div className="px-6 py-4 flex items-center gap-2 border-b-2 border-slate-100">
+                                <ShieldCheck size={20} className="text-[#1e3a8a]" />
+                                <h3 className="text-lg font-bold text-[#1e3a8a]">Enrolled Schemes</h3>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-[#1e3a8a] text-white text-[11px] uppercase tracking-wider">
+                                            <th className="py-3 px-6 font-semibold">Scheme</th>
+                                            <th className="py-3 px-6 font-semibold">Status</th>
+                                            <th className="py-3 px-6 font-semibold">Next Payment</th>
+                                            <th className="py-3 px-6 font-semibold">Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="text-sm divide-y divide-slate-100">
+                                        <tr className="hover:bg-slate-50 transition-colors">
+                                            <td className="py-4 px-6 font-medium text-slate-700">PM Kisan</td>
+                                            <td className="py-4 px-6">
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">ACTIVE</span>
+                                            </td>
+                                            <td className="py-4 px-6 text-slate-500">Apr 2026</td>
+                                            <td className="py-4 px-6 font-bold text-green-600">₹2,000</td>
+                                        </tr>
+                                        <tr className="hover:bg-slate-50 transition-colors bg-slate-50/50">
+                                            <td className="py-4 px-6 font-medium text-slate-700">MGNREGA</td>
+                                            <td className="py-4 px-6">
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">ACTIVE</span>
+                                            </td>
+                                            <td className="py-4 px-6 text-slate-500">On demand</td>
+                                            <td className="py-4 px-6 font-bold text-green-600">₹202/day</td>
+                                        </tr>
+                                        <tr className="hover:bg-slate-50 transition-colors">
+                                            <td className="py-4 px-6 font-medium text-slate-700">Ayushman Bharat</td>
+                                            <td className="py-4 px-6">
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">ACTIVE</span>
+                                            </td>
+                                            <td className="py-4 px-6 text-slate-500">N/A</td>
+                                            <td className="py-4 px-6 font-bold text-green-600">₹5,00,000 cover</td>
+                                        </tr>
+                                        <tr className="hover:bg-slate-50 transition-colors bg-slate-50/50">
+                                            <td className="py-4 px-6 font-medium text-slate-700">Food Security</td>
+                                            <td className="py-4 px-6">
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">ACTIVE</span>
+                                            </td>
+                                            <td className="py-4 px-6 text-slate-500">Monthly</td>
+                                            <td className="py-4 px-6 font-bold text-green-600">35kg grain</td>
+                                        </tr>
+                                        <tr className="hover:bg-slate-50 transition-colors">
+                                            <td className="py-4 px-6 font-medium text-slate-700">Ujjwala Yojana</td>
+                                            <td className="py-4 px-6">
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-yellow-100 text-yellow-700">COMPLETED</span>
+                                            </td>
+                                            <td className="py-4 px-6 text-slate-500">–</td>
+                                            <td className="py-4 px-6 font-bold text-green-600">₹1,600 (one-time)</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* 3. Benefit Receipt History */}
+                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div className="px-6 py-4 flex items-center gap-2 border-b-2 border-slate-100">
+                                <TrendingUp size={20} className="text-[#1e3a8a]" />
+                                <h3 className="text-lg font-bold text-[#1e3a8a]">Benefit Receipt History</h3>
+                            </div>
+                            <div className="p-6 space-y-4">
+                                {/* Item 1 */}
+                                <div className="flex items-center justify-between p-4 rounded-lg bg-white border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                                            <CheckCircle2 size={24} />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-slate-800">PM Kisan Samman Nidhi</p>
+                                            <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5"><Clock size={12} /> 15 Feb 2026</p>
+                                        </div>
+                                    </div>
+                                    <p className="font-bold text-green-700">₹6,000</p>
+                                </div>
+                                {/* Item 2 */}
+                                <div className="flex items-center justify-between p-4 rounded-lg bg-white border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                                            <CheckCircle2 size={24} />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-slate-800">MGNREGA Wages</p>
+                                            <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5"><Clock size={12} /> 28 Jan 2026</p>
+                                        </div>
+                                    </div>
+                                    <p className="font-bold text-green-700">₹8,400</p>
+                                </div>
+                                {/* Item 3 */}
+                                <div className="flex items-center justify-between p-4 rounded-lg bg-white border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                                            <Clock size={24} />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-slate-800">Ayushman Bharat – PMJAY</p>
+                                            <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5"><Clock size={12} /> 10 Jan 2026</p>
+                                        </div>
+                                    </div>
+                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-green-100 text-green-700">ACTIVE COVERAGE</span>
+                                </div>
+                                {/* Item 4 */}
+                                <div className="flex items-center justify-between p-4 rounded-lg bg-white border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                                            <CheckCircle2 size={24} />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-slate-800">Food Security – PDS</p>
+                                            <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5"><Clock size={12} /> 20 Dec 2025</p>
+                                        </div>
+                                    </div>
+                                    <p className="font-bold text-green-700">₹2,400</p>
+                                </div>
+                                {/* Item 5 */}
+                                <div className="flex items-center justify-between p-4 rounded-lg bg-white border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                                            <CheckCircle2 size={24} />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-slate-800">PM Ujjwala Yojana</p>
+                                            <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5"><Clock size={12} /> 05 Nov 2025</p>
+                                        </div>
+                                    </div>
+                                    <p className="font-bold text-green-700">₹1,600</p>
+                                </div>
+
+                                {/* Download Button */}
+                                <button className="w-full mt-2 py-3 rounded-lg border border-[#1e3a8a] text-[#1e3a8a] text-sm font-semibold hover:bg-blue-50 transition-colors flex items-center justify-center gap-2">
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                    Download Full Statement
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
             </div>
         </div>
     );

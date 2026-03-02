@@ -11,6 +11,7 @@ LAMBDAS = {
     'sarathi-panchayat-stats': 'panchayat_stats.py',
     'sarathi-conflict-detector': 'conflict_detector.py',
     'sarathi-citizen-save': 'citizen_save.py',
+    'sarathi-tts-polly': 'tts_polly.py',
 }
 
 base = os.path.join(os.path.dirname(__file__), 'lambdas')

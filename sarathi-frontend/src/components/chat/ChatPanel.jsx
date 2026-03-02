@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react';
-import { Volume2 } from 'lucide-react';
+import { Volume2, Square, Loader2 } from 'lucide-react';
+import usePollyTTS from '../../hooks/usePollyTTS';
 
 /**
  * ChatPanel — renders the chat message list + auto-scroll.
@@ -7,13 +8,12 @@ import { Volume2 } from 'lucide-react';
 function ChatPanel({ messages = [], isThinking = false, language = 'en' }) {
     const bottomRef = useRef(null);
 
-    // Text to Speech
-    const speakMessage = (text) => {
-        if (!('speechSynthesis' in window)) return;
-        window.speechSynthesis.cancel(); // Stop current speech
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = language === 'hi' ? 'hi-IN' : 'en-IN';
-        window.speechSynthesis.speak(utterance);
+    // Text to Speech (AWS Polly)
+    const { playText, stopPlayback, isSpeaking, isLoading, activeTextId } = usePollyTTS();
+
+    const handleSpeak = (text, index) => {
+        // We use the message index as a unique ID to know which specific bubble is playing
+        playText(text, language, `msg-${index}`);
     };
 
     // Auto-scroll to bottom when new messages arrive
@@ -38,35 +38,51 @@ function ChatPanel({ messages = [], isThinking = false, language = 'en' }) {
 
             {/* Messages */}
             <div className="max-w-2xl mx-auto space-y-4">
-                {messages.map((msg, i) => (
-                    <div key={i} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        {msg.type === 'sarathi' && (
-                            <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center mr-3 shrink-0 mt-1 border border-indigo-500/20 shadow-sm">
-                                <span className="font-display text-sm text-indigo-400">S</span>
-                            </div>
-                        )}
-                        <div
-                            className={`max-w-[80%] px-4 py-3 whitespace-pre-wrap leading-relaxed font-body text-sm shadow-sm ${msg.type === 'user'
-                                ? 'bg-indigo-600 text-white rounded-[16px_16px_4px_16px] shadow-indigo-500/10'
-                                : msg.isFinal
-                                    ? 'bg-[#0f172a] text-[#f8fafc] rounded-[16px_16px_16px_4px] border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.05)]'
-                                    : 'bg-[#0f172a] text-[#f8fafc] rounded-[16px_16px_16px_4px] border border-slate-800 shadow-[0_2px_10px_rgba(0,0,0,0.2)]'
-                                }`}
-                        >
-                            {msg.text}
-                        </div>
-                        {msg.type === 'sarathi' && (
-                            <button
-                                onClick={() => speakMessage(msg.text)}
-                                className="ml-2 mt-auto mb-1 p-1.5 rounded-full text-slate-500 hover:text-indigo-400 hover:bg-indigo-500/10 transition-colors"
-                                aria-label="Listen to message"
-                                title="Listen to message"
+                {messages.map((msg, i) => {
+                    const msgId = `msg-${i}`;
+                    const isMsgActive = activeTextId === msgId;
+                    const isMsgLoading = isLoading && isMsgActive;
+                    const isMsgPlaying = isSpeaking && isMsgActive;
+
+                    return (
+                        <div key={i} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
+                            {msg.type === 'sarathi' && (
+                                <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center mr-3 shrink-0 mt-1 border border-indigo-500/20 shadow-sm">
+                                    <span className="font-display text-sm text-indigo-400">S</span>
+                                </div>
+                            )}
+                            <div
+                                className={`max-w-[80%] px-4 py-3 whitespace-pre-wrap leading-relaxed font-body text-sm shadow-sm ${msg.type === 'user'
+                                    ? 'bg-indigo-600 text-white rounded-[16px_16px_4px_16px] shadow-indigo-500/10'
+                                    : msg.isFinal
+                                        ? 'bg-[#0f172a] text-[#f8fafc] rounded-[16px_16px_16px_4px] border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.05)]'
+                                        : 'bg-[#0f172a] text-[#f8fafc] rounded-[16px_16px_16px_4px] border border-slate-800 shadow-[0_2px_10px_rgba(0,0,0,0.2)]'
+                                    }`}
                             >
-                                <Volume2 size={16} />
-                            </button>
-                        )}
-                    </div>
-                ))}
+                                {msg.text}
+                            </div>
+                            {msg.type === 'sarathi' && (
+                                <button
+                                    onClick={() => handleSpeak(msg.text, i)}
+                                    className={`ml-2 mt-auto mb-1 p-1.5 rounded-full transition-all duration-200 ${isMsgPlaying || isMsgLoading
+                                            ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 shadow-[0_0_10px_rgba(99,102,241,0.2)]'
+                                            : 'text-slate-500 hover:text-indigo-400 hover:bg-indigo-500/10 border border-transparent'
+                                        }`}
+                                    aria-label="Listen to message"
+                                    title="Listen to message"
+                                >
+                                    {isMsgLoading ? (
+                                        <Loader2 size={16} className="animate-spin" />
+                                    ) : isMsgPlaying ? (
+                                        <Square size={16} className="fill-current" />
+                                    ) : (
+                                        <Volume2 size={16} />
+                                    )}
+                                </button>
+                            )}
+                        </div>
+                    );
+                })}
 
                 {/* Thinking indicator */}
                 {isThinking && (

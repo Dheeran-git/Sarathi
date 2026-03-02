@@ -37,6 +37,7 @@ function Navbar() {
       { to: '/panchayat', label: 'Panchayat' },
       { to: '/dashboard', label: 'Dashboard' },
       { to: '/profile', label: 'My Profile' },
+      { to: '/documents', label: 'Documents' },
       { to: '/schemes', label: 'Schemes' },
       { to: '/twin', label: 'Digital Twin' },
       { to: '/about', label: 'About' },
