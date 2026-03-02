@@ -1,8 +1,36 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { getCitizenProfile, saveCitizen } from '../utils/api';
 import { useAuth } from './AuthContext';
 
 const CitizenContext = createContext();
+
+const PROFILE_STORAGE_KEY = 'sarathi_citizen_profile';
+const SCHEMES_STORAGE_KEY = 'sarathi_eligible_schemes';
+
+/* ── localStorage helpers ─────────────────────────────────────────────── */
+const loadFromStorage = (key, fallback) => {
+    try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : fallback;
+    } catch {
+        return fallback;
+    }
+};
+
+const saveToStorage = (key, value) => {
+    try {
+        localStorage.setItem(key, JSON.stringify(value));
+    } catch (e) {
+        console.warn('[CitizenContext] localStorage write failed:', e);
+    }
+};
+
+const clearStorage = () => {
+    try {
+        localStorage.removeItem(PROFILE_STORAGE_KEY);
+        localStorage.removeItem(SCHEMES_STORAGE_KEY);
+    } catch { }
+};
 
 const emptyProfile = {
     name: '',
@@ -61,65 +89,131 @@ const emptyProfile = {
 };
 
 export function CitizenProvider({ children }) {
-    const [citizenProfile, setCitizenProfile] = useState(emptyProfile);
-    const [eligibleSchemes, setEligibleSchemes] = useState([]);
+    const [citizenProfile, setCitizenProfile] = useState(() => loadFromStorage(PROFILE_STORAGE_KEY, emptyProfile));
+    const [eligibleSchemes, setEligibleSchemesRaw] = useState(() => loadFromStorage(SCHEMES_STORAGE_KEY, []));
 
     const [isLoadingProfile, setIsLoadingProfile] = useState(false);
     const { isAuthenticated, user } = useAuth();
 
-    // The Cognito user ID (using email as a proxy if actual sub isn't easily available in AuthContext)
+    // The Cognito user ID (using email as a proxy)
     const userId = user?.email || localStorage.getItem('userEmail');
 
+    // Ref to track the latest profile for debounced save
+    const profileRef = useRef(citizenProfile);
+    const schemesRef = useRef(eligibleSchemes);
+    const dbSaveTimerRef = useRef(null);
+
+    /* Wrap setEligibleSchemes to also persist */
+    const setEligibleSchemes = useCallback((schemes) => {
+        setEligibleSchemesRaw(schemes);
+        schemesRef.current = schemes;
+        saveToStorage(SCHEMES_STORAGE_KEY, schemes);
+    }, []);
+
+    /* ── Debounced save to DB (2s after last change) ──────────────────── */
+    const scheduleDatabaseSave = useCallback((profile, schemes) => {
+        const currentUserId = userId;
+        if (!currentUserId) return;
+
+        // Clear any pending timer
+        if (dbSaveTimerRef.current) {
+            clearTimeout(dbSaveTimerRef.current);
+        }
+
+        dbSaveTimerRef.current = setTimeout(async () => {
+            try {
+                const payload = { ...profile };
+                if (schemes && schemes.length > 0) {
+                    payload.matchedSchemes = schemes;
+                    payload.totalAnnualBenefit = schemes.reduce((sum, s) => sum + (s.annualBenefit || 0), 0);
+                }
+                await saveCitizen(payload, currentUserId);
+                console.log('[CitizenContext] ✅ Profile auto-saved to DB');
+            } catch (err) {
+                console.warn('[CitizenContext] Auto-save to DB failed (will retry on next update):', err);
+            }
+        }, 2000);
+    }, [userId]);
+
+    /* ── Load profile from DB on login ───────────────────────────────── */
     useEffect(() => {
         if (isAuthenticated && userId) {
             loadProfile();
-        } else {
-            resetProfile();
+        } else if (!isAuthenticated) {
+            // On logout: clear local state but DB data stays intact
+            setCitizenProfile(emptyProfile);
+            setEligibleSchemesRaw([]);
+            clearStorage();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isAuthenticated, userId]);
+
+    // Cleanup timer on unmount
+    useEffect(() => {
+        return () => {
+            if (dbSaveTimerRef.current) clearTimeout(dbSaveTimerRef.current);
+        };
+    }, []);
 
     const loadProfile = async () => {
         setIsLoadingProfile(true);
         try {
             const data = await getCitizenProfile(userId);
             if (data && data.citizenId) {
-                setCitizenProfile((prev) => ({ ...prev, ...data }));
-                if (data.matchedSchemes) {
+                // DB data takes priority — merge on top of defaults
+                const merged = { ...emptyProfile, ...data };
+                setCitizenProfile(merged);
+                profileRef.current = merged;
+                saveToStorage(PROFILE_STORAGE_KEY, merged);
+                if (data.matchedSchemes && data.matchedSchemes.length > 0) {
                     setEligibleSchemes(data.matchedSchemes);
                 }
+                console.log('[CitizenContext] ✅ Profile loaded from DB for', userId);
             }
         } catch (error) {
-            console.log('[CitizenContext] No existing profile found for user or error loading:', error);
+            console.log('[CitizenContext] No existing profile in DB, using local/default:', error);
+            // localStorage data is already loaded via useState initializer — nothing to do
         } finally {
             setIsLoadingProfile(false);
         }
     };
 
-    const updateProfile = (updates) => {
-        setCitizenProfile((prev) => ({ ...prev, ...updates }));
-    };
+    const updateProfile = useCallback((updates) => {
+        setCitizenProfile((prev) => {
+            const next = { ...prev, ...updates };
+            profileRef.current = next;
+            saveToStorage(PROFILE_STORAGE_KEY, next);
+            // Schedule a debounced save to DB
+            scheduleDatabaseSave(next, schemesRef.current);
+            return next;
+        });
+    }, [scheduleDatabaseSave]);
 
-    const saveCurrentProfile = async (matchedSchemes = []) => {
+    const saveCurrentProfile = useCallback(async (matchedSchemes = []) => {
         if (!userId) return null;
         try {
-            const payload = { ...citizenProfile };
+            const payload = { ...profileRef.current };
             if (matchedSchemes.length > 0) {
                 payload.matchedSchemes = matchedSchemes;
                 const total = matchedSchemes.reduce((sum, s) => sum + (s.annualBenefit || 0), 0);
                 payload.totalAnnualBenefit = total;
             }
             const res = await saveCitizen(payload, userId);
+            console.log('[CitizenContext] ✅ Profile explicitly saved to DB');
             return res;
         } catch (error) {
             console.error('[CitizenContext] Failed to save profile:', error);
             throw error;
         }
-    };
+    }, [userId]);
 
-    const resetProfile = () => {
+    const resetProfile = useCallback(() => {
         setCitizenProfile(emptyProfile);
-        setEligibleSchemes([]);
-    };
+        profileRef.current = emptyProfile;
+        setEligibleSchemesRaw([]);
+        schemesRef.current = [];
+        clearStorage();
+    }, []);
 
     return (
         <CitizenContext.Provider
