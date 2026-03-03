@@ -1,290 +1,323 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { useCitizen } from '../context/CitizenContext';
+import { useToast } from '../components/ui/Toast';
+import { motion } from 'framer-motion';
 import {
-    Phone, MapPin, CreditCard, IndianRupee, Users,
-    Edit, Award, FileText, CheckCircle2, Clock,
-    TrendingUp, ShieldCheck
+    User, MapPin, Shield, LogOut,
+    ChevronRight, Edit3, Save, X, Briefcase,
+    Calendar, IndianRupee, Users, Home, Loader2
 } from 'lucide-react';
 
-export default function ProfilePage() {
+const MotionWrapper = ({ children, delay = 0, className = "" }) => (
+    <motion.div
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay }}
+        className={className}
+    >
+        {children}
+    </motion.div>
+);
+
+const fmt = (val) => {
+    if (val === null || val === undefined || val === '') return null;
+    if (typeof val === 'boolean') return val ? 'Yes' : 'No';
+    if (typeof val === 'number') return val.toLocaleString('en-IN');
+    return String(val);
+};
+
+// D2: 8 core fields for completion
+const COMPLETION_FIELDS = ['name', 'age', 'gender', 'state', 'income', 'category', 'urban', 'persona'];
+
+function ProfilePage() {
+    const { user, logout } = useAuth();
+    const { citizenProfile, updateProfile, isLoadingProfile, eligibleSchemes, saveCurrentProfile } = useCitizen();
+    const { addToast } = useToast();
+    const navigate = useNavigate();
+    const [isEditing, setIsEditing] = useState(false);
+    const [draft, setDraft] = useState({});
+    const [validationErrors, setValidationErrors] = useState({});
+
+    // D2: Completion progress
+    const completionPct = Math.round(
+        (COMPLETION_FIELDS.filter((f) => {
+            const v = citizenProfile[f];
+            return v !== null && v !== undefined && v !== '';
+        }).length / COMPLETION_FIELDS.length) * 100
+    );
+
+    const startEditing = () => {
+        setDraft({ ...citizenProfile });
+        setValidationErrors({});
+        setIsEditing(true);
+    };
+
+    const handleChange = (key, value) => {
+        setDraft((prev) => ({ ...prev, [key]: value }));
+        setValidationErrors((prev) => ({ ...prev, [key]: undefined }));
+    };
+
+    // D2: Validate before save
+    const validateDraft = (d) => {
+        const errors = {};
+        if (d.age !== null && d.age !== undefined) {
+            const age = Number(d.age);
+            if (d.age === '' || isNaN(age) || age < 1 || age > 120) errors.age = 'Age must be between 1 and 120';
+        }
+        if (d.income !== '' && d.income !== null && d.income !== undefined) {
+            const inc = Number(d.income);
+            if (isNaN(inc) || inc < 0 || inc > 999999) errors.income = 'Income must be between 0 and 9,99,999';
+        }
+        return errors;
+    };
+
+    const handleSave = async () => {
+        const errors = validateDraft(draft);
+        if (Object.keys(errors).length > 0) {
+            setValidationErrors(errors);
+            return;
+        }
+        updateProfile(draft);
+        setIsEditing(false);
+        try {
+            await saveCurrentProfile(eligibleSchemes);
+            addToast('Profile saved', 'success');
+        } catch {
+            addToast('Save failed — changes stored locally', 'error');
+        }
+    };
+
+    // D2: Cancel restores draft
+    const handleCancel = () => {
+        setDraft({ ...citizenProfile });
+        setValidationErrors({});
+        setIsEditing(false);
+    };
+
+    const handleLogout = async () => {
+        try {
+            await logout();
+            navigate('/');
+        } catch (err) {
+            console.error('Logout failed', err);
+        }
+    };
+
+    const displayName = citizenProfile.name || (user?.email ? user.email.split('@')[0] : 'Citizen');
+    const displayEmail = user?.email || 'Not available';
+
+    const coreFields = [
+        { key: 'name', label: 'Full Name', icon: User, type: 'text' },
+        { key: 'age', label: 'Age', icon: Calendar, type: 'number' },
+        { key: 'gender', label: 'Gender', icon: Users, type: 'text' },
+        { key: 'state', label: 'State', icon: MapPin, type: 'text' },
+        { key: 'income', label: 'Annual Income (₹)', icon: IndianRupee, type: 'number' },
+        { key: 'category', label: 'Social Category', icon: Shield, type: 'text' },
+        {
+            key: 'urban', label: 'Area Type', icon: Home, type: 'text',
+            format: (v) => v === true ? 'Urban' : v === false ? 'Rural' : null
+        },
+        { key: 'persona', label: 'Occupation', icon: Briefcase, type: 'text' },
+    ];
+
+    const extraFields = [
+        { key: 'landOwned', label: 'Owns Land' },
+        { key: 'shgMember', label: 'SHG Member' },
+        { key: 'isWidow', label: 'Widow' },
+        { key: 'pregnant', label: 'Pregnant / New Mother' },
+        { key: 'disability', label: 'Disability' },
+        { key: 'hasRationCard', label: 'Ration Card' },
+        { key: 'hasJobCard', label: 'MGNREGS Job Card' },
+        { key: 'educationLevel', label: 'Education Level' },
+        { key: 'hasEnterprise', label: 'Runs Enterprise' },
+        { key: 'seekingWork', label: 'Seeking Work' },
+    ].filter(({ key }) => {
+        const v = citizenProfile[key];
+        return v !== null && v !== undefined && v !== '' && v !== false;
+    });
+
+    if (isLoadingProfile) {
+        return (
+            <div className="min-h-screen bg-off-white flex items-center justify-center">
+                <Loader2 size={32} className="animate-spin text-saffron" />
+            </div>
+        );
+    }
+
     return (
-        <div className="min-h-screen bg-[#f4f7fb] pb-12 font-sans text-slate-800">
-            {/* Header Section */}
-            <div className="bg-white border-b border-slate-200 pt-8 pb-6 px-4 md:px-8">
-                <div className="max-w-7xl mx-auto">
-                    <h1 className="text-2xl md:text-3xl font-bold text-[#1e3a8a] tracking-tight">
-                        My Welfare Portfolio
-                    </h1>
-                    <p className="text-sm text-slate-500 mt-1">
-                        Your complete welfare profile, enrolled schemes, and benefit history at a glance.
-                    </p>
+        <div className="min-h-screen bg-off-white pb-12">
+            {/* Header */}
+            <div className="bg-navy pt-8 pb-12 lg:pt-12 lg:pb-16 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+                <div className="absolute top-0 left-1/4 w-96 h-96 bg-saffron/10 rounded-full blur-3xl pointer-events-none" />
+
+                <div className="max-w-3xl mx-auto relative z-10">
+                    <MotionWrapper>
+                        <div className="flex items-center gap-4">
+                            <div className="w-16 h-16 rounded-full bg-saffron/20 border-2 border-saffron/40 flex items-center justify-center">
+                                <User size={28} className="text-saffron" />
+                            </div>
+                            <div>
+                                <h1 className="font-display text-3xl lg:text-4xl text-white leading-tight">
+                                    {displayName}
+                                </h1>
+                                <p className="font-body text-gray-300 mt-1 text-sm">{displayEmail}</p>
+                                {eligibleSchemes.length > 0 && (
+                                    <p className="font-body text-green-300 mt-1 text-xs">
+                                        Eligible for {eligibleSchemes.length} scheme{eligibleSchemes.length > 1 ? 's' : ''}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    </MotionWrapper>
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto px-4 md:px-8 mt-6">
-                <div className="flex flex-col lg:flex-row gap-6">
+            <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-20 space-y-6">
+                {/* D2: Progress bar */}
+                <MotionWrapper className="bg-white rounded-xl border border-gray-200 shadow-card px-6 py-4">
+                    <div className="flex items-center justify-between mb-1">
+                        <span className="font-body text-xs text-gray-500">Profile Completion</span>
+                        <span className="font-body text-xs font-semibold text-gray-900">{completionPct}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                            className="bg-saffron h-2 rounded-full transition-all duration-500"
+                            style={{ width: `${completionPct}%` }}
+                        />
+                    </div>
+                </MotionWrapper>
 
-                    {/* LEFT SIDEBAR: PROFILE CARD */}
-                    <div className="w-full lg:w-[320px] shrink-0">
-                        <div className="bg-white rounded-xl shadow-sm border border-green-500 overflow-hidden relative">
-                            {/* Top decorative gradient line */}
-                            <div className="h-1 w-full bg-gradient-to-r from-green-400 to-emerald-600"></div>
-
-                            <div className="p-6">
-                                {/* User Header */}
-                                <div className="flex items-center gap-4 mb-6">
-                                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center text-white text-xl font-bold shadow-md relative">
-                                        RK
-                                        <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-orange-500 rounded-full border-2 border-white flex items-center justify-center text-white">
-                                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <h2 className="text-xl font-bold text-slate-900">Rajesh Kumar</h2>
-                                        <p className="text-xs text-slate-500 mt-0.5">42 yrs • Male</p>
-                                        <div className="flex gap-2 mt-2">
-                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">
-                                                BPL VERIFIED
-                                            </span>
-                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700">
-                                                OBC
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Info List */}
-                                <div className="space-y-4">
-                                    <div className="flex gap-3 items-start p-2 rounded-lg bg-slate-50 border border-slate-100">
-                                        <Phone size={16} className="text-blue-500 mt-0.5" />
-                                        <div>
-                                            <p className="text-[11px] text-slate-400 font-medium">Phone</p>
-                                            <p className="text-xs font-semibold text-slate-700">+91 98765 43210</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-3 items-start p-2 hover:bg-slate-50 rounded-lg transition-colors">
-                                        <MapPin size={16} className="text-blue-500 mt-0.5" />
-                                        <div>
-                                            <p className="text-[11px] text-slate-400 font-medium">Location</p>
-                                            <p className="text-xs font-semibold text-slate-700">Gram Panchayat Rampur, Meerut</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-3 items-start p-2 hover:bg-slate-50 rounded-lg transition-colors">
-                                        <CreditCard size={16} className="text-blue-500 mt-0.5" />
-                                        <div>
-                                            <p className="text-[11px] text-slate-400 font-medium">Aadhaar</p>
-                                            <p className="text-xs font-semibold text-slate-700">XXXX-XXXX-4521</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-3 items-start p-2 rounded-lg bg-slate-50 border border-slate-100">
-                                        <IndianRupee size={16} className="text-blue-500 mt-0.5" />
-                                        <div>
-                                            <p className="text-[11px] text-slate-400 font-medium">Annual Income</p>
-                                            <p className="text-xs font-semibold text-slate-700">₹85,000</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-3 items-start p-2 hover:bg-slate-50 rounded-lg transition-colors">
-                                        <Users size={16} className="text-blue-500 mt-0.5" />
-                                        <div>
-                                            <p className="text-[11px] text-slate-400 font-medium">Household Members</p>
-                                            <p className="text-xs font-semibold text-slate-700">5</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Edit Button */}
-                                <button className="w-full mt-6 py-2.5 rounded-lg border border-[#1e3a8a] text-[#1e3a8a] text-sm font-semibold hover:bg-blue-50 transition-colors flex items-center justify-center gap-2">
-                                    <Edit size={16} /> Edit Profile
+                {/* Core Profile Details */}
+                <MotionWrapper delay={0.2} className="bg-white rounded-xl border border-gray-200 p-6 shadow-card">
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="font-body text-lg font-bold text-gray-900 flex items-center gap-2">
+                            <Shield size={20} className="text-saffron" />
+                            Profile Details
+                        </h2>
+                        {isEditing ? (
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={handleSave}
+                                    className="inline-flex items-center gap-1.5 h-8 px-4 rounded-lg bg-saffron text-white font-body text-xs font-semibold hover:bg-saffron-light transition-colors"
+                                >
+                                    <Save size={14} /> Save
+                                </button>
+                                <button
+                                    onClick={handleCancel}
+                                    className="inline-flex items-center gap-1.5 h-8 px-4 rounded-lg border border-gray-300 text-gray-500 font-body text-xs font-semibold hover:text-danger hover:border-red-300 transition-colors"
+                                >
+                                    <X size={14} /> Cancel
                                 </button>
                             </div>
-                        </div>
+                        ) : (
+                            <button
+                                onClick={startEditing}
+                                className="inline-flex items-center gap-1.5 h-8 px-4 rounded-lg border border-gray-300 text-gray-600 font-body text-xs font-semibold hover:text-saffron hover:border-saffron/40 transition-colors"
+                            >
+                                <Edit3 size={14} /> Edit
+                            </button>
+                        )}
                     </div>
 
-                    {/* RIGHT MAIN CONTENT */}
-                    <div className="flex-1 space-y-6">
+                    <div className="space-y-3">
+                        {coreFields.map(({ key, label, icon: Icon, type, format }) => {
+                            const rawVal = isEditing ? draft[key] : citizenProfile[key];
+                            const displayVal = format ? format(rawVal) : fmt(rawVal);
+                            const fieldError = validationErrors[key];
 
-                        {/* 1. Top Stats Cards */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {/* Active Schemes */}
-                            <div className="bg-white rounded-xl shadow-sm border border-blue-500 pt-5 pb-4 px-4 text-center">
-                                <div className="w-10 h-10 mx-auto rounded-full bg-blue-500 text-white flex items-center justify-center mb-2 shadow-sm">
-                                    <Award size={20} />
-                                </div>
-                                <p className="text-2xl font-bold text-[#1e3a8a]">4</p>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Active Schemes</p>
-                            </div>
-                            {/* Total Benefits */}
-                            <div className="bg-white rounded-xl shadow-sm border border-orange-400 pt-5 pb-4 px-4 text-center">
-                                <div className="w-10 h-10 mx-auto rounded-full bg-emerald-500 text-white flex items-center justify-center mb-2 shadow-sm">
-                                    <IndianRupee size={20} />
-                                </div>
-                                <p className="text-2xl font-bold text-blue-600">₹18,400</p>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Total Benefits</p>
-                            </div>
-                            {/* Documents */}
-                            <div className="bg-white rounded-xl shadow-sm border border-orange-400 pt-5 pb-4 px-4 text-center">
-                                <div className="w-10 h-10 mx-auto rounded-full bg-red-400 text-white flex items-center justify-center mb-2 shadow-sm">
-                                    <FileText size={20} />
-                                </div>
-                                <p className="text-2xl font-bold text-[#1e3a8a]">6</p>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Documents</p>
-                            </div>
-                            {/* Welfare Score */}
-                            <div className="bg-white rounded-xl shadow-sm border border-slate-300 pt-5 pb-4 px-4 text-center shadow-[0_4px_14px_rgba(0,0,0,0.05)] relative overflow-hidden">
-                                {/* Orange highlight top line */}
-                                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-400 to-amber-500" />
-                                <div className="w-10 h-10 mx-auto rounded-full bg-purple-500 text-white flex items-center justify-center mb-2 shadow-sm">
-                                    <TrendingUp size={20} />
-                                </div>
-                                <p className="text-2xl font-bold text-[#1e3a8a]">87/100</p>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Welfare Score</p>
-                            </div>
-                        </div>
-
-                        {/* 2. Enrolled Schemes Table */}
-                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                            <div className="px-6 py-4 flex items-center gap-2 border-b-2 border-slate-100">
-                                <ShieldCheck size={20} className="text-[#1e3a8a]" />
-                                <h3 className="text-lg font-bold text-[#1e3a8a]">Enrolled Schemes</h3>
-                            </div>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr className="bg-[#1e3a8a] text-white text-[11px] uppercase tracking-wider">
-                                            <th className="py-3 px-6 font-semibold">Scheme</th>
-                                            <th className="py-3 px-6 font-semibold">Status</th>
-                                            <th className="py-3 px-6 font-semibold">Next Payment</th>
-                                            <th className="py-3 px-6 font-semibold">Amount</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="text-sm divide-y divide-slate-100">
-                                        <tr className="hover:bg-slate-50 transition-colors">
-                                            <td className="py-4 px-6 font-medium text-slate-700">PM Kisan</td>
-                                            <td className="py-4 px-6">
-                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">ACTIVE</span>
-                                            </td>
-                                            <td className="py-4 px-6 text-slate-500">Apr 2026</td>
-                                            <td className="py-4 px-6 font-bold text-green-600">₹2,000</td>
-                                        </tr>
-                                        <tr className="hover:bg-slate-50 transition-colors bg-slate-50/50">
-                                            <td className="py-4 px-6 font-medium text-slate-700">MGNREGA</td>
-                                            <td className="py-4 px-6">
-                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">ACTIVE</span>
-                                            </td>
-                                            <td className="py-4 px-6 text-slate-500">On demand</td>
-                                            <td className="py-4 px-6 font-bold text-green-600">₹202/day</td>
-                                        </tr>
-                                        <tr className="hover:bg-slate-50 transition-colors">
-                                            <td className="py-4 px-6 font-medium text-slate-700">Ayushman Bharat</td>
-                                            <td className="py-4 px-6">
-                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">ACTIVE</span>
-                                            </td>
-                                            <td className="py-4 px-6 text-slate-500">N/A</td>
-                                            <td className="py-4 px-6 font-bold text-green-600">₹5,00,000 cover</td>
-                                        </tr>
-                                        <tr className="hover:bg-slate-50 transition-colors bg-slate-50/50">
-                                            <td className="py-4 px-6 font-medium text-slate-700">Food Security</td>
-                                            <td className="py-4 px-6">
-                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">ACTIVE</span>
-                                            </td>
-                                            <td className="py-4 px-6 text-slate-500">Monthly</td>
-                                            <td className="py-4 px-6 font-bold text-green-600">35kg grain</td>
-                                        </tr>
-                                        <tr className="hover:bg-slate-50 transition-colors">
-                                            <td className="py-4 px-6 font-medium text-slate-700">Ujjwala Yojana</td>
-                                            <td className="py-4 px-6">
-                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-yellow-100 text-yellow-700">COMPLETED</span>
-                                            </td>
-                                            <td className="py-4 px-6 text-slate-500">–</td>
-                                            <td className="py-4 px-6 font-bold text-green-600">₹1,600 (one-time)</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        {/* 3. Benefit Receipt History */}
-                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                            <div className="px-6 py-4 flex items-center gap-2 border-b-2 border-slate-100">
-                                <TrendingUp size={20} className="text-[#1e3a8a]" />
-                                <h3 className="text-lg font-bold text-[#1e3a8a]">Benefit Receipt History</h3>
-                            </div>
-                            <div className="p-6 space-y-4">
-                                {/* Item 1 */}
-                                <div className="flex items-center justify-between p-4 rounded-lg bg-white border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
-                                            <CheckCircle2 size={24} />
+                            return (
+                                <div key={key}>
+                                    <div className="flex items-center gap-4 p-3 rounded-lg bg-off-white border border-gray-200">
+                                        <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                                            <Icon size={18} className="text-gray-500" />
                                         </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-slate-800">PM Kisan Samman Nidhi</p>
-                                            <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5"><Clock size={12} /> 15 Feb 2026</p>
+                                        <div className="flex-1 min-w-0">
+                                            <label className="block text-[11px] text-gray-500 uppercase tracking-widest mb-1 font-body">
+                                                {label}
+                                            </label>
+                                            {isEditing && key !== 'urban' ? (
+                                                <input
+                                                    type={type}
+                                                    value={draft[key] ?? ''}
+                                                    onChange={(e) =>
+                                                        handleChange(key, type === 'number' ? Number(e.target.value) || '' : e.target.value)
+                                                    }
+                                                    className="w-full bg-transparent text-sm text-gray-900 font-body outline-none border-b border-saffron/40 pb-0.5 focus:border-saffron transition-colors"
+                                                />
+                                            ) : (
+                                                <p className="text-sm text-gray-900 font-body truncate">
+                                                    {displayVal || <span className="text-gray-400 italic">Not set</span>}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
-                                    <p className="font-bold text-green-700">₹6,000</p>
+                                    {fieldError && (
+                                        <p className="font-body text-xs text-danger mt-1 ml-14">{fieldError}</p>
+                                    )}
                                 </div>
-                                {/* Item 2 */}
-                                <div className="flex items-center justify-between p-4 rounded-lg bg-white border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
-                                            <CheckCircle2 size={24} />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-slate-800">MGNREGA Wages</p>
-                                            <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5"><Clock size={12} /> 28 Jan 2026</p>
-                                        </div>
-                                    </div>
-                                    <p className="font-bold text-green-700">₹8,400</p>
-                                </div>
-                                {/* Item 3 */}
-                                <div className="flex items-center justify-between p-4 rounded-lg bg-white border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                                            <Clock size={24} />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-slate-800">Ayushman Bharat – PMJAY</p>
-                                            <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5"><Clock size={12} /> 10 Jan 2026</p>
-                                        </div>
-                                    </div>
-                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-green-100 text-green-700">ACTIVE COVERAGE</span>
-                                </div>
-                                {/* Item 4 */}
-                                <div className="flex items-center justify-between p-4 rounded-lg bg-white border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
-                                            <CheckCircle2 size={24} />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-slate-800">Food Security – PDS</p>
-                                            <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5"><Clock size={12} /> 20 Dec 2025</p>
-                                        </div>
-                                    </div>
-                                    <p className="font-bold text-green-700">₹2,400</p>
-                                </div>
-                                {/* Item 5 */}
-                                <div className="flex items-center justify-between p-4 rounded-lg bg-white border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
-                                            <CheckCircle2 size={24} />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-slate-800">PM Ujjwala Yojana</p>
-                                            <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5"><Clock size={12} /> 05 Nov 2025</p>
-                                        </div>
-                                    </div>
-                                    <p className="font-bold text-green-700">₹1,600</p>
-                                </div>
-
-                                {/* Download Button */}
-                                <button className="w-full mt-2 py-3 rounded-lg border border-[#1e3a8a] text-[#1e3a8a] text-sm font-semibold hover:bg-blue-50 transition-colors flex items-center justify-center gap-2">
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                                    Download Full Statement
-                                </button>
-                            </div>
-                        </div>
-
+                            );
+                        })}
                     </div>
-                </div>
+                </MotionWrapper>
+
+                {/* Additional Details */}
+                {extraFields.length > 0 && (
+                    <MotionWrapper delay={0.3} className="bg-white rounded-xl border border-gray-200 p-6 shadow-card">
+                        <h2 className="font-body text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                            <Briefcase size={20} className="text-saffron" />
+                            Additional Details
+                        </h2>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {extraFields.map(({ key, label }) => (
+                                <div key={key} className="flex items-center justify-between p-3 rounded-lg bg-off-white border border-gray-200">
+                                    <span className="text-xs text-gray-500 font-body uppercase tracking-wide">{label}</span>
+                                    <span className="text-sm font-body font-medium text-gray-900">
+                                        {fmt(citizenProfile[key])}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </MotionWrapper>
+                )}
+
+                {/* Quick Links */}
+                <MotionWrapper delay={0.4} className="bg-white rounded-xl border border-gray-200 p-5 shadow-card">
+                    <h2 className="font-body text-lg font-bold text-gray-900 mb-4">Quick Links</h2>
+                    <div className="space-y-2">
+                        {[
+                            { label: 'My Dashboard', path: '/dashboard' },
+                            { label: 'Browse Schemes', path: '/schemes' },
+                            { label: 'My Applications', path: '/applications' },
+                            { label: 'Ask Sarathi', path: '/chat' },
+                        ].map((link) => (
+                            <button
+                                key={link.path}
+                                onClick={() => navigate(link.path)}
+                                className="w-full flex items-center justify-between p-3 rounded-lg bg-off-white border border-gray-200 hover:border-saffron/40 transition-colors group"
+                            >
+                                <span className="font-body text-sm text-gray-700 group-hover:text-saffron transition-colors">
+                                    {link.label}
+                                </span>
+                                <ChevronRight size={16} className="text-gray-400 group-hover:text-saffron transition-colors" />
+                            </button>
+                        ))}
+                    </div>
+                </MotionWrapper>
+
+                {/* Logout */}
+                <MotionWrapper delay={0.5}>
+                    <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center justify-center gap-2 h-12 rounded-xl border border-red-200 bg-red-50 text-danger font-body text-sm font-semibold hover:bg-red-100 hover:border-red-300 transition-colors"
+                    >
+                        <LogOut size={16} /> Sign Out
+                    </button>
+                </MotionWrapper>
             </div>
         </div>
     );
 }
+
+export default ProfilePage;

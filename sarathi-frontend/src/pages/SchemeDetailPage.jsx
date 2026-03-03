@@ -1,10 +1,13 @@
 import { useParams, Link } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, ExternalLink, Check, FileText, Users, Coins, ClipboardList, Loader2, Volume2, VolumeX, Sparkles } from 'lucide-react';
+import { ArrowLeft, ExternalLink, FileText, Users, Coins, ClipboardList, Loader2, Volume2, VolumeX, Sparkles, Share2 } from 'lucide-react';
 import { fetchScheme, explainScheme } from '../utils/api';
+import { schemeMap, allSchemes } from '../data/schemesDB';
 import { useLanguage } from '../context/LanguageContext';
 import { localizeNum } from '../utils/formatters';
+import { useToast } from '../components/ui/Toast';
+import { CATEGORY_STYLE, FALLBACK_STYLE, CATEGORY_LABELS_EN } from '../constants/categories';
 
 const tabsData = {
   hi: [
@@ -21,25 +24,16 @@ const tabsData = {
   ],
 };
 
-const categoryColors = {
-  agriculture: { bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
-  housing: { bg: 'bg-orange-50', text: 'text-orange-700', dot: 'bg-orange-500' },
-  health: { bg: 'bg-red-50', text: 'text-red-700', dot: 'bg-red-500' },
-  education: { bg: 'bg-blue-50', text: 'text-blue-700', dot: 'bg-blue-500' },
-  women: { bg: 'bg-pink-50', text: 'text-pink-700', dot: 'bg-pink-500' },
-  employment: { bg: 'bg-purple-50', text: 'text-purple-700', dot: 'bg-purple-500' },
-};
-
 const categoryLabelsHi = { agriculture: 'कृषि', housing: 'आवास', health: 'स्वास्थ्य', education: 'शिक्षा', women: 'महिला एवं बाल', employment: 'रोजगार' };
-const categoryLabelsEn = { agriculture: 'Agriculture', housing: 'Housing', health: 'Health', education: 'Education', women: 'Women & Child', employment: 'Employment' };
 
 function SchemeDetailPage() {
   const { schemeId } = useParams();
   const [activeTab, setActiveTab] = useState('eligibility');
   const { language } = useLanguage();
+  const { addToast } = useToast();
   const isHi = language === 'hi';
   const tabs = tabsData[language] || tabsData.en;
-  const catLabels = isHi ? categoryLabelsHi : categoryLabelsEn;
+  const catLabels = isHi ? categoryLabelsHi : CATEGORY_LABELS_EN;
 
   const [scheme, setScheme] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -61,11 +55,13 @@ function SchemeDetailPage() {
         if (data && !data.error) {
           setScheme(data);
         } else {
-          setError(isHi ? 'योजना नहीं मिली' : 'Scheme not found');
+          const localScheme = schemeMap[schemeId];
+          if (localScheme) { setScheme(localScheme); } else { setError(isHi ? 'योजना नहीं मिली' : 'Scheme not found'); }
         }
       })
       .catch(() => {
-        setError(isHi ? 'सर्वर से कनेक्ट नहीं हो पा रहा' : 'Could not connect to server');
+        const localScheme = schemeMap[schemeId];
+        if (localScheme) { setScheme(localScheme); } else { setError(isHi ? 'सर्वर से कनेक्ट नहीं हो पा रहा' : 'Could not connect to server'); }
       })
       .finally(() => setLoading(false));
   }, [schemeId]);
@@ -84,7 +80,7 @@ function SchemeDetailPage() {
     setIsExplaining(true);
     try {
       const result = await explainScheme(scheme);
-      setExplanation(result);
+      setExplanation({ ...result, explanationHindi: result.explanationHindi || result.explanation || '' });
     } catch (err) {
       console.warn('[SchemeDetail] Explain API failed, using fallback:', err);
       setExplanation({
@@ -109,12 +105,12 @@ function SchemeDetailPage() {
     const text = explanation?.explanationHindi || scheme?.benefitType || '';
     if (explanation?.audioUrl) {
       const audio = new Audio(explanation.audioUrl);
-      audioRef.current = audio;
+      audioRef.current = audio;  // D4: Set ref BEFORE play()
       audio.onended = () => { setIsPlayingAudio(false); audioRef.current = null; };
       audio.onerror = () => { setIsPlayingAudio(false); audioRef.current = null; };
       setIsLoadingAudio(false);
       setIsPlayingAudio(true);
-      audio.play();
+      audio.play().catch(() => { setIsPlayingAudio(false); audioRef.current = null; });
     } else if ('speechSynthesis' in window) {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = isHi ? 'hi-IN' : 'en-IN';
@@ -149,7 +145,20 @@ function SchemeDetailPage() {
     );
   }
 
-  const catColors = categoryColors[scheme.category] || categoryColors.employment;
+  const catStyle = CATEGORY_STYLE[scheme.category] || FALLBACK_STYLE;
+  const catColors = catStyle.detail;
+
+  // D4: Related schemes (same category, different ID, max 3)
+  const relatedSchemes = allSchemes
+    .filter((s) => s.category === scheme.category && (s.schemeId || s.id) !== schemeId)
+    .slice(0, 3);
+
+  // D4: Share handler
+  const handleShare = () => {
+    navigator.clipboard.writeText(window.location.href)
+      .then(() => addToast('Link copied to clipboard', 'success'))
+      .catch(() => addToast('Could not copy link', 'error'));
+  };
   const annualBenefit = parseInt(scheme.annualBenefit || 0);
   const eligTags = (scheme.categories || 'SC,ST,OBC,General').split(',').map(c => c.trim());
 
@@ -316,6 +325,13 @@ function SchemeDetailPage() {
               <Link to="/chat" className="flex items-center justify-center h-10 w-full mt-2 rounded-lg border border-gray-200 text-gray-600 font-body text-sm hover:bg-gray-50 transition-colors">
                 {isHi ? '💬 सारथी से पूछें' : '💬 Ask Sarathi'}
               </Link>
+              {/* D4: Share button */}
+              <button
+                onClick={handleShare}
+                className="flex items-center justify-center gap-2 h-9 w-full mt-2 rounded-lg border border-gray-200 text-gray-500 font-body text-xs hover:bg-gray-50 hover:text-saffron transition-colors"
+              >
+                <Share2 size={13} /> {isHi ? 'लिंक कॉपी करें' : 'Share Scheme'}
+              </button>
             </div>
 
             {/* AI Explanation — Bedrock + Polly */}
@@ -369,6 +385,35 @@ function SchemeDetailPage() {
                 </div>
               )}
             </div>
+
+            {/* D4: Related schemes */}
+            {relatedSchemes.length > 0 && (
+              <div className="bg-white rounded-xl shadow-card p-5">
+                <h4 className="font-body text-sm font-bold text-gray-900 mb-3">
+                  {isHi ? 'समान योजनाएं' : 'Related Schemes'}
+                </h4>
+                <div className="space-y-2">
+                  {relatedSchemes.map((s) => {
+                    const sid = s.schemeId || s.id;
+                    const benefit = Number(s.annualBenefit) || 0;
+                    return (
+                      <Link
+                        key={sid}
+                        to={`/schemes/${sid}`}
+                        className="block p-3 rounded-lg bg-off-white border border-gray-200 hover:border-saffron/40 transition-colors"
+                      >
+                        <p className="font-body text-xs font-semibold text-gray-900 leading-snug">{s.nameEnglish || s.name}</p>
+                        {benefit > 0 && (
+                          <p className="font-mono text-xs text-success mt-0.5">
+                            ₹{benefit >= 100000 ? `${(benefit / 100000).toFixed(benefit % 100000 === 0 ? 0 : 1)}L` : benefit.toLocaleString('en-IN')}/yr
+                          </p>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Eligibility checker widget */}
             <div className="bg-white rounded-xl shadow-card p-5">

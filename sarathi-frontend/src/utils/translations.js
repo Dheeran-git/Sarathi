@@ -66,7 +66,7 @@ const translations = {
   footerTagline: { hi: 'हर पात्र नागरिक तक।', en: 'To Every Eligible Citizen.' },
   footerQuickLinks: { hi: 'त्वरित लिंक', en: 'Quick Links' },
   footerAbout: { hi: 'About', en: 'About' },
-  footerBuilt: { hi: 'Built for AWS AI for Bharat Hackathon 2025', en: 'Built for AWS AI for Bharat Hackathon 2025' },
+  footerBuilt: { hi: 'Built for AWS AI for Bharat Hackathon 2026', en: 'Built for AWS AI for Bharat Hackathon 2026' },
   footerOpen: { hi: 'Open source. Built with ❤️ in India.', en: 'Open source. Built with ❤️ in India.' },
 
   // ── Chat Page ───────────────────────────────────────────────────────────

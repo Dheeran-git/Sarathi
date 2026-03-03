@@ -16,97 +16,102 @@ const api = axios.create({
   timeout: 15000,
 });
 
+// Request interceptor — send whichever token is active
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('panchayatAccessToken') || localStorage.getItem('accessToken');
+  if (token) config.headers['Authorization'] = token;
+  return config;
+});
+
+// 401 handler — redirect to correct login page
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err.response?.status === 401) {
+      const isPanchayat = !!localStorage.getItem('panchayatAccessToken');
+      localStorage.removeItem('panchayatAccessToken');
+      localStorage.removeItem('panchayatIdToken');
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('idToken');
+      window.location.href = isPanchayat ? '/panchayat/login' : '/citizen/login';
+    }
+    return Promise.reject(err);
+  }
+);
+
+// B4: Unified body unwrapper — handles both proxied and direct Lambda responses
+function unwrapBody(res) {
+  const data = res.data;
+  if (data && typeof data.body === 'string') {
+    try { return JSON.parse(data.body); } catch { return data; }
+  }
+  return data;
+}
+
 /* ── Public API functions ─────────────────────────────────────────────── */
 
-/**
- * Check eligibility — POST /eligibility
- */
+/** POST /eligibility */
 export async function checkEligibility(profile) {
-  const res = await api.post('/eligibility', profile);
-  return typeof res.data.body === 'string' ? JSON.parse(res.data.body) : res.data;
+  return unwrapBody(await api.post('/eligibility', profile));
 }
 
-/**
- * Get digital twin projections — POST /twin
- */
+/** POST /twin */
 export async function getDigitalTwin(data) {
-  const res = await api.post('/twin', data);
-  return typeof res.data.body === 'string' ? JSON.parse(res.data.body) : res.data;
+  return unwrapBody(await api.post('/twin', data));
 }
 
-/**
- * Fetch single scheme — GET /scheme/{schemeId}
- */
+/** GET /scheme/{schemeId} */
 export async function fetchScheme(schemeId) {
-  const res = await api.get(`/scheme/${schemeId}`);
-  return typeof res.data.body === 'string' ? JSON.parse(res.data.body) : res.data;
+  return unwrapBody(await api.get(`/scheme/${schemeId}`));
 }
 
-/**
- * Fetch all schemes — GET /scheme/all
- */
+/** GET /scheme/all */
 export async function fetchAllSchemes() {
-  const res = await api.get('/scheme/all');
-  const data = typeof res.data.body === 'string' ? JSON.parse(res.data.body) : res.data;
+  const data = unwrapBody(await api.get('/scheme/all'));
   return Array.isArray(data) ? data : [];
 }
 
-/**
- * Get panchayat stats — GET /panchayat/{panchayatId}
- */
+/** GET /panchayat/{panchayatId} */
 export async function getPanchayatStats(panchayatId = 'rampur-barabanki-up') {
-  const res = await api.get(`/panchayat/${panchayatId}`);
-  return typeof res.data.body === 'string' ? JSON.parse(res.data.body) : res.data;
+  return unwrapBody(await api.get(`/panchayat/${panchayatId}`));
 }
 
-/**
- * Detect scheme conflicts — POST /conflicts
- */
+/** POST /conflicts */
 export async function detectConflicts(data) {
-  const res = await api.post('/conflicts', data);
-  return typeof res.data.body === 'string' ? JSON.parse(res.data.body) : res.data;
+  return unwrapBody(await api.post('/conflicts', data));
 }
 
-/**
- * Save citizen profile — POST /citizen
- * @param {Object} profile - Citizen profile object
- * @param {string} [cognitoUserId] - Cognito user ID to map profile to
- */
+/** POST /citizen */
 export async function saveCitizen(profile, cognitoUserId) {
   const payload = cognitoUserId ? { ...profile, cognitoUserId } : profile;
-  const res = await api.post('/citizen', payload);
-  return typeof res.data.body === 'string' ? JSON.parse(res.data.body) : res.data;
+  return unwrapBody(await api.post('/citizen', payload));
 }
 
-/**
- * Get citizen profile — GET /citizen/{userId}
- * @param {string} userId - Cognito user ID
- */
+/** GET /citizen/{userId} */
 export async function getCitizenProfile(userId) {
-  const res = await api.get(`/citizen/${userId}`);
-  return typeof res.data.body === 'string' ? JSON.parse(res.data.body) : res.data;
+  return unwrapBody(await api.get(`/citizen/${userId}`));
 }
 
-/* ── AI / Lex services (Member 2) ─────────────────────────────────────── */
-
-/**
- * Send a message to the Lex bot — POST /lex
- * @param {string} message - User message
- * @param {string} sessionId - Lex session ID
- * @param {string} locale - 'en_US' or 'hi_IN'
- */
-export async function sendToLex(message, sessionId = 'default', locale = 'en_US') {
-  const res = await api.post('/lex', { message, sessionId, locale });
-  return typeof res.data.body === 'string' ? JSON.parse(res.data.body) : res.data;
+/** POST /apply — submit an application */
+export async function submitApplication(payload) {
+  return unwrapBody(await api.post('/apply', payload));
 }
 
-/**
- * Get AI explanation + audio for a scheme via Bedrock + Polly — POST /explain
- * @param {Object} scheme - The scheme object to explain
- */
+/** GET /applications/{userId} — list citizen's applications */
+export async function getApplications(userId) {
+  return unwrapBody(await api.get(`/applications/${userId}`));
+}
+
+/** PATCH /apply/{applicationId} — update application status */
+export async function updateApplicationStatus(applicationId, status) {
+  return unwrapBody(await api.patch(`/apply/${applicationId}`, { status }));
+}
+
+/* ── AI / Polly services ──────────────────────────────────────────────── */
+
+/** POST /explain */
 export async function explainScheme(scheme) {
-  const res = await api.post('/explain', { scheme });
-  return typeof res.data.body === 'string' ? JSON.parse(res.data.body) : res.data;
+  return unwrapBody(await api.post('/explain', { scheme }));
 }
 
 /**
@@ -124,8 +129,12 @@ export async function synthesizeSpeech(text, language = 'en') {
  * @param {Object} notificationData - { citizenName, panchayatId, matchedSchemes, totalAnnualBenefit }
  */
 export async function notifyPanchayat(notificationData) {
-  const res = await api.post('/notify', notificationData);
-  return typeof res.data.body === 'string' ? JSON.parse(res.data.body) : res.data;
+  return unwrapBody(await api.post('/notify', notificationData));
+}
+
+/** POST /lex */
+export async function sendToLex(message, sessionId = 'default', locale = 'en_US') {
+  return unwrapBody(await api.post('/lex', { message, sessionId, locale }));
 }
 
 /* ── Document Vault API ──────────────────────────────────────────────── */

@@ -27,7 +27,7 @@ def lambda_handler(event, context):
                 if scheme_index < len(schemes_to_use) and month % months_per_scheme == 1:
                     scheme = schemes_to_use[scheme_index]
                     income += int(scheme.get('annualBenefit', 0)) / 12
-                    scheme_name_en = scheme.get('nameEnglish', '')
+                    scheme_name_en = scheme.get('nameEnglish', scheme.get('name', ''))
                     scheme_name_hi = scheme.get('nameHindi', scheme_name_en)
                     scheme_index += 1
                 else:
@@ -77,6 +77,6 @@ def lambda_handler(event, context):
     except Exception as e:
         return {
             'statusCode': 500,
-            'headers': { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+            'headers': { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type,Authorization', 'Content-Type': 'application/json' },
             'body': json.dumps({ 'error': 'Internal server error', 'message': str(e) })
         }

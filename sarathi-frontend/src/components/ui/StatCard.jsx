@@ -1,68 +1,75 @@
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { useLanguage } from '../../context/LanguageContext';
-import { localizeNum } from '../../utils/formatters';
 
 /**
- * StatCard — used in the Panchayat Dashboard and Digital Twin page.
- * Variants: primary | dark | success | warning
+ * StatCard — white card with navy/saffron/cream brand theme.
+ * Variants: primary | success | warning | danger | info
  */
 function StatCard({ value, label, icon, trend, variant = 'primary', progress }) {
-    const { language } = useLanguage();
-    const base = {
-        primary: 'bg-[#0f172a] text-[#f8fafc] border border-slate-800',
-        dark: 'bg-[#0f172a] text-white border border-slate-800',
-        success: 'bg-[#0f172a] text-[#f8fafc] border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.1)]',
-        warning: 'bg-[#0f172a] text-[#f8fafc] border border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.1)]',
-        danger: 'bg-[#0f172a] text-[#f8fafc] border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.1)]',
+    const borderColor = {
+        primary: 'border-navy/20',
+        success: 'border-success/30',
+        warning: 'border-warning/30',
+        danger: 'border-danger/30',
+        info: 'border-info/30',
     };
 
     const iconColor = {
-        primary: 'text-indigo-400',
-        dark: 'text-indigo-400',
-        success: 'text-emerald-400',
-        warning: 'text-amber-400',
-        danger: 'text-red-400',
+        primary: 'text-navy',
+        success: 'text-success',
+        warning: 'text-warning',
+        danger: 'text-danger',
+        info: 'text-info',
     };
 
-    const trendColor =
-        trend > 0 ? 'text-emerald-400' : trend < 0 ? 'text-red-400' : 'text-slate-500';
+    const metricColor = {
+        primary: 'text-navy',
+        success: 'text-success',
+        warning: 'text-warning',
+        danger: 'text-danger',
+        info: 'text-info',
+    };
 
-    const TrendIcon =
-        trend > 0 ? TrendingUp : trend < 0 ? TrendingDown : Minus;
+    const progressColor = {
+        primary: 'bg-navy',
+        success: 'bg-success',
+        warning: 'bg-warning',
+        danger: 'bg-danger',
+        info: 'bg-info',
+    };
+
+    const trendColor = trend > 0 ? 'text-success' : trend < 0 ? 'text-danger' : 'text-gray-500';
+    const TrendIcon = trend > 0 ? TrendingUp : trend < 0 ? TrendingDown : Minus;
 
     return (
-        <div
-            className={`relative rounded-xl p-5 overflow-hidden transition-transform duration-200 hover:scale-105 hover:z-10 cursor-default flex flex-col justify-between ${base[variant]}`}
-        >
+        <div className={`relative rounded-xl p-5 overflow-hidden bg-white border shadow-card flex flex-col justify-between transition-transform duration-200 hover:scale-105 hover:z-10 cursor-default ${borderColor[variant]}`}>
             {/* Top row — icon and trend */}
-            <div className="flex items-start justify-between mb-2">
+            <div className="flex items-start justify-between mb-3">
                 {icon && (
-                    <span className={`text-xl ${iconColor[variant]}`}>{icon}</span>
+                    <span className={`${iconColor[variant]}`}>{icon}</span>
                 )}
                 {trend !== undefined && trend !== null && (
                     <span className={`flex items-center gap-0.5 text-xs font-body font-medium ${trendColor}`}>
                         <TrendIcon size={14} />
-                        {trend > 0 ? '+' : ''}{localizeNum(trend, language)}%
+                        {trend > 0 ? '+' : ''}{trend}%
                     </span>
                 )}
             </div>
 
-            {/* Big number */}
-            <p className="font-mono text-[32px] font-bold leading-tight text-[#f8fafc]">
-                {localizeNum(String(value), language)}
+            {/* Value */}
+            <p className={`font-mono text-[28px] font-bold leading-tight ${metricColor[variant]}`}>
+                {value}
             </p>
 
             {/* Label */}
-            <p className="font-body text-sm mt-1 text-slate-400 font-medium">
+            <p className="font-body text-sm mt-1 text-gray-500 font-medium">
                 {label}
             </p>
 
             {/* Optional progress bar */}
             {progress !== undefined && (
-                <div className="mt-4 h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                <div className="mt-4 h-1.5 rounded-full bg-gray-200 overflow-hidden">
                     <div
-                        className={`h-full rounded-full transition-all duration-700 ease-out ${variant === 'success' ? 'bg-emerald-500' : 'bg-indigo-500'
-                            }`}
+                        className={`h-full rounded-full transition-all duration-700 ease-out ${progressColor[variant]}`}
                         style={{ width: `${Math.min(progress, 100)}%` }}
                     />
                 </div>

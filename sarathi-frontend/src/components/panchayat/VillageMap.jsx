@@ -163,8 +163,8 @@ function VillageMap({ households = [] }) {
             key={f.key}
             onClick={() => setFilter(f.key)}
             className={`px-3 py-1.5 rounded-full font-body text-xs font-medium transition-colors duration-200 ${filter === f.key
-              ? 'bg-indigo-500 text-white border-transparent'
-              : 'bg-[#0f172a] text-slate-300 border border-slate-700 hover:border-indigo-500/50 hover:text-[#f8fafc]'
+              ? 'bg-saffron text-white border-transparent'
+              : 'bg-white text-gray-600 border border-gray-200 hover:border-saffron/40 hover:text-saffron'
               }`}
           >
             {f.label}
@@ -175,7 +175,7 @@ function VillageMap({ households = [] }) {
       {/* Map Container */}
       <div
         ref={setMapEl}
-        className="relative overflow-auto rounded-xl border border-slate-800 bg-[#020617] shadow-inner"
+        className="relative overflow-auto rounded-xl border border-gray-200 bg-off-white shadow-inner"
         style={{ maxHeight: 480 }}
       >
         {/* Subtle grid background */}

@@ -1,20 +1,10 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext } from 'react';
 
 const LanguageContext = createContext();
 
 export function LanguageProvider({ children }) {
-  // Bug fix: persist language preference across page refreshes via localStorage
-  const [language, setLanguage] = useState(
-    () => localStorage.getItem('sarathi-lang') || 'en'
-  );
-
-  const toggleLanguage = () => {
-    setLanguage((prev) => {
-      const next = prev === 'hi' ? 'en' : 'hi';
-      localStorage.setItem('sarathi-lang', next);
-      return next;
-    });
-  };
+  const language = 'en';
+  const toggleLanguage = () => {};
 
   return (
     <LanguageContext.Provider value={{ language, toggleLanguage }}>

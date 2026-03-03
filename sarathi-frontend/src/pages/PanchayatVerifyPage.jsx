@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { authService } from '../services/authService';
 import { Loader2 } from 'lucide-react';
 
-export default function VerifyPage() {
+export default function PanchayatVerifyPage() {
     const location = useLocation();
     const navigate = useNavigate();
     const defaultEmail = location.state?.email || '';
@@ -13,24 +13,20 @@ export default function VerifyPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [successMessage] = useState(location.state?.message || '');
-
-    // C4: Resend countdown
     const [resendCountdown, setResendCountdown] = useState(0);
-    const [resendStatus, setResendStatus] = useState(''); // 'sent' | 'error'
-    const countdownRef = useRef(null);
+    const [resendStatus, setResendStatus] = useState('');
 
-    // C4: Auto-focus code input
     const codeInputRef = useRef(null);
+
     useEffect(() => {
         codeInputRef.current?.focus();
     }, []);
 
-    // Cleanup countdown timer on unmount
     useEffect(() => {
-        return () => {
-            if (countdownRef.current) clearInterval(countdownRef.current);
-        };
-    }, []);
+        if (resendCountdown <= 0) return;
+        const timer = setTimeout(() => setResendCountdown((c) => c - 1), 1000);
+        return () => clearTimeout(timer);
+    }, [resendCountdown]);
 
     const handleVerify = async (e) => {
         e.preventDefault();
@@ -38,8 +34,8 @@ export default function VerifyPage() {
         setIsLoading(true);
 
         try {
-            await authService.citizenConfirmSignUp(email, code);
-            navigate('/citizen/login', { state: { message: 'Verification successful! You can now log in.' } });
+            await authService.panchayatConfirmSignUp(email, code);
+            navigate('/panchayat/login', { state: { message: 'Verification successful! You can now log in.' } });
         } catch (err) {
             setError(err.message || 'Verification failed. Please check the code and try again.');
         } finally {
@@ -47,25 +43,15 @@ export default function VerifyPage() {
         }
     };
 
-    // C4: Resend OTP with 60s cooldown
     const handleResend = async () => {
-        if (resendCountdown > 0) return;
         setResendStatus('');
+        setError('');
         try {
-            await authService.resendConfirmationCode(email);
-            setResendStatus('sent');
+            await authService.panchayatResendConfirmationCode(email);
+            setResendStatus('A new code has been sent to your email.');
             setResendCountdown(60);
-            countdownRef.current = setInterval(() => {
-                setResendCountdown((prev) => {
-                    if (prev <= 1) {
-                        clearInterval(countdownRef.current);
-                        return 0;
-                    }
-                    return prev - 1;
-                });
-            }, 1000);
-        } catch {
-            setResendStatus('error');
+        } catch (err) {
+            setError(err.message || 'Failed to resend code. Please try again.');
         }
     };
 
@@ -73,10 +59,10 @@ export default function VerifyPage() {
         <div className="min-h-screen bg-off-white flex flex-col items-center justify-center px-4 py-12">
             <div className="w-full max-w-md bg-white rounded-xl border border-gray-200 shadow-card p-8">
 
-                {/* Badge */}
+                {/* Badge — teal accent for Panchayat */}
                 <div className="flex justify-center mb-4">
-                    <span className="inline-flex items-center px-3 py-1 rounded-full bg-navy text-white font-body text-xs font-semibold tracking-wide uppercase">
-                        Citizen Portal
+                    <span className="inline-flex items-center px-3 py-1 rounded-full bg-teal-50 border border-teal-500/50 text-teal-600 font-body text-xs font-semibold tracking-wide uppercase">
+                        Panchayat Official Portal
                     </span>
                 </div>
 
@@ -94,14 +80,9 @@ export default function VerifyPage() {
                 )}
 
                 {/* Resend status */}
-                {resendStatus === 'sent' && (
+                {resendStatus && (
                     <div className="mb-4 p-3 bg-success/10 border border-success/20 text-success rounded-lg font-body text-sm">
-                        A new code has been sent to your email.
-                    </div>
-                )}
-                {resendStatus === 'error' && (
-                    <div className="mb-4 p-3 bg-danger/10 border border-danger/20 text-danger rounded-lg font-body text-sm">
-                        Failed to resend code. Please try again.
+                        {resendStatus}
                     </div>
                 )}
 
@@ -150,16 +131,14 @@ export default function VerifyPage() {
                     </button>
                 </form>
 
-                {/* C4: Resend button */}
                 <div className="mt-4 text-center">
                     <button
+                        type="button"
                         onClick={handleResend}
                         disabled={resendCountdown > 0}
-                        className="font-body text-sm text-gray-500 hover:text-saffron disabled:text-gray-300 disabled:cursor-not-allowed transition-colors"
+                        className="font-body text-xs text-gray-500 hover:text-saffron transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {resendCountdown > 0
-                            ? `Resend code in ${resendCountdown}s`
-                            : "Didn't receive a code? Resend"}
+                        {resendCountdown > 0 ? `Resend in ${resendCountdown}s` : 'Resend Code'}
                     </button>
                 </div>
             </div>

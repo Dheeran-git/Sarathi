@@ -16,6 +16,7 @@ import boto3
 import random
 import json
 import os
+from datetime import datetime
 
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
 table = dynamodb.Table('SarathiCitizens')
@@ -79,7 +80,9 @@ def _make_persona(citizen_id, name, age, gender, state, monthly_income, category
         'status': status,
         'matchedSchemes': matched,
         'enrolledSchemes': [],
-        'estimatedBenefit': estimated_benefit,
+        'totalAnnualBenefit': estimated_benefit,
+        'updatedAt': datetime.utcnow().isoformat(),
+        'createdAt': datetime.utcnow().isoformat(),
     }
 
 
@@ -133,7 +136,9 @@ def generate_households(count=15):
             'status': status,
             'matchedSchemes': matched,
             'enrolledSchemes': [],
-            'estimatedBenefit': estimated_benefit,
+            'totalAnnualBenefit': estimated_benefit,
+            'updatedAt': datetime.utcnow().isoformat(),
+            'createdAt': datetime.utcnow().isoformat(),
         })
     return households
 
@@ -146,7 +151,7 @@ def seed():
         for citizen in all_records:
             batch.put_item(Item=citizen)
             schemes_count = len(citizen.get('matchedSchemes', []))
-            benefit = citizen.get('estimatedBenefit', 0)
+            benefit = citizen.get('totalAnnualBenefit', 0)
             print(f"  [OK] {citizen['citizenId']} - {citizen['name']} "
                   f"({citizen['status']}, {citizen['ward']}, "
                   f"{schemes_count} schemes, Rs.{benefit:,})")

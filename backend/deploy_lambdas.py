@@ -1,9 +1,10 @@
-"""Deploy all 6 hardened Lambda functions to AWS."""
-import boto3, zipfile, os, sys, io
+"""Deploy all Lambda functions to AWS (us-east-1)."""
+import boto3, zipfile, os, sys, io, json
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
 client = boto3.client('lambda', region_name='us-east-1')
 
+# Core lambdas: name -> source file
 LAMBDAS = {
     'sarathi-eligibility-engine': 'eligibility_engine.py',
     'sarathi-digital-twin': 'digital_twin.py',
@@ -12,12 +13,23 @@ LAMBDAS = {
     'sarathi-conflict-detector': 'conflict_detector.py',
     'sarathi-citizen-save': 'citizen_save.py',
     'sarathi-tts-polly': 'tts_polly.py',
+    'sarathi-bedrock-explainer': 'bedrock_explainer.py',
+    'sarathi-panchayat-notifier': 'panchayat_notifier.py',
+    'sarathi-applications': 'applications.py',
+}
+
+# Extra files to bundle alongside specific lambdas
+EXTRA_FILES = {
+    'sarathi-eligibility-engine': ['schemes.json'],
 }
 
 base = os.path.join(os.path.dirname(__file__), 'lambdas')
 
 for fn_name, filename in LAMBDAS.items():
     filepath = os.path.join(base, filename)
+    if not os.path.exists(filepath):
+        print(f"[SKIP] {fn_name}: {filename} not found")
+        continue
     with open(filepath, 'r', encoding='utf-8') as f:
         code = f.read()
 
@@ -25,6 +37,11 @@ for fn_name, filename in LAMBDAS.items():
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
         zf.writestr('lambda_function.py', code)
+        # Bundle any extra files (e.g. schemes.json for eligibility engine)
+        for extra in EXTRA_FILES.get(fn_name, []):
+            extra_path = os.path.join(base, extra)
+            if os.path.exists(extra_path):
+                zf.write(extra_path, extra)
     buf.seek(0)
 
     try:
@@ -33,6 +50,8 @@ for fn_name, filename in LAMBDAS.items():
             ZipFile=buf.read()
         )
         print(f"[OK] {fn_name} -> {resp['LastModified']}")
+    except client.exceptions.ResourceNotFoundException:
+        print(f"[SKIP] {fn_name}: function does not exist yet (create it first)")
     except Exception as e:
         print(f"[ERR] {fn_name}: {e}")
 
