@@ -10,7 +10,7 @@ const PASSWORD_RULES = [
     { label: 'One special character', test: (p) => /[^A-Za-z0-9]/.test(p) },
 ];
 
-export default function SignupPage() {
+export default function PanchayatSignupPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -19,9 +19,8 @@ export default function SignupPage() {
     const [error, setError] = useState('');
     const navigate = useNavigate();
 
-    // C3: Password strength
-    const passwordRules = useMemo(() =>
-        PASSWORD_RULES.map((r) => ({ ...r, pass: r.test(password) })),
+    const passwordRules = useMemo(
+        () => PASSWORD_RULES.map((r) => ({ ...r, pass: r.test(password) })),
         [password]
     );
     const passwordStrength = passwordRules.filter((r) => r.pass).length;
@@ -31,19 +30,19 @@ export default function SignupPage() {
         e.preventDefault();
         setError('');
 
-        if (passwordStrength < 4) {
-            setError('Please use a stronger password.');
-            return;
-        }
         if (password !== confirmPassword) {
             setError('Passwords do not match');
+            return;
+        }
+        if (passwordStrength < 4) {
+            setError('Please use a stronger password before continuing.');
             return;
         }
 
         setIsLoading(true);
         try {
-            await authService.citizenSignUp(email, password);
-            navigate('/citizen/verify', { state: { email, message: 'Account created! Please verify your email.' } });
+            await authService.panchayatSignUp(email, password);
+            navigate('/panchayat/verify', { state: { email, message: 'Account created! Please verify your email.' } });
         } catch (err) {
             setError(err.message || 'Failed to sign up');
         } finally {
@@ -55,17 +54,17 @@ export default function SignupPage() {
         <div className="min-h-screen bg-off-white flex flex-col items-center justify-center px-4 py-12">
             <div className="w-full max-w-md bg-white rounded-xl border border-gray-200 shadow-card p-8">
 
-                {/* Badge */}
+                {/* Badge — teal accent for Panchayat */}
                 <div className="flex justify-center mb-4">
-                    <span className="inline-flex items-center px-3 py-1 rounded-full bg-navy text-white font-body text-xs font-semibold tracking-wide uppercase">
-                        Citizen Portal
+                    <span className="inline-flex items-center px-3 py-1 rounded-full bg-teal-50 border border-teal-500/50 text-teal-600 font-body text-xs font-semibold tracking-wide uppercase">
+                        Panchayat Official Portal
                     </span>
                 </div>
 
                 {/* Header */}
                 <div className="text-center mb-6">
                     <h1 className="font-display text-3xl text-gray-900 mt-4 mb-2">Create Account</h1>
-                    <p className="font-body text-sm text-gray-500">Join Sarathi to discover your benefits</p>
+                    <p className="font-body text-sm text-gray-500">Register as a Panchayat official</p>
                 </div>
 
                 {/* Error message */}
@@ -86,7 +85,7 @@ export default function SignupPage() {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             className="w-full h-11 px-4 rounded-lg border border-gray-300 bg-white font-body text-sm text-gray-900 focus:outline-none focus:border-saffron focus:ring-2 focus:ring-saffron/20 transition-colors placeholder:text-gray-400"
-                            placeholder="you@example.com"
+                            placeholder="official@panchayat.gov.in"
                         />
                     </div>
 
@@ -111,7 +110,6 @@ export default function SignupPage() {
                                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                             </button>
                         </div>
-                        {/* C3: Strength meter */}
                         {password.length > 0 && (
                             <div className="mt-2">
                                 <div className="flex gap-1 mb-2">
@@ -122,7 +120,7 @@ export default function SignupPage() {
                                         />
                                     ))}
                                 </div>
-                                <ul className="space-y-0.5">
+                                <ul className="space-y-1">
                                     {passwordRules.map((r) => (
                                         <li key={r.label} className={`font-body text-xs flex items-center gap-1 ${r.pass ? 'text-success' : 'text-gray-400'}`}>
                                             <span>{r.pass ? '✓' : '○'}</span> {r.label}
@@ -152,20 +150,20 @@ export default function SignupPage() {
                         disabled={isLoading || passwordStrength < 4}
                         className="w-full h-11 rounded-lg bg-saffron text-white font-body text-sm font-semibold hover:bg-saffron-light transition-colors shadow-saffron disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center mt-2"
                     >
-                        {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Sign Up'}
+                        {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Create Account'}
                     </button>
                 </form>
 
                 <p className="mt-6 text-center font-body text-sm text-gray-500">
                     Already have an account?{' '}
-                    <Link to="/citizen/login" className="text-saffron hover:underline font-body text-sm font-medium">
+                    <Link to="/panchayat/login" className="text-saffron hover:underline font-body text-sm font-medium">
                         Log in
                     </Link>
                 </p>
                 <p className="mt-3 text-center font-body text-xs text-gray-400">
-                    Are you a Panchayat official?{' '}
-                    <Link to="/panchayat/login" className="text-teal-600 hover:underline">
-                        Panchayat Login →
+                    Are you a citizen?{' '}
+                    <Link to="/citizen/login" className="text-teal-600 hover:underline">
+                        Citizen Login →
                     </Link>
                 </p>
             </div>

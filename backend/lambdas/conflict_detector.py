@@ -1,22 +1,16 @@
 import json
+import boto3
 
-# Hardcoded conflict rules — can be moved to DynamoDB for scalability
-CONFLICTS = [
-    {
-        'scheme1': 'pmegp',
-        'scheme2': 'nrlm-shg',
-        'reason': 'Cannot receive two entrepreneurship loans simultaneously',
-        'recommended': 'nrlm-shg',
-        'reasoning': 'NRLM SHG has lower interest rate — better for first-time borrowers'
-    },
-    {
-        'scheme1': 'mgnregs',
-        'scheme2': 'pmegp',
-        'reason': 'PMEGP income from business disqualifies from MGNREGS wage employment',
-        'recommended': 'pmegp',
-        'reasoning': 'PMEGP provides higher long-term income than MGNREGS daily wages'
-    },
-]
+dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
+_conflicts_table = dynamodb.Table('SarathiConflicts')
+
+def _load_rules():
+    """Load conflict rules from DynamoDB. Falls back to [] on any error."""
+    try:
+        resp = _conflicts_table.scan()
+        return resp.get('Items', [])
+    except Exception:
+        return []
 
 def lambda_handler(event, context):
     try:
@@ -25,20 +19,23 @@ def lambda_handler(event, context):
         if not isinstance(matched_schemes, list):
             matched_schemes = []
 
-        matched_ids = [s.get('schemeId', '') for s in matched_schemes]
+        matched_ids = [s.get('id', s.get('schemeId', '')) for s in matched_schemes]
 
         detected_conflicts = []
         excluded = set()
 
+        CONFLICTS = _load_rules()
         for conflict in CONFLICTS:
-            if conflict['scheme1'] in matched_ids and conflict['scheme2'] in matched_ids:
+            s1 = conflict.get('scheme1', '')
+            s2 = conflict.get('scheme2', '')
+            if s1 in matched_ids and s2 in matched_ids:
                 detected_conflicts.append(conflict)
                 # Remove the non-recommended scheme from optimal bundle
-                for s in [conflict['scheme1'], conflict['scheme2']]:
-                    if s != conflict['recommended']:
+                for s in [s1, s2]:
+                    if s != conflict.get('recommended', ''):
                         excluded.add(s)
 
-        optimal_bundle = [s for s in matched_schemes if s.get('schemeId') not in excluded]
+        optimal_bundle = [s for s in matched_schemes if s.get('id', s.get('schemeId')) not in excluded]
         total_value = sum(int(s.get('annualBenefit', 0)) for s in optimal_bundle)
 
         return {
@@ -58,6 +55,6 @@ def lambda_handler(event, context):
     except Exception as e:
         return {
             'statusCode': 500,
-            'headers': { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+            'headers': { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type,Authorization', 'Content-Type': 'application/json' },
             'body': json.dumps({ 'error': 'Internal server error', 'message': str(e) })
         }

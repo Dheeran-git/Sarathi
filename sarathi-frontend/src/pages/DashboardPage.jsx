@@ -1,52 +1,22 @@
-import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useCitizen } from '../context/CitizenContext';
 import { motion } from 'framer-motion';
 import {
-    Bell, CheckCircle2, ChevronRight, Clock, ShieldAlert,
-    Sparkles, TrendingUp, AlertTriangle, ArrowRight,
-    MessageSquare, FileText, Download
+    Bell, CheckCircle2, ChevronRight, Sparkles, TrendingUp,
+    AlertTriangle, ArrowRight, MessageSquare, FileText, Loader2, ClipboardList
 } from 'lucide-react';
 import StatCard from '../components/ui/StatCard';
+import { CATEGORY_STYLE, FALLBACK_STYLE } from '../constants/categories';
 
-// Temporary Mock Data for Citizen Dashboard
-const MOCK_DATA = {
-    metrics: {
-        totalBenefits: 24500,
-        eligibleSchemes: 4,
-        notEnrolled: 2
-    },
-    aiRecommendations: [
-        {
-            id: 1,
-            title: "Apply for PM-KISAN immediately",
-            desc: "You are eligible for ₹6,000/year. Deadline approaches in 5 days.",
-            impact: "+₹6,000",
-            urgency: "high"
-        },
-        {
-            id: 2,
-            title: "Link Ration Card to Aadhaar",
-            desc: "Required to keep receiving PDS subsidies without interruption.",
-            impact: "Prevents Loss",
-            urgency: "medium"
-        }
-    ],
-    eligibleSchemes: [
-        { id: 's1', name: 'Pradhan Mantri Awas Yojana (PMAY)', category: 'Housing', amount: '₹1.2L', tag: 'High Match' },
-        { id: 's2', name: 'Ayushman Bharat (PM-JAY)', category: 'Health', amount: '₹5L', tag: 'Essential' }
-    ],
-    applications: [
-        { id: 'a1', name: 'PM Ujjwala Yojana', status: 'approved', date: 'Oct 12, 2023', amount: '₹1,600' },
-        { id: 'a2', name: 'Kisan Samman Nidhi', status: 'pending', date: 'Nov 05, 2023', amount: '₹6,000' }
-    ],
-    alerts: [
-        { id: 'al1', text: 'Document requires update for State Pension', type: 'warning' },
-        { id: 'al2', text: 'PM-JAY eCard generated successfully', type: 'success' }
-    ]
+const STATUS_CONFIG = {
+    pending:   { color: 'text-amber-600',   bg: 'bg-amber-100'   },
+    submitted: { color: 'text-blue-600',    bg: 'bg-blue-100'    },
+    approved:  { color: 'text-success',     bg: 'bg-success-light' },
+    rejected:  { color: 'text-danger',      bg: 'bg-danger/10'   },
 };
 
-const MotionWrapper = ({ children, delay = 0, className = "" }) => (
+const MotionWrapper = ({ children, delay = 0, className = '' }) => (
     <motion.div
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
@@ -57,40 +27,57 @@ const MotionWrapper = ({ children, delay = 0, className = "" }) => (
     </motion.div>
 );
 
+// D1: 8 core fields for completion percentage
+const COMPLETION_FIELDS = ['name', 'age', 'gender', 'state', 'income', 'category', 'urban', 'persona'];
+
 function DashboardPage() {
     const { user } = useAuth();
+    const { eligibleSchemes, citizenProfile, isLoadingProfile, applications } = useCitizen();
     const navigate = useNavigate();
-    const [data, setData] = useState(MOCK_DATA);
+
     const userName = user?.email ? user.email.split('@')[0] : 'Citizen';
+    const hasProfile = citizenProfile?.name && citizenProfile.name !== '';
+    const totalBenefits = eligibleSchemes.reduce((sum, s) => sum + (Number(s.annualBenefit) || 0), 0);
+    const topSchemes = eligibleSchemes;
+
+    // D1: Compute profile completion %
+    const completionPct = Math.round(
+        (COMPLETION_FIELDS.filter((f) => {
+            const v = citizenProfile[f];
+            return v !== null && v !== undefined && v !== '';
+        }).length / COMPLETION_FIELDS.length) * 100
+    );
+    const completionVariant = completionPct >= 80 ? 'success' : completionPct >= 50 ? 'info' : 'warning';
+
+    // D1: Last 3 applications for widget
+    const recentApplications = applications.slice(0, 3);
 
     return (
-        <div className="min-h-screen bg-[#020617] pb-12">
-            {/* Header Backdrop */}
-            <div className="bg-[#0f172a] border-b border-slate-800 pt-8 pb-12 lg:pt-12 lg:pb-16 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-                {/* Glow effect */}
-                <div className="absolute top-0 right-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-
-                <div className="max-w-7xl mx-auto relative z-10">
+        <div className="min-h-screen bg-off-white pb-12">
+            {/* Header */}
+            <div className="bg-navy py-8 lg:py-12 px-4 sm:px-6 lg:px-8">
+                <div className="max-w-7xl mx-auto">
                     <MotionWrapper>
-                        <h1 className="font-display text-3xl lg:text-4xl text-[#f8fafc] leading-tight">
-                            Welcome back, <span className="text-indigo-400">{userName}</span>
+                        <h1 className="font-display text-3xl lg:text-4xl text-white leading-tight">
+                            Welcome back, <span className="text-saffron">{userName}</span>
                         </h1>
-                        <p className="font-body text-slate-400 mt-2 text-sm lg:text-base max-w-2xl">
-                            Your personalized welfare intelligence dashboard. We found 2 new schemes you might be eligible for today.
+                        <p className="font-body text-gray-300 mt-2 text-sm lg:text-base max-w-2xl">
+                            {hasProfile
+                                ? `Your personalized welfare dashboard — ${eligibleSchemes.length} scheme${eligibleSchemes.length !== 1 ? 's' : ''} matched to your profile.`
+                                : 'Complete your profile through our AI chat to discover schemes you qualify for.'}
                         </p>
                     </MotionWrapper>
 
-                    {/* Quick Actions Row */}
                     <MotionWrapper delay={0.1} className="mt-6 flex flex-wrap gap-3">
                         <button
                             onClick={() => navigate('/schemes')}
-                            className="inline-flex items-center gap-2 h-10 px-5 rounded-lg bg-indigo-500 text-white font-body text-sm font-medium hover:bg-indigo-400 transition-colors shadow-lg shadow-indigo-500/20"
+                            className="inline-flex items-center gap-2 h-10 px-5 rounded-lg bg-saffron text-white font-body text-sm font-medium hover:bg-saffron-light transition-colors shadow-saffron"
                         >
                             <FileText size={16} /> View All Schemes
                         </button>
                         <button
                             onClick={() => navigate('/chat')}
-                            className="inline-flex items-center gap-2 h-10 px-5 rounded-lg border border-slate-700 bg-[#020617] text-[#f8fafc] font-body text-sm font-medium hover:border-indigo-400 hover:text-indigo-400 transition-colors"
+                            className="inline-flex items-center gap-2 h-10 px-5 rounded-lg border border-white/30 text-white font-body text-sm font-medium hover:bg-white/10 transition-colors"
                         >
                             <MessageSquare size={16} /> Ask Sarathi
                         </button>
@@ -98,191 +85,241 @@ function DashboardPage() {
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-20">
-                {/* Metrics Row */}
-                <MotionWrapper delay={0.2} className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                    <StatCard
-                        label="Total Potential Benefits"
-                        value={data.metrics.totalBenefits}
-                        icon="₹"
-                        variant="success"
-                    />
-                    <StatCard
-                        label="Eligible Schemes Found"
-                        value={data.metrics.eligibleSchemes}
-                        icon={<Sparkles size={20} />}
-                        variant="warning"
-                    />
-                    <StatCard
-                        label="Not Yet Enrolled"
-                        value={data.metrics.notEnrolled}
-                        icon={<AlertTriangle size={20} />}
-                        variant="danger"
-                    />
-                </MotionWrapper>
-
-                {/* Main Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-                    {/* Left Column: AI Recs + Scheme List */}
-                    <div className="lg:col-span-2 space-y-6">
-
-                        {/* AI Recommendations */}
-                        <MotionWrapper delay={0.3} className="bg-[#0f172a] rounded-xl border border-slate-800 p-5 shadow-2xl">
-                            <div className="flex items-center justify-between mb-5">
-                                <h2 className="font-body text-lg font-bold text-[#f8fafc] flex items-center gap-2">
-                                    <Sparkles size={20} className="text-indigo-400" />
-                                    AI Recommendations
-                                </h2>
-                                <span className="text-xs font-mono px-2 py-1 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                                    Top {data.aiRecommendations.length} Actions
-                                </span>
-                            </div>
-                            <div className="space-y-4">
-                                {data.aiRecommendations.map((rec) => (
-                                    <div key={rec.id} className="relative p-4 rounded-lg bg-[#020617] border border-slate-800 hover:border-slate-700 transition-colors group">
-                                        <div className="absolute top-4 right-4 text-emerald-400 font-mono text-sm font-bold bg-emerald-500/10 px-2 py-1 rounded">
-                                            {rec.impact}
-                                        </div>
-                                        <div className="pr-20">
-                                            <h3 className="font-body font-bold text-[#f8fafc] text-base mb-1 flex items-center gap-2">
-                                                {rec.urgency === 'high' && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
-                                                {rec.title}
-                                            </h3>
-                                            <p className="font-body text-sm text-slate-400 leading-relaxed mb-3">
-                                                {rec.desc}
-                                            </p>
-                                            <button className="text-indigo-400 font-body text-sm font-medium flex items-center gap-1 group-hover:gap-2 transition-all">
-                                                Take Action <ArrowRight size={14} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </MotionWrapper>
-
-                        {/* Eligible Schemes List */}
-                        <MotionWrapper delay={0.4} className="bg-[#0f172a] rounded-xl border border-slate-800 p-5 shadow-2xl">
-                            <div className="flex items-center justify-between mb-5">
-                                <h2 className="font-body text-lg font-bold text-[#f8fafc] flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-amber-500" />
-                                    Eligible For You
-                                </h2>
-                                <button onClick={() => navigate('/schemes')} className="text-sm font-body text-slate-400 hover:text-indigo-400 transition-colors">
-                                    View All →
-                                </button>
-                            </div>
-                            <div className="space-y-3">
-                                {data.eligibleSchemes.map((scheme) => (
-                                    <div key={scheme.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg bg-[#020617] border border-slate-800">
-                                        <div>
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <span className="text-[10px] font-body px-2 py-0.5 rounded bg-slate-800 text-slate-300 uppercase tracking-widest">
-                                                    {scheme.category}
-                                                </span>
-                                                <span className="text-[10px] font-body px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                                                    {scheme.tag}
-                                                </span>
-                                            </div>
-                                            <h4 className="font-body text-sm font-bold text-[#f8fafc]">{scheme.name}</h4>
-                                        </div>
-                                        <div className="flex items-center justify-between sm:justify-end gap-6 mt-3 sm:mt-0">
-                                            <div className="text-left sm:text-right">
-                                                <span className="block text-xs text-slate-500">Benefit</span>
-                                                <span className="font-mono font-bold text-emerald-400">{scheme.amount}</span>
-                                            </div>
-                                            <button className="h-8 px-4 rounded md bg-indigo-500 text-white font-body text-xs font-semibold hover:bg-indigo-400 transition-colors">
-                                                Apply
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </MotionWrapper>
-
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-10">
+                {isLoadingProfile ? (
+                    <div className="flex items-center justify-center py-24">
+                        <Loader2 size={32} className="animate-spin text-saffron" />
                     </div>
-
-                    {/* Right Column: Twin, Alerts, Status */}
-                    <div className="space-y-6">
-
-                        {/* Digital Twin Preview */}
-                        <MotionWrapper delay={0.35} className="bg-gradient-to-br from-indigo-900/40 to-[#0f172a] rounded-xl border border-indigo-500/20 p-5 shadow-2xl relative overflow-hidden group cursor-pointer" onClick={() => navigate('/twin')}>
-                            <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-40 transition-opacity">
-                                <TrendingUp size={64} />
+                ) : !hasProfile ? (
+                    <MotionWrapper delay={0.1} className="mt-8">
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-card p-8 text-center max-w-xl mx-auto">
+                            <div className="w-16 h-16 rounded-full bg-saffron-pale flex items-center justify-center mx-auto mb-4">
+                                <Sparkles size={28} className="text-saffron" />
                             </div>
-                            <h2 className="font-body text-lg font-bold text-[#f8fafc] mb-1">Digital Twin Match</h2>
-                            <p className="font-body text-xs text-indigo-300 mb-6 w-3/4">We've modeled your demographic profile against 140+ state schemes.</p>
-
-                            <div className="bg-[#020617]/50 rounded-lg p-3 backdrop-blur-sm border border-indigo-500/10">
-                                <div className="flex justify-between items-end mb-1">
-                                    <span className="text-xs text-slate-400">Projected Income Increase</span>
-                                    <span className="font-mono text-xl font-bold text-emerald-400">+18%</span>
-                                </div>
-                                <div className="w-full bg-slate-800 rounded-full h-1.5 mt-2">
-                                    <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: '18%' }}></div>
-                                </div>
-                            </div>
-
-                            <div className="mt-4 flex items-center text-sm font-medium text-indigo-400">
-                                View Full Analysis <ChevronRight size={16} />
-                            </div>
+                            <h2 className="font-display text-2xl text-gray-900 mb-2">Complete Your Profile</h2>
+                            <p className="font-body text-gray-700 mb-6">
+                                Chat with Sarathi AI to answer a few questions about yourself. We'll instantly find all government schemes you're eligible for.
+                            </p>
+                            <button
+                                onClick={() => navigate('/chat')}
+                                className="inline-flex items-center gap-2 h-11 px-8 rounded-lg bg-saffron text-white font-body text-sm font-medium hover:bg-saffron-light transition-colors shadow-saffron"
+                            >
+                                Start Chat <ArrowRight size={16} />
+                            </button>
+                        </div>
+                    </MotionWrapper>
+                ) : (
+                    <>
+                        {/* Metrics Row — D1: 4 stat cards */}
+                        <MotionWrapper delay={0.15} className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 mt-8">
+                            <StatCard
+                                label="Total Potential Benefits"
+                                value={`₹${totalBenefits.toLocaleString('en-IN')}`}
+                                icon={<TrendingUp size={20} />}
+                                variant="success"
+                            />
+                            <StatCard
+                                label="Eligible Schemes"
+                                value={eligibleSchemes.length}
+                                icon={<Sparkles size={20} />}
+                                variant="primary"
+                            />
+                            <StatCard
+                                label="Profile Complete"
+                                value={`${completionPct}%`}
+                                icon={<CheckCircle2 size={20} />}
+                                variant={completionVariant}
+                            />
+                            <button onClick={() => navigate('/applications')} className="text-left w-full">
+                                <StatCard
+                                    label="My Applications"
+                                    value={applications.length}
+                                    icon={<ClipboardList size={20} />}
+                                    variant="primary"
+                                />
+                            </button>
                         </MotionWrapper>
 
-                        {/* Application Status */}
-                        <MotionWrapper delay={0.45} className="bg-[#0f172a] rounded-xl border border-slate-800 p-5 shadow-2xl">
-                            <h2 className="font-body text-lg font-bold text-[#f8fafc] mb-4">Application Status</h2>
-                            <div className="space-y-4">
-                                {data.applications.map((app) => (
-                                    <div key={app.id} className="relative pl-6">
-                                        {/* Timeline line */}
-                                        <div className="absolute left-1.5 top-2 bottom-0 w-px bg-slate-800" />
-
-                                        {/* Status dot */}
-                                        <div className={`absolute left-0 top-1.5 w-3.5 h-3.5 rounded-full border-2 border-[#0f172a] ${app.status === 'approved' ? 'bg-emerald-500' : 'bg-amber-500'
-                                            }`} />
-
-                                        <div>
-                                            <h4 className="font-body justify-between text-sm font-semibold text-[#f8fafc] flex items-center">
-                                                {app.name}
-                                                <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${app.status === 'approved' ? 'text-emerald-400 bg-emerald-500/10' : 'text-amber-400 bg-amber-500/10'
-                                                    }`}>
-                                                    {app.status}
-                                                </span>
-                                            </h4>
-                                            <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
-                                                <span className="flex items-center gap-1"><Clock size={12} /> {app.date}</span>
-                                                <span className="font-mono text-slate-300">{app.amount}</span>
-                                            </div>
-                                        </div>
+                        {/* Main Grid */}
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            {/* Left: Eligible Schemes */}
+                            <div className="lg:col-span-2 space-y-6">
+                                <MotionWrapper delay={0.2} className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
+                                    <div className="flex items-center justify-between mb-5">
+                                        <h2 className="font-body text-lg font-bold text-gray-900 flex items-center gap-2">
+                                            <span className="w-2 h-2 rounded-full bg-saffron" />
+                                            Eligible For You
+                                        </h2>
+                                        <button onClick={() => navigate('/my-schemes')} className="text-sm font-body text-gray-500 hover:text-saffron transition-colors">
+                                            View All →
+                                        </button>
                                     </div>
-                                ))}
-                            </div>
-                        </MotionWrapper>
 
-                        {/* Alerts */}
-                        <MotionWrapper delay={0.5} className="bg-[#0f172a] rounded-xl border border-slate-800 p-5 shadow-2xl">
-                            <div className="flex items-center gap-2 mb-4">
-                                <Bell size={18} className="text-slate-400" />
-                                <h2 className="font-body text-lg font-bold text-[#f8fafc]">Recent Alerts</h2>
+                                    {topSchemes.length === 0 ? (
+                                        <p className="font-body text-sm text-gray-500 py-4 text-center">No schemes matched yet. Complete your profile to see results.</p>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {topSchemes.map((scheme) => {
+                                                const benefit = Number(scheme.annualBenefit) || 0;
+                                                const benefitStr = benefit >= 100000
+                                                    ? `₹${(benefit / 100000).toFixed(benefit % 100000 === 0 ? 0 : 1)}L`
+                                                    : `₹${benefit.toLocaleString('en-IN')}`;
+                                                const catStyle = CATEGORY_STYLE[scheme.category] || FALLBACK_STYLE;
+                                                return (
+                                                    <div key={scheme.id || scheme.schemeId} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl bg-off-white border border-gray-200">
+                                                        <div>
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <span className={`text-[10px] font-body px-2 py-0.5 rounded-full font-medium ${catStyle.pill}`}>
+                                                                    {(scheme.category || '').toUpperCase()}
+                                                                </span>
+                                                            </div>
+                                                            <h4 className="font-body text-sm font-bold text-gray-900">{scheme.name || scheme.nameEnglish}</h4>
+                                                        </div>
+                                                        <div className="flex items-center justify-between sm:justify-end gap-4 mt-3 sm:mt-0">
+                                                            <div className="text-left sm:text-right">
+                                                                <span className="block text-xs text-gray-500">Annual Benefit</span>
+                                                                <span className="font-mono font-bold text-success">{benefitStr}</span>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => navigate(`/schemes/${scheme.schemeId || scheme.id}`)}
+                                                                className="h-8 px-4 rounded-lg bg-saffron text-white font-body text-xs font-semibold hover:bg-saffron-light transition-colors"
+                                                            >
+                                                                View
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </MotionWrapper>
+
+                                {/* Profile Summary */}
+                                <MotionWrapper delay={0.3} className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
+                                    <h2 className="font-body text-lg font-bold text-gray-900 mb-4">Your Profile</h2>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                        {[
+                                            { label: 'Name', value: citizenProfile.name },
+                                            { label: 'Age', value: citizenProfile.age },
+                                            { label: 'State', value: citizenProfile.state },
+                                            { label: 'Category', value: citizenProfile.category },
+                                            { label: 'Income/mo', value: citizenProfile.income ? `₹${Number(citizenProfile.income).toLocaleString('en-IN')}` : '—' },
+                                            { label: 'Occupation', value: citizenProfile.occupation || citizenProfile.persona || '—' },
+                                        ].map(({ label, value }) => (
+                                            <div key={label} className="p-3 rounded-lg bg-off-white border border-gray-200">
+                                                <p className="font-body text-xs text-gray-500 mb-0.5">{label}</p>
+                                                <p className="font-body text-sm font-semibold text-gray-900 truncate">{value || '—'}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <button
+                                        onClick={() => navigate('/profile')}
+                                        className="mt-4 text-sm font-body text-saffron hover:underline"
+                                    >
+                                        Edit Profile →
+                                    </button>
+                                </MotionWrapper>
                             </div>
-                            <div className="space-y-3">
-                                {data.alerts.map((alert) => (
-                                    <div key={alert.id} className="flex gap-3 text-sm font-body">
-                                        <div className="mt-0.5">
-                                            {alert.type === 'warning' ? (
-                                                <ShieldAlert size={16} className="text-red-400" />
-                                            ) : (
-                                                <CheckCircle2 size={16} className="text-emerald-400" />
+
+                            {/* Right: Digital Twin + Actions */}
+                            <div className="space-y-6">
+                                <MotionWrapper delay={0.25} className="bg-navy rounded-xl p-5 relative overflow-hidden group cursor-pointer">
+                                    <div onClick={() => navigate('/twin')}>
+                                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                            <TrendingUp size={64} className="text-white" />
+                                        </div>
+                                        <h2 className="font-body text-lg font-bold text-white mb-1">Digital Twin</h2>
+                                        <p className="font-body text-xs text-gray-300 mb-4">See your projected income increase across all matched schemes.</p>
+                                        <div className="bg-white/10 rounded-lg p-3">
+                                            <div className="flex justify-between items-end mb-1">
+                                                <span className="text-xs text-gray-300">Total Potential</span>
+                                                <span className="font-mono text-xl font-bold text-saffron">
+                                                    {totalBenefits > 0 ? `₹${(totalBenefits / 1000).toFixed(0)}K` : '—'}
+                                                </span>
+                                            </div>
+                                            {totalBenefits > 0 && (
+                                                <div className="w-full bg-white/20 rounded-full h-1.5 mt-2">
+                                                    <div className="bg-saffron h-1.5 rounded-full" style={{ width: `${Math.min((totalBenefits / 200000) * 100, 100)}%` }} />
+                                                </div>
                                             )}
                                         </div>
-                                        <p className="text-slate-300 leading-snug">{alert.text}</p>
+                                        <div className="mt-4 flex items-center text-sm font-medium text-saffron">
+                                            View Full Analysis <ChevronRight size={16} />
+                                        </div>
                                     </div>
-                                ))}
-                            </div>
-                        </MotionWrapper>
+                                </MotionWrapper>
 
-                    </div>
-                </div>
+                                <MotionWrapper delay={0.35} className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <Bell size={18} className="text-saffron" />
+                                        <h2 className="font-body text-lg font-bold text-gray-900">Quick Actions</h2>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <button onClick={() => navigate('/schemes')} className="w-full flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:border-saffron/50 hover:bg-saffron-pale transition-colors text-left">
+                                            <span className="font-body text-sm text-gray-700">Browse All Schemes</span>
+                                            <ArrowRight size={14} className="text-gray-400" />
+                                        </button>
+                                        <button onClick={() => navigate('/chat')} className="w-full flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:border-saffron/50 hover:bg-saffron-pale transition-colors text-left">
+                                            <span className="font-body text-sm text-gray-700">Update via Chat</span>
+                                            <ArrowRight size={14} className="text-gray-400" />
+                                        </button>
+                                        <button onClick={() => navigate('/profile')} className="w-full flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:border-saffron/50 hover:bg-saffron-pale transition-colors text-left">
+                                            <span className="font-body text-sm text-gray-700">Edit Profile</span>
+                                            <ArrowRight size={14} className="text-gray-400" />
+                                        </button>
+                                        <button onClick={() => navigate('/applications')} className="w-full flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:border-saffron/50 hover:bg-saffron-pale transition-colors text-left">
+                                            <span className="font-body text-sm text-gray-700">My Applications</span>
+                                            <ArrowRight size={14} className="text-gray-400" />
+                                        </button>
+                                    </div>
+                                </MotionWrapper>
+
+                                {/* D1: Recent Applications widget */}
+                                {recentApplications.length > 0 && (
+                                    <MotionWrapper delay={0.4} className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center gap-2">
+                                                <ClipboardList size={16} className="text-saffron" />
+                                                <h2 className="font-body text-sm font-bold text-gray-900">Recent Applications</h2>
+                                            </div>
+                                            <button onClick={() => navigate('/applications')} className="text-xs font-body text-gray-500 hover:text-saffron transition-colors">
+                                                View All →
+                                            </button>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {recentApplications.map((app) => {
+                                                const sc = STATUS_CONFIG[app.status] || STATUS_CONFIG.pending;
+                                                return (
+                                                    <div key={app.applicationId} className="flex items-center justify-between p-2 rounded-lg bg-off-white border border-gray-100">
+                                                        <p className="font-body text-xs text-gray-800 font-medium truncate flex-1 mr-2">{app.schemeName || app.schemeId}</p>
+                                                        <span className={`text-[10px] font-body px-2 py-0.5 rounded-full font-semibold shrink-0 ${sc.bg} ${sc.color}`}>
+                                                            {app.status}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </MotionWrapper>
+                                )}
+
+                                {eligibleSchemes.length > 0 && (
+                                    <MotionWrapper delay={0.45} className="bg-success-light rounded-xl border border-success/20 p-5">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <AlertTriangle size={18} className="text-success" />
+                                            <h2 className="font-body text-sm font-bold text-success">Action Required</h2>
+                                        </div>
+                                        <p className="font-body text-sm text-gray-700">
+                                            You have <strong>{eligibleSchemes.length}</strong> eligible scheme{eligibleSchemes.length !== 1 ? 's' : ''}. Apply now to start receiving benefits.
+                                        </p>
+                                        <button onClick={() => navigate('/my-schemes')} className="mt-3 text-sm font-body text-success font-medium hover:underline">
+                                            Apply Now →
+                                        </button>
+                                    </MotionWrapper>
+                                )}
+                            </div>
+                        </div>
+                    </>
+                )}
             </div>
         </div>
     );

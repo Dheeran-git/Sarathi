@@ -7,30 +7,28 @@ import { Volume2 } from 'lucide-react';
 function ChatPanel({ messages = [], isThinking = false, language = 'en' }) {
     const bottomRef = useRef(null);
 
-    // Text to Speech
     const speakMessage = (text) => {
         if (!('speechSynthesis' in window)) return;
-        window.speechSynthesis.cancel(); // Stop current speech
+        window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = language === 'hi' ? 'hi-IN' : 'en-IN';
         window.speechSynthesis.speak(utterance);
     };
 
-    // Auto-scroll to bottom when new messages arrive
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, isThinking]);
 
     return (
-        <div className="flex-1 overflow-y-auto px-4 py-6">
-            {/* Welcome Screen (shown when no messages) */}
+        <div className="flex-1 overflow-y-auto px-4 py-6 bg-off-white">
+            {/* Welcome Screen */}
             {messages.length === 0 && !isThinking && (
                 <div className="flex flex-col items-center justify-center h-full text-center">
-                    <div className="w-16 h-16 rounded-full bg-indigo-500/10 flex items-center justify-center mb-4 shadow-[0_0_30px_rgba(99,102,241,0.15)] border border-indigo-500/20">
-                        <span className="font-display text-2xl text-indigo-400">S</span>
+                    <div className="w-16 h-16 rounded-full bg-saffron-pale flex items-center justify-center mb-4 border border-saffron/30 shadow-saffron">
+                        <span className="font-display text-2xl text-saffron">S</span>
                     </div>
-                    <h2 className="font-display text-xl text-[#f8fafc]">Hello! I am Sarathi.</h2>
-                    <p className="font-body text-sm text-slate-400 mt-2 max-w-xs leading-relaxed">
+                    <h2 className="font-display text-xl text-gray-900">Hello! I am Sarathi.</h2>
+                    <p className="font-body text-sm text-gray-500 mt-2 max-w-xs leading-relaxed">
                         I'll tell you which government schemes you can get.
                     </p>
                 </div>
@@ -41,24 +39,25 @@ function ChatPanel({ messages = [], isThinking = false, language = 'en' }) {
                 {messages.map((msg, i) => (
                     <div key={i} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
                         {msg.type === 'sarathi' && (
-                            <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center mr-3 shrink-0 mt-1 border border-indigo-500/20 shadow-sm">
-                                <span className="font-display text-sm text-indigo-400">S</span>
+                            <div className="w-8 h-8 rounded-full bg-saffron-pale flex items-center justify-center mr-3 shrink-0 mt-1 border border-saffron/30 shadow-sm">
+                                <span className="font-display text-sm text-saffron">S</span>
                             </div>
                         )}
                         <div
-                            className={`max-w-[80%] px-4 py-3 whitespace-pre-wrap leading-relaxed font-body text-sm shadow-sm ${msg.type === 'user'
-                                ? 'bg-indigo-600 text-white rounded-[16px_16px_4px_16px] shadow-indigo-500/10'
-                                : msg.isFinal
-                                    ? 'bg-[#0f172a] text-[#f8fafc] rounded-[16px_16px_16px_4px] border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.05)]'
-                                    : 'bg-[#0f172a] text-[#f8fafc] rounded-[16px_16px_16px_4px] border border-slate-800 shadow-[0_2px_10px_rgba(0,0,0,0.2)]'
-                                }`}
+                            className={`max-w-[80%] px-4 py-3 whitespace-pre-wrap leading-relaxed font-body text-sm shadow-sm ${
+                                msg.type === 'user'
+                                    ? 'bg-navy text-white rounded-[16px_16px_4px_16px]'
+                                    : msg.isFinal
+                                        ? 'bg-white text-gray-900 rounded-[16px_16px_16px_4px] border border-success/30'
+                                        : 'bg-white text-gray-900 rounded-[16px_16px_16px_4px] border border-gray-200'
+                            }`}
                         >
                             {msg.text}
                         </div>
                         {msg.type === 'sarathi' && (
                             <button
                                 onClick={() => speakMessage(msg.text)}
-                                className="ml-2 mt-auto mb-1 p-1.5 rounded-full text-slate-500 hover:text-indigo-400 hover:bg-indigo-500/10 transition-colors"
+                                className="ml-2 mt-auto mb-1 p-1.5 rounded-full text-gray-400 hover:text-saffron hover:bg-saffron-pale transition-colors"
                                 aria-label="Listen to message"
                                 title="Listen to message"
                             >
@@ -71,14 +70,14 @@ function ChatPanel({ messages = [], isThinking = false, language = 'en' }) {
                 {/* Thinking indicator */}
                 {isThinking && (
                     <div className="flex justify-start">
-                        <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center mr-3 shrink-0 border border-indigo-500/20 shadow-sm">
-                            <span className="font-display text-sm text-indigo-400">S</span>
+                        <div className="w-8 h-8 rounded-full bg-saffron-pale flex items-center justify-center mr-3 shrink-0 border border-saffron/30 shadow-sm">
+                            <span className="font-display text-sm text-saffron">S</span>
                         </div>
-                        <div className="bg-[#0f172a] text-[#f8fafc] rounded-[16px_16px_16px_4px] px-5 py-3.5 border border-slate-800 shadow-[0_2px_10px_rgba(0,0,0,0.2)]">
+                        <div className="bg-white text-gray-900 rounded-[16px_16px_16px_4px] px-5 py-3.5 border border-gray-200 shadow-sm">
                             <div className="flex items-center gap-1.5 h-full py-1">
-                                <div className="w-2 h-2 bg-indigo-500/60 rounded-full animate-[bounce_1s_infinite_0ms]" />
-                                <div className="w-2 h-2 bg-indigo-500/60 rounded-full animate-[bounce_1s_infinite_150ms]" />
-                                <div className="w-2 h-2 bg-indigo-500/60 rounded-full animate-[bounce_1s_infinite_300ms]" />
+                                <div className="w-2 h-2 bg-saffron/60 rounded-full animate-[bounce_1s_infinite_0ms]" />
+                                <div className="w-2 h-2 bg-saffron/60 rounded-full animate-[bounce_1s_infinite_150ms]" />
+                                <div className="w-2 h-2 bg-saffron/60 rounded-full animate-[bounce_1s_infinite_300ms]" />
                             </div>
                         </div>
                     </div>

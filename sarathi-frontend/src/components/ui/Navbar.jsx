@@ -1,47 +1,36 @@
 import { useState, useEffect } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { useLanguage } from '../../context/LanguageContext';
-import { Globe } from 'lucide-react';
 
-// Public-only nav (shown when not logged in)
-const PUBLIC_NAV_LINKS = [
-  { to: '/about', label: 'About' },
-];
-
-// Full nav (shown when logged in)
-const AUTH_NAV_LINKS = [
+const CITIZEN_NAV_LINKS = [
   { to: '/chat', label: 'Citizens' },
-  { to: '/panchayat', label: 'Panchayat' },
+  { to: '/dashboard', label: 'Dashboard' },
   { to: '/schemes', label: 'Schemes' },
   { to: '/twin', label: 'Digital Twin' },
-  { to: '/about', label: 'About' },
+  { to: '/profile', label: 'My Profile' },
+];
+
+const PANCHAYAT_NAV_LINKS = [
+  { to: '/panchayat', label: 'Panchayat Dashboard' },
 ];
 
 function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { isAuthenticated, user, logout } = useAuth();
-  const { language, toggleLanguage } = useLanguage();
+  const { isAuthenticated, isCitizen, isPanchayat, user, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate('/');
     setMobileOpen(false);
   };
 
-  const currentNavLinks = isAuthenticated
-    ? [
-      { to: '/chat', label: 'Citizens' },
-      { to: '/panchayat', label: 'Panchayat' },
-      { to: '/dashboard', label: 'Dashboard' },
-      { to: '/profile', label: 'My Profile' },
-      { to: '/schemes', label: 'Schemes' },
-      { to: '/twin', label: 'Digital Twin' },
-      { to: '/about', label: 'About' },
-    ]
-    : PUBLIC_NAV_LINKS;
+  const currentNavLinks = isPanchayat
+    ? PANCHAYAT_NAV_LINKS
+    : isCitizen
+      ? CITIZEN_NAV_LINKS
+      : [];
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
@@ -49,7 +38,6 @@ function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Lock body scroll when mobile drawer is open
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
@@ -93,21 +81,24 @@ function Navbar() {
 
         {/* Right — Actions */}
         <div className="flex items-center gap-3">
-          {/* Language Toggle */}
-          <button
-            onClick={toggleLanguage}
-            className="flex items-center gap-1.5 h-9 px-3 rounded-md border border-slate-700 text-slate-300 font-body text-xs font-semibold hover:bg-slate-800 transition-colors duration-200"
-            aria-label="Toggle language"
+          {/* About — subtle secondary link, always visible on desktop */}
+          <NavLink
+            to="/about"
+            className={({ isActive }) =>
+              `hidden lg:block font-body text-sm transition-colors duration-200 ${isActive ? 'text-white' : 'text-slate-400 hover:text-white'}`
+            }
           >
-            <Globe size={14} />
-            {language === 'hi' ? 'EN' : 'HI'}
-          </button>
+            About
+          </NavLink>
 
-          {/* Desktop-only Buttons */}
+          {/* Desktop-only auth buttons */}
           {isAuthenticated ? (
             <div className="hidden lg:flex items-center gap-4">
               <span className="font-body text-sm text-slate-300">
-                Welcome, <span className="font-semibold text-saffron">{user?.email?.split('@')[0] || 'User'}</span>
+                Welcome,{' '}
+                <span className={`font-semibold ${isPanchayat ? 'text-teal-400' : 'text-saffron'}`}>
+                  {user?.email?.split('@')[0] || 'User'}
+                </span>
               </span>
               <button
                 onClick={handleLogout}
@@ -119,13 +110,13 @@ function Navbar() {
           ) : (
             <>
               <Link
-                to="/login"
-                className="hidden lg:inline-flex items-center h-9 px-4 rounded-md border border-saffron text-saffron font-body text-sm font-medium hover:bg-saffron/10 transition-colors duration-200"
+                to="/panchayat/login"
+                className="hidden lg:inline-flex items-center h-9 px-4 rounded-md border border-teal-500/50 text-teal-400 font-body text-sm font-medium hover:bg-teal-500/10 transition-colors duration-200"
               >
                 Panchayat Login
               </Link>
               <Link
-                to="/signup"
+                to="/citizen/signup"
                 className="hidden lg:inline-flex items-center h-9 px-4 rounded-md bg-saffron text-white font-body text-sm font-medium hover:bg-saffron-light transition-colors duration-200"
               >
                 Get Started
@@ -186,25 +177,26 @@ function Navbar() {
             </NavLink>
           ))}
 
-          <hr className="border-navy-light/30 my-3" />
-
-          {/* Language Toggle Mobile */}
-          <button
-            onClick={toggleLanguage}
-            className="flex items-center justify-between h-12 px-4 rounded-lg bg-slate-800/30 text-slate-300 font-body text-base hover:bg-slate-800 transition-colors duration-200"
+          <NavLink
+            to="/about"
+            onClick={() => setMobileOpen(false)}
+            className={({ isActive }) =>
+              `flex items-center h-12 px-4 rounded-lg font-body text-base transition-colors duration-200 ${isActive
+                ? 'text-white bg-navy-mid'
+                : 'text-slate-400 hover:text-white hover:bg-navy-mid/50'
+              }`
+            }
           >
-            <span className="flex items-center gap-2">
-              <Globe size={18} /> Language
-            </span>
-            <span className="font-semibold text-saffron uppercase">{language === 'hi' ? 'Hindi' : 'English'}</span>
-          </button>
+            About
+          </NavLink>
 
           <hr className="border-navy-light/30 my-3" />
 
           {isAuthenticated ? (
             <>
               <div className="px-4 py-2 font-body text-sm text-slate-400 mb-2">
-                Logged in as <span className="text-white">{user?.email || 'User'}</span>
+                Logged in as <span className={`font-semibold ${isPanchayat ? 'text-teal-400' : 'text-white'}`}>{user?.email || 'User'}</span>
+                {isPanchayat && <span className="ml-2 text-xs text-teal-500">(Panchayat)</span>}
               </div>
               <button
                 onClick={handleLogout}
@@ -216,14 +208,14 @@ function Navbar() {
           ) : (
             <>
               <Link
-                to="/login"
+                to="/panchayat/login"
                 onClick={() => setMobileOpen(false)}
-                className="flex items-center justify-center h-12 rounded-lg border border-saffron text-saffron font-body text-sm font-medium hover:bg-saffron/10 transition-colors duration-200"
+                className="flex items-center justify-center h-12 rounded-lg border border-teal-500/50 text-teal-400 font-body text-sm font-medium hover:bg-teal-500/10 transition-colors duration-200"
               >
                 Panchayat Login
               </Link>
               <Link
-                to="/signup"
+                to="/citizen/signup"
                 onClick={() => setMobileOpen(false)}
                 className="flex items-center justify-center h-12 rounded-lg bg-saffron text-white font-body text-sm font-medium hover:bg-saffron-light transition-colors duration-200"
               >

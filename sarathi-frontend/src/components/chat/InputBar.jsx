@@ -28,12 +28,12 @@ function InputBar({
     const isHi = language === 'hi';
 
     return (
-        <div className="border-t border-slate-800 bg-[#0f172a] px-4 py-3">
+        <div className="border-t border-gray-200 bg-white px-4 py-3">
             {/* Recording indicator */}
             {isRecording && (
                 <div className="flex items-center gap-2 mb-2">
-                    <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                    <span className="font-body text-xs text-red-500">Recording... (Speak now)</span>
+                    <div className="w-2 h-2 rounded-full bg-danger animate-pulse" />
+                    <span className="font-body text-xs text-danger">Recording... (Speak now)</span>
                 </div>
             )}
 
@@ -47,7 +47,7 @@ function InputBar({
                                 key={chip.value}
                                 type="button"
                                 onClick={() => handleChipClick(displayLabel)}
-                                className="px-3 py-1.5 rounded-full border border-indigo-500/40 bg-indigo-500/10 text-indigo-300 font-body text-xs font-medium hover:bg-indigo-500/25 hover:border-indigo-400/60 transition-all duration-200 whitespace-nowrap"
+                                className="px-3 py-1.5 rounded-full border border-saffron/40 bg-saffron-pale text-saffron font-body text-xs font-medium hover:bg-saffron hover:text-white hover:border-saffron transition-all duration-200 whitespace-nowrap"
                             >
                                 {displayLabel}
                             </button>
@@ -63,7 +63,7 @@ function InputBar({
                     onChange={(e) => setText(e.target.value)}
                     placeholder={isHi ? 'यहाँ टाइप करें या माइक दबाएं...' : 'Type here or press mic to speak...'}
                     disabled={disabled}
-                    className="flex-1 h-11 px-4 rounded-xl border border-slate-700 bg-[#020617] text-[#f8fafc] placeholder-slate-500 font-body text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="flex-1 h-11 px-4 rounded-xl border border-gray-300 bg-white text-gray-900 placeholder-gray-400 font-body text-sm focus:outline-none focus:border-saffron focus:ring-2 focus:ring-saffron/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 />
 
                 {/* Mic button */}
@@ -71,10 +71,11 @@ function InputBar({
                     type="button"
                     onClick={onToggleRecording}
                     disabled={disabled}
-                    className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${isRecording
-                        ? 'bg-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)]'
-                        : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-300'
-                        } disabled:opacity-50 disabled:cursor-not-allowed border border-slate-700 md:border-none`}
+                    className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all border ${
+                        isRecording
+                            ? 'bg-danger text-white border-danger shadow-[0_0_15px_rgba(192,57,43,0.3)]'
+                            : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200 hover:text-gray-700'
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
                     aria-label={isRecording ? 'Stop recording' : 'Start recording'}
                 >
                     {isRecording ? <MicOff size={18} /> : <Mic size={18} />}
@@ -84,7 +85,7 @@ function InputBar({
                 <button
                     type="submit"
                     disabled={disabled || !text.trim()}
-                    className="w-11 h-11 rounded-xl bg-indigo-500 text-white flex items-center justify-center hover:bg-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.3)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-11 h-11 rounded-xl bg-saffron text-white flex items-center justify-center hover:bg-saffron-light shadow-saffron transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     aria-label="Send message"
                 >
                     <Send size={18} />

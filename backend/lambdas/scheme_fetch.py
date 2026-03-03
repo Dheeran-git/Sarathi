@@ -22,7 +22,7 @@ def lambda_handler(event, context):
         if not scheme_id:
             return {
                 'statusCode': 400,
-                'headers': { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+                'headers': { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type,Authorization', 'Content-Type': 'application/json' },
                 'body': json.dumps({ 'error': 'schemeId is required' })
             }
 
@@ -48,7 +48,7 @@ def lambda_handler(event, context):
         if not item:
             return {
                 'statusCode': 404,
-                'headers': { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+                'headers': { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type,Authorization', 'Content-Type': 'application/json' },
                 'body': json.dumps({ 'error': 'Scheme not found' })
             }
 
@@ -64,6 +64,6 @@ def lambda_handler(event, context):
     except Exception as e:
         return {
             'statusCode': 500,
-            'headers': { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+            'headers': { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type,Authorization', 'Content-Type': 'application/json' },
             'body': json.dumps({ 'error': 'Internal server error', 'message': str(e) })
         }

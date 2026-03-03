@@ -119,6 +119,14 @@ function ChatPage() {
     language: isHi ? 'hi-IN' : 'en-IN',
   });
 
+  // E1: Memory leak cleanup on unmount
+  useEffect(() => {
+    return () => {
+      window.speechSynthesis?.cancel();
+      window.__utterances = [];
+    };
+  }, []);
+
   const isRecording = voiceState === 'listening';
 
   const handleToggleRecording = () => {
@@ -217,7 +225,7 @@ function ChatPage() {
       setTimeout(() => setShowResults(true), 500);
 
       // Persist profile + matched schemes to DynamoDB
-      saveCurrentProfile(matchedSchemesParam)
+      saveCurrentProfile(matchedSchemesParam, { panchayatId })
         .then(() => {
           setProfileSaved(true);
           setTimeout(() => setProfileSaved(false), 4000);
@@ -225,8 +233,19 @@ function ChatPage() {
         .catch((err) => console.warn('[ChatPage] Profile save failed:', err));
     };
 
+    // All citizens go to the single panchayat in the system
+    const panchayatId = localProfile.panchayatId
+      || citizenProfile?.panchayatId
+      || 'rampur-barabanki-up';
+
     try {
-      const result = await checkEligibility(apiPayload);
+      // E1: Timeout wrapper — fall through to local fallback after 15s
+      const withTimeout = (promise, ms) => Promise.race([
+        promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
+      ]);
+
+      const result = await withTimeout(checkEligibility(apiPayload), 15000);
       const matched = result.matchedSchemes && result.matchedSchemes.length > 0
         ? result.matchedSchemes
         : localFallbackMatch(profile);
@@ -236,14 +255,19 @@ function ChatPage() {
       flushResults(matched, totalBenefit);
 
       notifyPanchayat({
-        citizenName: profile.name || 'Unknown',
-        panchayatId: 'rampur-barabanki-up',
-        matchedSchemes: matched,
-        totalAnnualBenefit: totalBenefit,
+        type: 'unenrolled_alert',
+        panchayatId,
+        citizenCount: matched.length,
+        schemeName: matched[0]?.nameEnglish || matched[0]?.name || 'multiple schemes',
+        subject: `New citizen registered — ${profile.name || 'Unknown'} (${matched.length} schemes)`,
       }).catch(() => { });
 
-    } catch {
-      console.warn('[ChatPage] API failed, using local fallback schemes match');
+    } catch (err) {
+      if (err?.message === 'timeout') {
+        addMessage({ type: 'sarathi', text: 'Showing results from local database instead.', timestamp: 'JUST_NOW' });
+      } else {
+        console.warn('[ChatPage] API failed, using local fallback');
+      }
       const matched = localFallbackMatch(profile);
       const totalBenefit = matched.reduce((s, sc) => s + (sc.annualBenefit || 0), 0);
       flushResults(matched, totalBenefit);
@@ -318,17 +342,16 @@ function ChatPage() {
   }, [handleAnswer]);
 
   /* ── Boot: ask the first question ──────────────────────────────────── */
+  const hasGreetedRef = useRef(false);
+
   useEffect(() => {
-    if (messages.length === 0) {
+    if (!hasGreetedRef.current) {
+      hasGreetedRef.current = true;
       const greeting = isHi
         ? 'नमस्ते! 🙏 मैं सारथी हूँ, आपका AI सहायक। मैं आपको सरकारी योजनाओं से जोड़ने में मदद करूँगा। चलिए शुरू करते हैं!'
-        : 'Namaste! 🙏 I\'m Sarathi, your AI welfare assistant. I\'ll help connect you with government schemes you\'re eligible for. Let\'s get started!';
+        : "Namaste! 🙏 I'm Sarathi, your AI welfare assistant. I'll help connect you with government schemes you're eligible for. Let's get started!";
       addMessage({ type: 'sarathi', text: greeting, timestamp: 'JUST_NOW' });
-
-      // Ask first question after greeting
-      setTimeout(() => {
-        askNextQuestion({});
-      }, 600);
+      setTimeout(() => askNextQuestion({}), 600);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -361,20 +384,20 @@ function ChatPage() {
       </div>
 
       {/* Main chat area */}
-      <div className="flex-1 flex flex-col bg-[#020617]">
+      <div className="flex-1 flex flex-col bg-off-white">
         <ProgressSteps currentStep={progressStep} labels={stepLabels} totalSteps={totalSteps} />
 
         {/* Profile Saved toast */}
         {profileSaved && (
-          <div className="mx-auto mt-2 px-4 py-2 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-sm font-body flex items-center gap-2 animate-pulse">
-            ✅ Profile Saved
+          <div className="mx-auto mt-2 px-4 py-2 rounded-lg bg-green-50 border border-green-200 text-success text-sm font-body flex items-center gap-2 animate-pulse">
+            &#10003; Profile Saved
           </div>
         )}
 
         {/* Question counter */}
         {!conversationDone && answeredCount > 0 && (
           <div className="text-center py-1">
-            <span className="text-xs font-body text-slate-500">
+            <span className="text-xs font-body text-gray-500">
               {isHi ? `प्रश्न ${answeredCount} / ~${totalQuestions}` : `Question ${answeredCount} / ~${totalQuestions}`}
             </span>
           </div>
@@ -394,7 +417,7 @@ function ChatPage() {
 
       {/* Results panel — mobile bottom sheet */}
       {showResults && (
-        <div className="lg:hidden fixed inset-x-0 bottom-0 z-50 bg-[#0f172a] border border-slate-800 rounded-t-2xl shadow-2xl max-h-[60vh] overflow-y-auto">
+        <div className="lg:hidden fixed inset-x-0 bottom-0 z-50 bg-white border border-gray-200 rounded-t-2xl shadow-2xl max-h-[60vh] overflow-y-auto">
           <div className="w-12 h-1.5 rounded-full bg-gray-300 mx-auto mt-2 mb-1" />
           <ResultsPanel schemes={matchedSchemes} visible={showResults} />
         </div>

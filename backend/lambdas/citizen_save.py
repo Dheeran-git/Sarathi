@@ -117,20 +117,24 @@ def lambda_handler(event, context):
 
             # Additional fields
             'educationLevel': body.get('educationLevel', ''),
-            'panchayatId': body.get('panchayatId', 'rampur-barabanki-up'),
+            'panchayatId': (body.get('panchayatId') or '').strip(),
 
             # Scheme data
             'matchedSchemes': convert_to_dynamodb(body.get('matchedSchemes', [])),
             'enrolledSchemes': convert_to_dynamodb(body.get('enrolledSchemes', [])),
             'totalAnnualBenefit': int(body.get('totalAnnualBenefit', 0) or 0),
-            'status': 'eligible' if body.get('matchedSchemes') else 'pending',
+            'status': (
+                'enrolled' if bool(body.get('enrolledSchemes'))
+                else 'eligible' if bool(body.get('matchedSchemes'))
+                else 'none'
+            ),
 
             'updatedAt': now,
         }
 
         # Preserve createdAt on updates (don't overwrite if record already exists)
         existing = table.get_item(Key={'citizenId': citizen_id}).get('Item')
-        citizen['createdAt'] = existing['createdAt'] if existing else now
+        citizen['createdAt'] = existing.get('createdAt', now) if existing else now
 
         table.put_item(Item=citizen)
 

@@ -1,10 +1,30 @@
 import json
 import boto3
 from decimal import Decimal
-from boto3.dynamodb.conditions import Attr
+from boto3.dynamodb.conditions import Key
 
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
 citizens_table = dynamodb.Table('SarathiCitizens')
+
+# Known panchayat metadata — extend as needed
+_PANCHAYAT_META = {
+    'rampur-barabanki-up': {
+        'panchayatName': 'Rampur Panchayat',
+        'district': 'Barabanki',
+        'state': 'Uttar Pradesh',
+    },
+}
+
+def _panchayat_meta(panchayat_id):
+    if panchayat_id in _PANCHAYAT_META:
+        return _PANCHAYAT_META[panchayat_id]
+    # Derive readable name from ID slug
+    parts = panchayat_id.replace('-', ' ').split()
+    return {
+        'panchayatName': ' '.join(p.capitalize() for p in parts[:-2]) + ' Panchayat' if len(parts) > 2 else panchayat_id.replace('-', ' ').title(),
+        'district': parts[-2].capitalize() if len(parts) >= 2 else 'Unknown',
+        'state': parts[-1].upper() if len(parts) >= 1 else 'Unknown',
+    }
 
 class DecimalEncoder(json.JSONEncoder):
     def default(self, o):
@@ -18,16 +38,20 @@ def lambda_handler(event, context):
         if event.get('pathParameters'):
             panchayat_id = event['pathParameters'].get('panchayatId', panchayat_id)
 
-        # Scan with pagination for all citizens in this panchayat
+        # Query via GSI for efficiency — no full table scan
         citizens = []
-        response = citizens_table.scan(
-            FilterExpression=Attr('panchayatId').eq(panchayat_id)
+        response = citizens_table.query(
+            IndexName='panchayatId-updatedAt-index',
+            KeyConditionExpression=Key('panchayatId').eq(panchayat_id),
+            ScanIndexForward=False,
         )
         citizens.extend(response.get('Items', []))
         while 'LastEvaluatedKey' in response:
-            response = citizens_table.scan(
-                FilterExpression=Attr('panchayatId').eq(panchayat_id),
-                ExclusiveStartKey=response['LastEvaluatedKey']
+            response = citizens_table.query(
+                IndexName='panchayatId-updatedAt-index',
+                KeyConditionExpression=Key('panchayatId').eq(panchayat_id),
+                ScanIndexForward=False,
+                ExclusiveStartKey=response['LastEvaluatedKey'],
             )
             citizens.extend(response.get('Items', []))
 
@@ -58,6 +82,7 @@ def lambda_handler(event, context):
                 'description': f'{len(elderly_unserved)} elderly citizens missing old age pension'
             })
 
+        meta = _panchayat_meta(panchayat_id)
         return {
             'statusCode': 200,
             'headers': {
@@ -67,9 +92,9 @@ def lambda_handler(event, context):
             },
             'body': json.dumps({
                 'panchayatId': panchayat_id,
-                'panchayatName': 'Rampur Panchayat',
-                'district': 'Barabanki',
-                'state': 'Uttar Pradesh',
+                'panchayatName': meta['panchayatName'],
+                'district': meta['district'],
+                'state': meta['state'],
                 'totalHouseholds': len(citizens),
                 'enrolled': len(enrolled),
                 'eligibleNotEnrolled': len(eligible),
@@ -81,6 +106,6 @@ def lambda_handler(event, context):
     except Exception as e:
         return {
             'statusCode': 500,
-            'headers': { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+            'headers': { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type,Authorization', 'Content-Type': 'application/json' },
             'body': json.dumps({ 'error': 'Internal server error', 'message': str(e) })
         }
