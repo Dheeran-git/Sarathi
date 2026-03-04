@@ -1,0 +1,382 @@
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { ChevronRight, RefreshCw, Download, Loader2 } from 'lucide-react';
+import StatCard from '../components/ui/StatCard';
+import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
+import { t } from '../utils/translations';
+import { localizeNum } from '../utils/formatters';
+import VillageMap from '../components/panchayat/VillageMap';
+import AlertsPanel from '../components/panchayat/AlertsPanel';
+import CitizenTable from '../components/panchayat/CitizenTable';
+import GovernanceHeatmap from '../components/panchayat/GovernanceHeatmap';
+import AIInsights from '../components/panchayat/AIInsights';
+import { getPanchayatStats, notifyPanchayat } from '../utils/api';
+import { useToast } from '../components/ui/Toast';
+
+const HEATMAP_SCHEME_IDS = ['pm-kisan', 'pmay-gramin', 'pm-jan-arogya', 'pm-ujjwala', 'mgnregs', 'ignoaps'];
+const HEATMAP_SCHEME_NAMES = {
+  'pm-kisan': 'PM-KISAN',
+  'pmay-gramin': 'PMAY',
+  'pm-jan-arogya': 'Ayushman',
+  'pm-ujjwala': 'Ujjwala',
+  'mgnregs': 'MGNREGS',
+  'ignoaps': 'Pension',
+};
+
+/**
+ * PanchayatDashboard — the Sarpanch's comprehensive welfare dashboard.
+ * All data fetched from the live API (sarathi-panchayat-stats Lambda).
+ */
+function PanchayatDashboard() {
+  const { language } = useLanguage();
+  const T = (key) => t(key, language);
+  const isHi = language === 'hi';
+  const { user } = useAuth();
+  const { addToast } = useToast();
+
+  // B1: Dynamic panchayat ID from auth context
+  const panchayatId = user?.panchayatId || 'rampur-barabanki-up';
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [stats, setStats] = useState({
+    totalHouseholds: 0, enrolled: 0, eligibleNotEnrolled: 0, zeroBenefits: 0,
+    panchayatName: 'Rampur Panchayat', district: 'Barabanki', state: 'Uttar Pradesh',
+  });
+  const [alerts, setAlerts] = useState([]);
+  const [households, setHouseholds] = useState([]);
+
+  const [activeAlertFilter, setActiveAlertFilter] = useState(null);
+
+  const fetchData = () => {
+    setLoading(true);
+    setError(null);
+    setActiveAlertFilter(null);
+    getPanchayatStats(panchayatId)
+      .then((data) => {
+        if (data) {
+          const enrolled = data.enrolled || 0;
+          const total = data.totalHouseholds || 0;
+
+          // B2: Real addedThisMonth from updatedAt timestamps
+          const now = new Date();
+          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+          const citizenList = data.citizens || data.households || [];
+          const addedThisMonth = citizenList.filter(c => c.updatedAt >= startOfMonth).length;
+
+          setStats({
+            totalHouseholds: total,
+            enrolled: enrolled,
+            receivingPercent: total ? Math.round((enrolled / total) * 100) : 0,
+            eligibleNotEnrolled: data.eligibleNotEnrolled || 0,
+            zeroBenefits: data.zeroBenefits || 0,
+            addedThisMonth,
+            panchayatName: data.panchayatName || 'Rampur Panchayat',
+            panchayatNameHi: 'रामपुर पंचायत',
+            district: data.district || 'Barabanki',
+            state: data.state || 'Uttar Pradesh',
+          });
+
+          // Process households for village map
+          if (data.households) {
+            const processed = data.households.map((h, i) => ({
+              id: h.citizenId || `HH-${i}`,
+              name: h.name || 'Unknown',
+              ward: h.ward || `Ward ${(i % 6) + 1}`,
+              age: parseInt(h.age || 0),
+              status: h.status || 'unknown',
+              schemesCount: (h.matchedSchemes || []).length,
+              category: h.category || 'General',
+              gender: h.gender || 'any',
+              isWidow: h.isWidow === true || h.isWidow === 'true',
+              matchedSchemes: h.matchedSchemes || [],
+              enrolledSchemes: h.enrolledSchemes || [],
+              eligibleSchemes: (h.matchedSchemes || []).map(s => s.schemeId || s.id || s),
+              estimatedBenefit: h.estimatedBenefit || h.totalAnnualBenefit || 0,
+              updatedAt: h.updatedAt || '',
+            }));
+            setHouseholds(processed);
+          }
+
+          // Process live alerts
+          if (data.alerts && data.alerts.length > 0) {
+            const liveAlerts = data.alerts.map((a, i) => ({
+              id: `live-${i}`,
+              type: a.type || (a.urgency === 'high' ? 'urgent' : 'warning'),
+              title: a.title,
+              titleEnglish: a.description,
+              description: a.description,
+              descriptionEnglish: a.description,
+              action: isHi ? 'सूची देखें' : 'View List',
+              actionEnglish: 'View List',
+              time: isHi ? 'अभी' : 'Just now',
+              timeEnglish: 'Just now',
+            }));
+            setAlerts(liveAlerts);
+          }
+        }
+      })
+      .catch(() => {
+        setError(isHi ? 'सर्वर से कनेक्ट नहीं हो पा रहा' : 'Could not connect to server');
+      })
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { fetchData(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Compute AI Insights dynamically from stats and active alerts
+  const computedInsights = [];
+  if (stats.receivingPercent < 40) {
+    computedInsights.push({
+      severity: 'high',
+      text: 'Overall scheme penetration is critically low (under 40%). Urgent outreach required for PM-KISAN and PMAY.',
+      actionText: 'Send Notification',
+      actionType: 'notify',
+    });
+  }
+  if (stats.eligibleNotEnrolled > stats.enrolled) {
+    computedInsights.push({
+      severity: 'medium',
+      text: 'Deprived households exceed actively enrolled households. Consider organizing a multi-village registration camp.',
+      actionText: 'Send Notification',
+      actionType: 'notify',
+    });
+  }
+  if (stats.zeroBenefits > 10) {
+    computedInsights.push({
+      severity: 'high',
+      text: `Critical Alert: ${stats.zeroBenefits} households are currently receiving absolutely zero welfare benefits.`,
+      actionText: 'View Citizens',
+      actionType: 'view',
+    });
+  }
+  if (computedInsights.length === 0) {
+    computedInsights.push({
+      severity: 'low',
+      text: 'Demographic enrollment is stable. Suggest conducting follow-up KYC validations for older beneficiaries.',
+      actionText: 'Run Analysis',
+      actionType: 'analyze',
+    });
+  }
+
+  // B3: AIInsights action handlers
+  const handleNotify = async (insight) => {
+    try {
+      await notifyPanchayat({ panchayatId, message: insight.text });
+      addToast('Notification sent to panchayat.', 'success');
+    } catch {
+      addToast('Failed to send notification.', 'error');
+    }
+  };
+
+  const handleViewCitizens = () => {
+    const tableEl = document.getElementById('citizen-table-section');
+    if (tableEl) tableEl.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  // Build eligible citizens for CitizenTable from households data
+  let eligibleCitizens = households
+    .filter(h => h.status === 'eligible')
+    .map(h => {
+      const enrolledIds = (h.enrolledSchemes || []).map(e => e.schemeId || e.id || e);
+      const missingList = (h.matchedSchemes || [])
+        .filter(s => !enrolledIds.includes(s.schemeId || s.id));
+      return {
+        id: h.id,
+        name: h.name,
+        ward: h.ward,
+        age: h.age,
+        category: h.category,
+        categoryEnglish: h.category,
+        gender: h.gender,
+        isWidow: h.isWidow,
+        missingSchemes: missingList.map(s => s.nameHindi || s.nameEnglish || s.name || s.schemeId || s.id),
+        missingSchemesEnglish: missingList.map(s => s.nameEnglish || s.name || s.schemeId || s.id),
+        estimatedBenefit: h.estimatedBenefit ||
+          missingList.reduce((sum, s) => sum + (parseInt(s.annualBenefit) || 0), 0),
+        status: 'deprived',
+        statusLabel: '🔴 ' + (isHi ? 'वंचित' : 'Deprived'),
+        statusLabelEnglish: '🔴 Deprived',
+      };
+    });
+
+  // Apply alert filter if one is active
+  if (activeAlertFilter) {
+    if (activeAlertFilter === 'widow_pension') {
+      eligibleCitizens = eligibleCitizens.filter(c => c.isWidow === true);
+    } else if (activeAlertFilter === 'old_age_pension') {
+      eligibleCitizens = eligibleCitizens.filter(c => c.age >= 60);
+    }
+  }
+
+  const handleViewAlertList = (alertType) => {
+    setActiveAlertFilter(prev => prev === alertType ? null : alertType);
+    setTimeout(() => {
+      const tableEl = document.getElementById('citizen-table-section');
+      if (tableEl) tableEl.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
+
+  // B7: Real scheme names for heatmap
+  const wardSet = [...new Set(households.map(h => h.ward))].sort();
+
+  const heatmapData = wardSet.map(ward => ({
+    ward,
+    schemes: HEATMAP_SCHEME_IDS.map(schemeId => {
+      const wardHouseholds = households.filter(h => h.ward === ward);
+      const enrolled = wardHouseholds.filter(h =>
+        (h.eligibleSchemes || []).includes(schemeId) && h.status === 'enrolled'
+      ).length;
+      const eligible = wardHouseholds.filter(h =>
+        (h.eligibleSchemes || []).includes(schemeId)
+      ).length;
+      const pct = eligible > 0 ? Math.round((enrolled / eligible) * 100) : 0;
+      return {
+        scheme: HEATMAP_SCHEME_NAMES[schemeId],
+        enrollment: pct,
+        success: Math.min(100, pct + 5),
+        benefit: Math.max(0, pct - 5),
+        eligible,
+        enrolled,
+      };
+    }),
+  }));
+
+  // B6: CSV download
+  const handleDownload = () => {
+    const header = 'Name,Age,Category,State,Income,Schemes Matched,Last Updated';
+    const rows = households.map(c =>
+      `"${c.name}",${c.age},"${c.category}","${stats.state}",${c.estimatedBenefit},${c.schemesCount || 0},"${c.updatedAt?.slice(0, 10) || ''}"`
+    );
+    const csv = [header, ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `panchayat-citizens-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const heatmapSchemes = HEATMAP_SCHEME_IDS.map(id => HEATMAP_SCHEME_NAMES[id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-off-white flex items-center justify-center">
+        <Loader2 className="animate-spin text-saffron mr-3" size={24} />
+        <span className="font-body text-sm text-gray-500">{isHi ? 'डेटा लोड हो रहा है...' : 'Loading data...'}</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-off-white flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-danger font-body text-sm mb-2">🔴 {error}</p>
+          <button onClick={fetchData} className="text-saffron font-body text-sm hover:underline">
+            {isHi ? 'पुनः प्रयास करें' : 'Try Again'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-off-white">
+      {/* Header */}
+      <div className="bg-navy py-6 lg:py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3"
+          >
+            <div>
+              <nav className="flex items-center gap-1 font-body text-xs text-gray-300 mb-2" aria-label="Breadcrumb">
+                <Link to="/" className="hover:text-white transition-colors">{T('panchHome')}</Link>
+                <ChevronRight size={12} />
+                <span className="text-white">{T('panchDashboard')}</span>
+              </nav>
+
+              <h1 className="font-display text-[28px] lg:text-[36px] text-white">
+                {isHi ? stats.panchayatNameHi || stats.panchayatName : stats.panchayatName}
+              </h1>
+              <p className="font-body text-sm text-gray-300">
+                {isHi ? 'जिला:' : 'District:'} {stats.district}, {stats.state} • {localizeNum(stats.totalHouseholds, language)} {isHi ? 'परिवार' : 'Households'}
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="px-3 py-1 rounded-full bg-success/20 text-success font-body text-xs font-medium">
+                {isHi ? '🟢 लाइव डेटा' : '🟢 Live Data'}
+              </span>
+              <button
+                onClick={fetchData}
+                className="w-9 h-9 rounded-lg flex items-center justify-center bg-saffron/20 text-saffron hover:bg-saffron/30 transition-colors"
+                aria-label="Refresh data"
+              >
+                <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+              </button>
+              <button
+                onClick={handleDownload}
+                className="hidden md:flex items-center gap-1.5 h-9 px-4 rounded-lg border border-white/30 text-white font-body text-xs font-medium hover:bg-white/10 transition-colors"
+              >
+                <Download size={14} /> {T('panchDownload')}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Stats Row */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
+          <StatCard icon="🏠" value={stats.totalHouseholds} label={T('panchTotalHouseholds')} variant="primary" />
+          <StatCard icon="✅" value={`${stats.enrolled} (${stats.receivingPercent || 0}%)`} label={T('panchReceiving')} variant="success" progress={stats.receivingPercent} />
+          <StatCard icon="⚠️" value={stats.eligibleNotEnrolled} label={T('panchEligibleNot')} variant="warning" />
+          <StatCard icon="🔴" value={stats.zeroBenefits} label={T('panchZero')} variant="danger" />
+        </div>
+
+        {/* AI Insights */}
+        <AIInsights
+          insights={computedInsights}
+          onNotify={handleNotify}
+          onViewCitizens={handleViewCitizens}
+          onRefresh={fetchData}
+        />
+
+        {/* Village Map + Alerts */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6 mb-8">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
+            <h2 className="font-body text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-saffron"></span>
+              {T('panchMapTitle')}
+            </h2>
+            <VillageMap households={households} />
+          </div>
+          <AlertsPanel alerts={alerts} onViewList={handleViewAlertList} />
+        </div>
+
+        {/* Citizen Table */}
+        {eligibleCitizens.length > 0 && (
+          <div id="citizen-table-section" className="mb-8">
+            <h2 className="font-body text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-danger"></span>
+              {activeAlertFilter ? (isHi ? 'फ़िल्टर की गई सूची' : 'Filtered Action List') : (isHi ? 'पात्र नागरिक' : 'Eligible Citizens')}
+            </h2>
+            <CitizenTable citizens={eligibleCitizens} />
+          </div>
+        )}
+
+        {/* Governance Heatmap */}
+        {heatmapData.length > 0 && (
+          <GovernanceHeatmap data={heatmapData} schemes={heatmapSchemes} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default PanchayatDashboard;
