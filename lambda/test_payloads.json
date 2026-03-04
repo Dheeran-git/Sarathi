@@ -1,0 +1,162 @@
+{
+    "testCases": {
+        "lexFulfillment": {
+            "description": "Test the lex-fulfillment Lambda directly",
+            "event": {
+                "sessionState": {
+                    "intent": {
+                        "name": "CollectProfile",
+                        "slots": {
+                            "citizenName": {
+                                "value": {
+                                    "interpretedValue": "Kamla Devi"
+                                }
+                            },
+                            "citizenAge": {
+                                "value": {
+                                    "interpretedValue": "55"
+                                }
+                            },
+                            "citizenState": {
+                                "value": {
+                                    "interpretedValue": "UP"
+                                }
+                            },
+                            "monthlyIncome": {
+                                "value": {
+                                    "interpretedValue": "2000"
+                                }
+                            },
+                            "category": {
+                                "value": {
+                                    "interpretedValue": "SC"
+                                }
+                            },
+                            "gender": {
+                                "value": {
+                                    "interpretedValue": "female"
+                                }
+                            },
+                            "isWidow": {
+                                "value": {
+                                    "interpretedValue": "yes"
+                                }
+                            },
+                            "occupation": {
+                                "value": {
+                                    "interpretedValue": "none"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "bedrockExplainer": {
+            "description": "Test the bedrock-explainer Lambda with PM-KISAN scheme",
+            "event": {
+                "scheme": {
+                    "id": "pm-kisan",
+                    "nameHindi": "प्रधानमंत्री किसान सम्मान निधि",
+                    "nameEnglish": "PM-KISAN",
+                    "annualBenefit": 6000,
+                    "benefitDescription": "₹6,000 प्रति वर्ष तीन समान किश्तों में छोटे और सीमांत किसानों को।",
+                    "eligibility": {
+                        "maxIncome": null,
+                        "minAge": 18,
+                        "gender": "any",
+                        "category": [
+                            "SC",
+                            "ST",
+                            "OBC",
+                            "General"
+                        ],
+                        "occupation": [
+                            "farmer"
+                        ]
+                    }
+                }
+            }
+        },
+        "bedrockExplainerWidowPension": {
+            "description": "Test with Widow Pension scheme",
+            "event": {
+                "scheme": {
+                    "id": "widow-pension",
+                    "nameHindi": "इंदिरा गांधी राष्ट्रीय विधवा पेंशन",
+                    "nameEnglish": "IGNWPS - Widow Pension",
+                    "annualBenefit": 12000,
+                    "benefitDescription": "₹1,000 प्रति माह बीपीएल विधवा महिलाओं को पेंशन।",
+                    "eligibility": {
+                        "maxIncome": 300000,
+                        "minAge": 40,
+                        "maxAge": 79,
+                        "gender": "female",
+                        "isWidow": true
+                    }
+                }
+            }
+        },
+        "panchayatNotifier": {
+            "description": "Test the panchayat-notifier Lambda",
+            "event": {
+                "citizenName": "Kamla Devi",
+                "panchayatId": "rampur-barabanki-up",
+                "matchedSchemes": [
+                    {
+                        "nameHindi": "प्रधानमंत्री उज्ज्वला योजना",
+                        "nameEnglish": "PM Ujjwala",
+                        "annualBenefit": 9600
+                    },
+                    {
+                        "nameHindi": "इंदिरा गांधी विधवा पेंशन",
+                        "nameEnglish": "Widow Pension",
+                        "annualBenefit": 12000
+                    },
+                    {
+                        "nameHindi": "प्रधानमंत्री आवास योजना",
+                        "nameEnglish": "PMAY-G",
+                        "annualBenefit": 120000
+                    }
+                ],
+                "totalAnnualBenefit": 141600
+            }
+        },
+        "demoPersonas": {
+            "kamlaDevi": {
+                "description": "Demo Persona 1 — Elderly widow in UP",
+                "profile": {
+                    "name": "Kamla Devi",
+                    "age": 55,
+                    "state": "UP",
+                    "income": 2000,
+                    "category": "SC",
+                    "gender": "female",
+                    "isWidow": true,
+                    "occupation": "none"
+                }
+            },
+            "ramuPrasad": {
+                "description": "Demo Persona 2 — Migrant worker from Bihar",
+                "profile": {
+                    "name": "Ramu Prasad",
+                    "age": 30,
+                    "state": "Bihar",
+                    "income": 8000,
+                    "category": "OBC",
+                    "gender": "male",
+                    "isWidow": false,
+                    "occupation": "laborer"
+                }
+            },
+            "meenaJi": {
+                "description": "Demo Persona 3 — Panchayat Secretary in Rajasthan",
+                "profile": {
+                    "name": "Meena Ji",
+                    "panchayatId": "rampur-barabanki-up",
+                    "role": "panchayat_secretary"
+                }
+            }
+        }
+    }
+}

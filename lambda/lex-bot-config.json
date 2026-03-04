@@ -1,0 +1,158 @@
+{
+    "botName": "SarathiBot",
+    "description": "Sarathi welfare assistant chatbot — collects citizen profile through natural conversation in Hindi and English",
+    "idleSessionTTLInSeconds": 300,
+    "locales": [
+        "hi_IN",
+        "en_US"
+    ],
+    "intents": [
+        {
+            "name": "CollectProfile",
+            "description": "Main intent — collects citizen's full profile through 6 slots",
+            "sampleUtterances": [
+                "मुझे योजनाएं ढूंढनी हैं",
+                "सरकारी योजना बताइए",
+                "I want to find schemes",
+                "Find government schemes for me",
+                "Help me find welfare schemes",
+                "योजनाएं ढूंढें",
+                "किसान हूँ",
+                "विधवा पेंशन चाहिए"
+            ],
+            "slots": [
+                {
+                    "name": "citizenName",
+                    "slotType": "AMAZON.FirstName",
+                    "prompt_hi": "नमस्ते! मैं सारथी हूँ। आपकी सरकारी योजनाएं ढूंढने में मदद करूंगा। सबसे पहले, आपका शुभ नाम बताइए?",
+                    "prompt_en": "Hello! I am Sarathi. I'll help you find government schemes you're eligible for. First, what is your name?",
+                    "required": true
+                },
+                {
+                    "name": "citizenAge",
+                    "slotType": "AMAZON.Number",
+                    "prompt_hi": "{citizenName} जी, आपकी उम्र कितनी है?",
+                    "prompt_en": "{citizenName}, how old are you?",
+                    "required": true
+                },
+                {
+                    "name": "citizenState",
+                    "slotType": "IndianState",
+                    "slotValues": [
+                        "UP",
+                        "Bihar",
+                        "Rajasthan",
+                        "MP",
+                        "Maharashtra",
+                        "Gujarat",
+                        "Tamil Nadu",
+                        "Karnataka",
+                        "Kerala",
+                        "West Bengal",
+                        "Odisha",
+                        "Punjab",
+                        "Haryana",
+                        "Jharkhand",
+                        "Chhattisgarh",
+                        "Uttarakhand",
+                        "HP",
+                        "AP",
+                        "Telangana",
+                        "Assam",
+                        "Goa",
+                        "Delhi"
+                    ],
+                    "prompt_hi": "आप कौन से राज्य में रहते हैं?",
+                    "prompt_en": "Which state do you live in?",
+                    "required": true
+                },
+                {
+                    "name": "monthlyIncome",
+                    "slotType": "AMAZON.Number",
+                    "prompt_hi": "आपके परिवार की मासिक आय कितनी है? (रुपये में बताइए)",
+                    "prompt_en": "What is your family's monthly income? (in Rupees)",
+                    "required": true
+                },
+                {
+                    "name": "category",
+                    "slotType": "CasteCategory",
+                    "slotValues": [
+                        "SC",
+                        "ST",
+                        "OBC",
+                        "General"
+                    ],
+                    "prompt_hi": "आपका वर्ग क्या है? — SC, ST, OBC, या सामान्य?",
+                    "prompt_en": "What is your category? — SC, ST, OBC, or General?",
+                    "required": true
+                },
+                {
+                    "name": "gender",
+                    "slotType": "Gender",
+                    "slotValues": [
+                        "male",
+                        "female",
+                        "other",
+                        "पुरुष",
+                        "महिला"
+                    ],
+                    "prompt_hi": "आप पुरुष हैं या महिला?",
+                    "prompt_en": "Are you male or female?",
+                    "required": true
+                },
+                {
+                    "name": "isWidow",
+                    "slotType": "YesNo",
+                    "slotValues": [
+                        "yes",
+                        "no",
+                        "हाँ",
+                        "नहीं"
+                    ],
+                    "prompt_hi": "क्या आप विधवा/विधुर हैं? (हाँ या नहीं)",
+                    "prompt_en": "Are you a widow/widower? (yes or no)",
+                    "required": true
+                },
+                {
+                    "name": "occupation",
+                    "slotType": "Occupation",
+                    "slotValues": [
+                        "farmer",
+                        "laborer",
+                        "unemployed",
+                        "student",
+                        "self-employed",
+                        "other",
+                        "किसान",
+                        "मजदूर",
+                        "बेरोजगार",
+                        "छात्र"
+                    ],
+                    "prompt_hi": "आपका काम-धंधा क्या है? (किसान, मजदूर, बेरोजगार, छात्र, या अन्य)",
+                    "prompt_en": "What is your occupation? (farmer, laborer, unemployed, student, or other)",
+                    "required": true
+                }
+            ],
+            "fulfillmentLambda": "lex-fulfillment",
+            "confirmationPrompt": {
+                "hi": "ठीक है {citizenName} जी — मैं आपके लिए योजनाएं खोज रहा हूँ। एक पल रुकिए...",
+                "en": "OK {citizenName} — I'm searching for schemes you're eligible for. Please wait..."
+            },
+            "closingResponse": {
+                "hi": "धन्यवाद! सारथी हमेशा आपकी सेवा में। 🙏",
+                "en": "Thank you! Sarathi is always at your service. 🙏"
+            }
+        },
+        {
+            "name": "FallbackIntent",
+            "description": "Handles unrecognized input",
+            "response_hi": "मुझे समझ नहीं आया। कृपया दोबारा बताइए। आप 'योजनाएं ढूंढें' बोल सकते हैं।",
+            "response_en": "I didn't understand that. Please try again. You can say 'Find schemes'."
+        }
+    ],
+    "deployment": {
+        "region": "us-east-1",
+        "fulfillmentLambdaArn": "REPLACE_WITH_LAMBDA_ARN",
+        "testAlias": "$LATEST"
+    }
+}
