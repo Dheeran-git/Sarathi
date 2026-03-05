@@ -10,6 +10,7 @@ import SchemeDetailPage from './pages/SchemeDetailPage';
 import ApplyPage from './pages/ApplyPage';
 import AboutPage from './pages/AboutPage';
 import ProfilePage from './pages/ProfilePage';
+import LocationSetupPage from './pages/LocationSetupPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ApplicationsPage from './pages/ApplicationsPage';
 
@@ -53,6 +54,7 @@ function App() {
             <Route path="/chat" element={<PrivateRoute requiredRole="citizen"><PageTransition><ChatPage /></PageTransition></PrivateRoute>} />
             <Route path="/twin" element={<PrivateRoute requiredRole="citizen"><PageTransition><TwinPage /></PageTransition></PrivateRoute>} />
             <Route path="/dashboard" element={<PrivateRoute requiredRole="citizen"><PageTransition><DashboardPage /></PageTransition></PrivateRoute>} />
+            <Route path="/setup-location" element={<PrivateRoute requiredRole="citizen"><PageTransition><LocationSetupPage /></PageTransition></PrivateRoute>} />
             <Route path="/profile" element={<PrivateRoute requiredRole="citizen"><PageTransition><ProfilePage /></PageTransition></PrivateRoute>} />
             <Route path="/schemes" element={<PrivateRoute requiredRole="citizen"><PageTransition><SchemesPage /></PageTransition></PrivateRoute>} />
             <Route path="/schemes/:schemeId" element={<PrivateRoute requiredRole="citizen"><PageTransition><SchemeDetailPage /></PageTransition></PrivateRoute>} />

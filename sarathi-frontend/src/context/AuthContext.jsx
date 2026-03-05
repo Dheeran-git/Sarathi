@@ -4,7 +4,7 @@ import { authService } from '../services/authService';
 
 const AuthContext = createContext();
 
-const region = import.meta.env.VITE_AWS_REGION || 'ap-south-1';
+const region = import.meta.env.VITE_AWS_REGION || 'us-east-1';
 const citizenClientId = import.meta.env.VITE_CITIZEN_CLIENT_ID || import.meta.env.VITE_CLIENT_ID;
 const panchayatClientId = import.meta.env.VITE_PANCHAYAT_CLIENT_ID;
 const cognitoClient = new CognitoIdentityProviderClient({ region });

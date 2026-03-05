@@ -15,7 +15,19 @@ _PANCHAYAT_META = {
     },
 }
 
-def _panchayat_meta(panchayat_id):
+def _panchayat_meta(panchayat_id, citizens=None):
+    """Derive panchayat display metadata.
+    Priority: 1) citizen records with location fields, 2) static dict, 3) slug-based fallback."""
+    # Try to derive from citizen location fields first
+    if citizens:
+        for c in citizens:
+            if c.get('panchayatName'):
+                return {
+                    'panchayatName': c['panchayatName'],
+                    'district': c.get('district', 'Unknown'),
+                    'state': c.get('state', 'Unknown'),
+                }
+    # Fallback to static dict
     if panchayat_id in _PANCHAYAT_META:
         return _PANCHAYAT_META[panchayat_id]
     # Derive readable name from ID slug
@@ -82,7 +94,7 @@ def lambda_handler(event, context):
                 'description': f'{len(elderly_unserved)} elderly citizens missing old age pension'
             })
 
-        meta = _panchayat_meta(panchayat_id)
+        meta = _panchayat_meta(panchayat_id, citizens=citizens)
         return {
             'statusCode': 200,
             'headers': {

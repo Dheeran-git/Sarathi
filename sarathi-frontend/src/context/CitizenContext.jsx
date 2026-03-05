@@ -36,6 +36,13 @@ const emptyProfile = {
     name: '',
     age: null,
     state: '',
+    district: '',
+    block: '',
+    village: '',
+    villageCode: '',
+    panchayatCode: '',
+    panchayatName: '',
+    panchayatId: '',
     income: null,
     category: '',
     gender: '',
@@ -97,7 +104,7 @@ export function CitizenProvider({ children }) {
     const [isLoadingApplications, setIsLoadingApplications] = useState(false);
 
     const [isLoadingProfile, setIsLoadingProfile] = useState(false);
-    const { isAuthenticated, user } = useAuth();
+    const { isAuthenticated, isLoading: isAuthLoading, user, userType } = useAuth();
 
     const userId = user?.email || localStorage.getItem('userEmail');
 
@@ -135,7 +142,11 @@ export function CitizenProvider({ children }) {
 
     /* ── Load profile + applications from DB on login ─────────────────── */
     useEffect(() => {
-        if (isAuthenticated && userId) {
+        // Don't do anything while auth state is still being determined
+        if (isAuthLoading) return;
+
+        // Only load citizen profile/applications for citizen users, NOT panchayat
+        if (isAuthenticated && userId && userType === 'citizen') {
             loadProfile();
             loadApplications(userId);
         } else if (!isAuthenticated) {
@@ -145,7 +156,7 @@ export function CitizenProvider({ children }) {
             clearStorage();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isAuthenticated, userId]);
+    }, [isAuthenticated, isAuthLoading, userId, userType]);
 
     useEffect(() => {
         return () => {
@@ -165,9 +176,14 @@ export function CitizenProvider({ children }) {
                 if (data.matchedSchemes && data.matchedSchemes.length > 0) {
                     setEligibleSchemes(data.matchedSchemes);
                 }
+                console.log('[CitizenContext] Profile loaded from DB');
+            } else {
+                // No profile in DB — keep whatever is in localStorage
+                console.log('[CitizenContext] No profile in DB, keeping local data');
             }
         } catch (error) {
-            console.log('[CitizenContext] No existing profile in DB, using local:', error);
+            // DB fetch failed — keep localStorage data, don't wipe it
+            console.log('[CitizenContext] DB fetch failed, keeping local data:', error.message);
         } finally {
             setIsLoadingProfile(false);
         }
@@ -226,12 +242,16 @@ export function CitizenProvider({ children }) {
         clearStorage();
     }, []);
 
+    const hasLocation = !!(citizenProfile.village && citizenProfile.state && citizenProfile.district);
+
+
     return (
         <CitizenContext.Provider
             value={{
                 citizenProfile,
                 eligibleSchemes,
                 isLoadingProfile,
+                hasLocation,
                 updateProfile,
                 saveCurrentProfile,
                 setEligibleSchemes,

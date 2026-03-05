@@ -7,14 +7,17 @@ import { motion } from 'framer-motion';
 import {
     User, MapPin, Shield, LogOut,
     ChevronRight, Edit3, Save, X, Briefcase,
-    Calendar, IndianRupee, Users, Home, Loader2
+    Calendar, IndianRupee, Users, Home, Loader2,
+    Building2, TreePine, Landmark, FileText, BarChart3,
+    CheckCircle2, Clock, Star
 } from 'lucide-react';
 
-const MotionWrapper = ({ children, delay = 0, className = "" }) => (
+/* ── Helpers ────────────────────────────────────────────────────────── */
+const M = ({ children, delay = 0, className = '' }) => (
     <motion.div
-        initial={{ opacity: 0, y: 15 }}
+        initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay }}
+        transition={{ duration: 0.45, delay, ease: [.22, 1, .36, 1] }}
         className={className}
     >
         {children}
@@ -28,19 +31,99 @@ const fmt = (val) => {
     return String(val);
 };
 
-// D2: 8 core fields for completion
-const COMPLETION_FIELDS = ['name', 'age', 'gender', 'state', 'income', 'category', 'urban', 'persona'];
+const COMPLETION_FIELDS = ['name', 'age', 'gender', 'state', 'income', 'category', 'urban', 'persona', 'village', 'district'];
 
+const PLACEHOLDER_MAP = {
+    name: 'Add your full name',
+    age: 'Add your age',
+    gender: 'Select your gender',
+    state: 'Select your state',
+    income: 'Enter annual income',
+    category: 'Select category',
+    urban: 'Select area type',
+    persona: 'Add your occupation',
+};
+
+/* ── Reusable Card ──────────────────────────────────────────────────── */
+const Card = ({ children, className = '', hover = false }) => (
+    <div className={`bg-white rounded-2xl border border-gray-100 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_6px_24px_rgba(0,0,0,0.03)] ${hover ? 'hover:shadow-[0_4px_24px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 transition-all duration-300' : ''} ${className}`}>
+        {children}
+    </div>
+);
+
+/* ── Stat Badge ─────────────────────────────────────────────────────── */
+const StatBadge = ({ icon: Icon, label, value, color }) => (
+    <div className="flex items-center gap-3 px-4 py-3">
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${color}`}>
+            <Icon size={18} className="text-white" />
+        </div>
+        <div>
+            <p className="font-display text-xl font-bold text-gray-900 leading-tight">{value}</p>
+            <p className="font-body text-[11px] text-gray-500 uppercase tracking-wider">{label}</p>
+        </div>
+    </div>
+);
+
+/* ── Field Row (view + edit) ────────────────────────────────────────── */
+const FieldRow = ({ icon: Icon, label, value, placeholder, isEditing, fieldKey, type, onChange, error }) => (
+    <div>
+        <div className="flex items-center gap-3.5 py-3 px-1 group">
+            <div className="w-9 h-9 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center flex-shrink-0 group-hover:bg-saffron/5 group-hover:border-saffron/20 transition-colors">
+                <Icon size={16} className="text-gray-400 group-hover:text-saffron transition-colors" />
+            </div>
+            <div className="flex-1 min-w-0">
+                <label className="block text-[10px] text-gray-400 uppercase tracking-[0.1em] mb-0.5 font-body font-medium">
+                    {label}
+                </label>
+                {isEditing && fieldKey !== 'urban' ? (
+                    <input
+                        type={type}
+                        value={value ?? ''}
+                        onChange={(e) =>
+                            onChange(fieldKey, type === 'number' ? Number(e.target.value) || '' : e.target.value)
+                        }
+                        placeholder={placeholder}
+                        className="w-full bg-transparent text-sm text-gray-900 font-body outline-none border-b-2 border-saffron/30 pb-0.5 focus:border-saffron transition-colors placeholder:text-gray-300"
+                    />
+                ) : (
+                    <p className="text-sm text-gray-900 font-body truncate">
+                        {fmt(value) || <span className="text-gray-300 italic text-xs">{placeholder || 'Not set'}</span>}
+                    </p>
+                )}
+            </div>
+        </div>
+        {error && <p className="font-body text-xs text-red-500 mt-0.5 ml-[52px]">{error}</p>}
+    </div>
+);
+
+/* ── Location Field (read-only) ─────────────────────────────────────── */
+const LocationField = ({ icon: Icon, label, value }) => (
+    <div className="flex items-center gap-3 py-2.5 px-1">
+        <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0">
+            <Icon size={14} className="text-blue-500" />
+        </div>
+        <div className="flex-1 min-w-0">
+            <p className="text-[10px] text-gray-400 uppercase tracking-[0.1em] font-body font-medium">{label}</p>
+            <p className="text-sm text-gray-900 font-body truncate">
+                {value || <span className="text-gray-300 italic text-xs">Not set</span>}
+            </p>
+        </div>
+    </div>
+);
+
+/* ════════════════════════════════════════════════════════════════════════
+   PROFILE PAGE
+   ════════════════════════════════════════════════════════════════════════ */
 function ProfilePage() {
     const { user, logout } = useAuth();
-    const { citizenProfile, updateProfile, isLoadingProfile, eligibleSchemes, saveCurrentProfile } = useCitizen();
+    const { citizenProfile, updateProfile, isLoadingProfile, eligibleSchemes, saveCurrentProfile, hasLocation, applications } = useCitizen();
     const { addToast } = useToast();
     const navigate = useNavigate();
     const [isEditing, setIsEditing] = useState(false);
     const [draft, setDraft] = useState({});
     const [validationErrors, setValidationErrors] = useState({});
 
-    // D2: Completion progress
+    /* ── Computed ──────────────────────────────────────────────────────── */
     const completionPct = Math.round(
         (COMPLETION_FIELDS.filter((f) => {
             const v = citizenProfile[f];
@@ -48,78 +131,75 @@ function ProfilePage() {
         }).length / COMPLETION_FIELDS.length) * 100
     );
 
-    const startEditing = () => {
-        setDraft({ ...citizenProfile });
-        setValidationErrors({});
-        setIsEditing(true);
-    };
+    const displayName = citizenProfile.name || (user?.email ? user.email.split('@')[0] : 'Citizen');
+    const displayEmail = user?.email || 'Not available';
+    const initials = displayName.slice(0, 2).toUpperCase();
+    const appliedCount = applications?.length || 0;
+    const eligibleCount = eligibleSchemes?.length || 0;
 
+    /* ── Handlers ──────────────────────────────────────────────────────── */
+    const startEditing = () => { setDraft({ ...citizenProfile }); setValidationErrors({}); setIsEditing(true); };
     const handleChange = (key, value) => {
         setDraft((prev) => ({ ...prev, [key]: value }));
         setValidationErrors((prev) => ({ ...prev, [key]: undefined }));
     };
 
-    // D2: Validate before save
     const validateDraft = (d) => {
         const errors = {};
         if (d.age !== null && d.age !== undefined) {
             const age = Number(d.age);
-            if (d.age === '' || isNaN(age) || age < 1 || age > 120) errors.age = 'Age must be between 1 and 120';
+            if (d.age === '' || isNaN(age) || age < 1 || age > 120) errors.age = 'Age must be 1-120';
         }
         if (d.income !== '' && d.income !== null && d.income !== undefined) {
             const inc = Number(d.income);
-            if (isNaN(inc) || inc < 0 || inc > 999999) errors.income = 'Income must be between 0 and 9,99,999';
+            if (isNaN(inc) || inc < 0 || inc > 999999) errors.income = 'Income must be 0-9,99,999';
         }
         return errors;
     };
 
     const handleSave = async () => {
         const errors = validateDraft(draft);
-        if (Object.keys(errors).length > 0) {
-            setValidationErrors(errors);
-            return;
-        }
+        if (Object.keys(errors).length > 0) { setValidationErrors(errors); return; }
         updateProfile(draft);
         setIsEditing(false);
         try {
             await saveCurrentProfile(eligibleSchemes);
-            addToast('Profile saved', 'success');
+            addToast('Profile saved successfully!', 'success');
         } catch {
             addToast('Save failed — changes stored locally', 'error');
         }
     };
 
-    // D2: Cancel restores draft
-    const handleCancel = () => {
-        setDraft({ ...citizenProfile });
-        setValidationErrors({});
-        setIsEditing(false);
-    };
+    const handleCancel = () => { setDraft({}); setValidationErrors({}); setIsEditing(false); };
 
     const handleLogout = async () => {
-        try {
-            await logout();
-            navigate('/');
-        } catch (err) {
-            console.error('Logout failed', err);
-        }
+        try { await logout(); navigate('/'); }
+        catch (err) { console.error('Logout failed', err); }
     };
 
-    const displayName = citizenProfile.name || (user?.email ? user.email.split('@')[0] : 'Citizen');
-    const displayEmail = user?.email || 'Not available';
-
-    const coreFields = [
+    /* ── Field configs ─────────────────────────────────────────────────── */
+    const personalFields = [
         { key: 'name', label: 'Full Name', icon: User, type: 'text' },
         { key: 'age', label: 'Age', icon: Calendar, type: 'number' },
         { key: 'gender', label: 'Gender', icon: Users, type: 'text' },
-        { key: 'state', label: 'State', icon: MapPin, type: 'text' },
-        { key: 'income', label: 'Annual Income (₹)', icon: IndianRupee, type: 'number' },
-        { key: 'category', label: 'Social Category', icon: Shield, type: 'text' },
-        {
-            key: 'urban', label: 'Area Type', icon: Home, type: 'text',
-            format: (v) => v === true ? 'Urban' : v === false ? 'Rural' : null
-        },
         { key: 'persona', label: 'Occupation', icon: Briefcase, type: 'text' },
+    ];
+
+    const demographicFields = [
+        { key: 'category', label: 'Social Category', icon: Shield, type: 'text' },
+        { key: 'urban', label: 'Area Type', icon: Home, type: 'text', format: (v) => v === true ? 'Urban' : v === false ? 'Rural' : null },
+    ];
+
+    const financialFields = [
+        { key: 'income', label: 'Annual Income (₹)', icon: IndianRupee, type: 'number' },
+    ];
+
+    const locationFields = [
+        { key: 'state', label: 'State / UT', icon: Landmark },
+        { key: 'district', label: 'District', icon: Building2 },
+        { key: 'block', label: 'Block / Sub-District', icon: TreePine },
+        { key: 'village', label: 'Village', icon: Home },
+        { key: 'panchayatName', label: 'Gram Panchayat', icon: Shield },
     ];
 
     const extraFields = [
@@ -138,183 +218,282 @@ function ProfilePage() {
         return v !== null && v !== undefined && v !== '' && v !== false;
     });
 
+    /* ── Loading ───────────────────────────────────────────────────────── */
     if (isLoadingProfile) {
         return (
-            <div className="min-h-screen bg-off-white flex items-center justify-center">
+            <div className="min-h-screen bg-[#F8F9FB] flex items-center justify-center">
                 <Loader2 size={32} className="animate-spin text-saffron" />
             </div>
         );
     }
 
+    /* ── Render ─────────────────────────────────────────────────────────── */
     return (
-        <div className="min-h-screen bg-off-white pb-12">
-            {/* Header */}
-            <div className="bg-navy pt-8 pb-12 lg:pt-12 lg:pb-16 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-                <div className="absolute top-0 left-1/4 w-96 h-96 bg-saffron/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="min-h-screen bg-[#F8F9FB] pb-16">
+            {/* ═══ PROFILE HEADER ═══ */}
+            <div className="relative overflow-hidden">
+                {/* Background gradient */}
+                <div className="absolute inset-0 bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a]" />
+                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-saffron/8 rounded-full blur-[120px]" />
+                <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-blue-500/8 rounded-full blur-[100px]" />
 
-                <div className="max-w-3xl mx-auto relative z-10">
-                    <MotionWrapper>
-                        <div className="flex items-center gap-4">
-                            <div className="w-16 h-16 rounded-full bg-saffron/20 border-2 border-saffron/40 flex items-center justify-center">
-                                <User size={28} className="text-saffron" />
+                <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-20 lg:pt-14 lg:pb-24">
+                    <M>
+                        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
+                            {/* Avatar */}
+                            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-saffron to-orange-500 flex items-center justify-center text-white font-display text-2xl font-bold shadow-lg shadow-saffron/25 ring-4 ring-white/10">
+                                {initials}
                             </div>
-                            <div>
-                                <h1 className="font-display text-3xl lg:text-4xl text-white leading-tight">
+                            <div className="text-center sm:text-left flex-1">
+                                <h1 className="font-display text-2xl lg:text-3xl text-white font-bold tracking-tight">
                                     {displayName}
                                 </h1>
-                                <p className="font-body text-gray-300 mt-1 text-sm">{displayEmail}</p>
-                                {eligibleSchemes.length > 0 && (
-                                    <p className="font-body text-green-300 mt-1 text-xs">
-                                        Eligible for {eligibleSchemes.length} scheme{eligibleSchemes.length > 1 ? 's' : ''}
+                                <p className="font-body text-slate-400 text-sm mt-1">{displayEmail}</p>
+                                {citizenProfile.village && (
+                                    <p className="font-body text-slate-500 text-xs mt-1.5 flex items-center justify-center sm:justify-start gap-1">
+                                        <MapPin size={12} />
+                                        {citizenProfile.village}, {citizenProfile.district}
                                     </p>
                                 )}
                             </div>
+                            {/* Edit button */}
+                            {isEditing ? (
+                                <div className="flex gap-2">
+                                    <button onClick={handleSave} className="inline-flex items-center gap-1.5 h-9 px-4 rounded-xl bg-emerald-500 text-white font-body text-xs font-semibold hover:bg-emerald-400 transition-colors shadow-lg shadow-emerald-500/25">
+                                        <Save size={14} /> Save Changes
+                                    </button>
+                                    <button onClick={handleCancel} className="inline-flex items-center gap-1.5 h-9 px-4 rounded-xl bg-white/10 text-white/70 font-body text-xs font-semibold hover:bg-white/20 transition-colors backdrop-blur-sm">
+                                        <X size={14} /> Cancel
+                                    </button>
+                                </div>
+                            ) : (
+                                <button onClick={startEditing} className="inline-flex items-center gap-1.5 h-9 px-5 rounded-xl bg-white/10 text-white font-body text-xs font-semibold hover:bg-white/20 transition-colors backdrop-blur-sm border border-white/10">
+                                    <Edit3 size={14} /> Edit Profile
+                                </button>
+                            )}
                         </div>
-                    </MotionWrapper>
+                    </M>
                 </div>
             </div>
 
-            <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-20 space-y-6">
-                {/* D2: Progress bar */}
-                <MotionWrapper className="bg-white rounded-xl border border-gray-200 shadow-card px-6 py-4">
-                    <div className="flex items-center justify-between mb-1">
-                        <span className="font-body text-xs text-gray-500">Profile Completion</span>
-                        <span className="font-body text-xs font-semibold text-gray-900">{completionPct}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                            className="bg-saffron h-2 rounded-full transition-all duration-500"
-                            style={{ width: `${completionPct}%` }}
-                        />
-                    </div>
-                </MotionWrapper>
+            {/* ═══ MAIN CONTENT ═══ */}
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12 relative z-20">
 
-                {/* Core Profile Details */}
-                <MotionWrapper delay={0.2} className="bg-white rounded-xl border border-gray-200 p-6 shadow-card">
-                    <div className="flex items-center justify-between mb-6">
-                        <h2 className="font-body text-lg font-bold text-gray-900 flex items-center gap-2">
-                            <Shield size={20} className="text-saffron" />
-                            Profile Details
-                        </h2>
-                        {isEditing ? (
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={handleSave}
-                                    className="inline-flex items-center gap-1.5 h-8 px-4 rounded-lg bg-saffron text-white font-body text-xs font-semibold hover:bg-saffron-light transition-colors"
-                                >
-                                    <Save size={14} /> Save
-                                </button>
-                                <button
-                                    onClick={handleCancel}
-                                    className="inline-flex items-center gap-1.5 h-8 px-4 rounded-lg border border-gray-300 text-gray-500 font-body text-xs font-semibold hover:text-danger hover:border-red-300 transition-colors"
-                                >
-                                    <X size={14} /> Cancel
-                                </button>
+                {/* ── Stats + Progress Row ─── */}
+                <M delay={0.05}>
+                    <Card className="p-5 mb-6">
+                        <div className="flex flex-col lg:flex-row items-start lg:items-center gap-5">
+                            {/* Progress bar */}
+                            <div className="flex-1 w-full lg:w-auto">
+                                <div className="flex items-center justify-between mb-1.5">
+                                    <span className="font-body text-xs text-gray-500 font-medium">Profile Completion</span>
+                                    <span className="font-display text-sm font-bold text-gray-900">{completionPct}%</span>
+                                </div>
+                                <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                                    <motion.div
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${completionPct}%` }}
+                                        transition={{ duration: 0.8, ease: [.22, 1, .36, 1] }}
+                                        className={`h-full rounded-full ${completionPct === 100
+                                            ? 'bg-gradient-to-r from-emerald-400 to-emerald-500'
+                                            : completionPct >= 60
+                                                ? 'bg-gradient-to-r from-saffron to-orange-400'
+                                                : 'bg-gradient-to-r from-amber-400 to-saffron'
+                                            }`}
+                                    />
+                                </div>
                             </div>
-                        ) : (
-                            <button
-                                onClick={startEditing}
-                                className="inline-flex items-center gap-1.5 h-8 px-4 rounded-lg border border-gray-300 text-gray-600 font-body text-xs font-semibold hover:text-saffron hover:border-saffron/40 transition-colors"
-                            >
-                                <Edit3 size={14} /> Edit
-                            </button>
+
+                            {/* Divider */}
+                            <div className="hidden lg:block w-px h-12 bg-gray-200" />
+
+                            {/* Stats */}
+                            <div className="flex items-center gap-2 w-full lg:w-auto">
+                                <StatBadge icon={FileText} label="Applied" value={appliedCount} color="bg-blue-500" />
+                                <StatBadge icon={CheckCircle2} label="Eligible" value={eligibleCount} color="bg-emerald-500" />
+                                <StatBadge icon={Star} label="Matched" value={eligibleCount} color="bg-saffron" />
+                            </div>
+                        </div>
+                    </Card>
+                </M>
+
+                {/* ── Two-Column Grid ─── */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                    {/* LEFT COLUMN */}
+                    <div className="space-y-6">
+                        {/* Personal Information Card */}
+                        <M delay={0.1}>
+                            <Card className="p-6" hover>
+                                <div className="flex items-center gap-2 mb-5">
+                                    <div className="w-8 h-8 rounded-lg bg-saffron/10 flex items-center justify-center">
+                                        <User size={16} className="text-saffron" />
+                                    </div>
+                                    <h2 className="font-body text-[15px] font-bold text-gray-900">Personal Information</h2>
+                                </div>
+                                <div className="divide-y divide-gray-50">
+                                    {personalFields.map((f) => (
+                                        <FieldRow
+                                            key={f.key}
+                                            icon={f.icon}
+                                            label={f.label}
+                                            value={isEditing ? draft[f.key] : citizenProfile[f.key]}
+                                            placeholder={PLACEHOLDER_MAP[f.key]}
+                                            isEditing={isEditing}
+                                            fieldKey={f.key}
+                                            type={f.type}
+                                            onChange={handleChange}
+                                            error={validationErrors[f.key]}
+                                        />
+                                    ))}
+                                </div>
+                            </Card>
+                        </M>
+
+                        {/* Demographics & Financial Card */}
+                        <M delay={0.15}>
+                            <Card className="p-6" hover>
+                                <div className="flex items-center gap-2 mb-5">
+                                    <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+                                        <BarChart3 size={16} className="text-indigo-500" />
+                                    </div>
+                                    <h2 className="font-body text-[15px] font-bold text-gray-900">Demographics & Finance</h2>
+                                </div>
+                                <div className="divide-y divide-gray-50">
+                                    {[...demographicFields, ...financialFields].map((f) => {
+                                        const rawVal = isEditing ? draft[f.key] : citizenProfile[f.key];
+                                        const displayVal = f.format ? f.format(rawVal) : rawVal;
+                                        return (
+                                            <FieldRow
+                                                key={f.key}
+                                                icon={f.icon}
+                                                label={f.label}
+                                                value={displayVal}
+                                                placeholder={PLACEHOLDER_MAP[f.key]}
+                                                isEditing={isEditing}
+                                                fieldKey={f.key}
+                                                type={f.type}
+                                                onChange={handleChange}
+                                                error={validationErrors[f.key]}
+                                            />
+                                        );
+                                    })}
+                                </div>
+                            </Card>
+                        </M>
+
+                        {/* Additional Details */}
+                        {extraFields.length > 0 && (
+                            <M delay={0.2}>
+                                <Card className="p-6" hover>
+                                    <div className="flex items-center gap-2 mb-5">
+                                        <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                                            <Briefcase size={16} className="text-purple-500" />
+                                        </div>
+                                        <h2 className="font-body text-[15px] font-bold text-gray-900">Additional Details</h2>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {extraFields.map(({ key, label }) => (
+                                            <div key={key} className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-gray-50 border border-gray-100">
+                                                <span className="text-[10px] text-gray-500 font-body uppercase tracking-wider">{label}</span>
+                                                <span className="text-xs font-body font-semibold text-gray-800">{fmt(citizenProfile[key])}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </Card>
+                            </M>
                         )}
                     </div>
 
-                    <div className="space-y-3">
-                        {coreFields.map(({ key, label, icon: Icon, type, format }) => {
-                            const rawVal = isEditing ? draft[key] : citizenProfile[key];
-                            const displayVal = format ? format(rawVal) : fmt(rawVal);
-                            const fieldError = validationErrors[key];
-
-                            return (
-                                <div key={key}>
-                                    <div className="flex items-center gap-4 p-3 rounded-lg bg-off-white border border-gray-200">
-                                        <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-                                            <Icon size={18} className="text-gray-500" />
+                    {/* RIGHT COLUMN */}
+                    <div className="space-y-6">
+                        {/* Location Card */}
+                        <M delay={0.1}>
+                            <Card className="p-6" hover>
+                                <div className="flex items-center justify-between mb-5">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                                            <MapPin size={16} className="text-blue-500" />
                                         </div>
-                                        <div className="flex-1 min-w-0">
-                                            <label className="block text-[11px] text-gray-500 uppercase tracking-widest mb-1 font-body">
-                                                {label}
-                                            </label>
-                                            {isEditing && key !== 'urban' ? (
-                                                <input
-                                                    type={type}
-                                                    value={draft[key] ?? ''}
-                                                    onChange={(e) =>
-                                                        handleChange(key, type === 'number' ? Number(e.target.value) || '' : e.target.value)
-                                                    }
-                                                    className="w-full bg-transparent text-sm text-gray-900 font-body outline-none border-b border-saffron/40 pb-0.5 focus:border-saffron transition-colors"
-                                                />
-                                            ) : (
-                                                <p className="text-sm text-gray-900 font-body truncate">
-                                                    {displayVal || <span className="text-gray-400 italic">Not set</span>}
-                                                </p>
-                                            )}
-                                        </div>
+                                        <h2 className="font-body text-[15px] font-bold text-gray-900">Location</h2>
                                     </div>
-                                    {fieldError && (
-                                        <p className="font-body text-xs text-danger mt-1 ml-14">{fieldError}</p>
-                                    )}
+                                    <button
+                                        onClick={() => navigate('/setup-location')}
+                                        className="inline-flex items-center gap-1 h-7 px-3 rounded-lg text-[11px] font-body font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors"
+                                    >
+                                        <Edit3 size={12} /> {hasLocation ? 'Change' : 'Set Location'}
+                                    </button>
                                 </div>
-                            );
-                        })}
-                    </div>
-                </MotionWrapper>
 
-                {/* Additional Details */}
-                {extraFields.length > 0 && (
-                    <MotionWrapper delay={0.3} className="bg-white rounded-xl border border-gray-200 p-6 shadow-card">
-                        <h2 className="font-body text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                            <Briefcase size={20} className="text-saffron" />
-                            Additional Details
-                        </h2>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            {extraFields.map(({ key, label }) => (
-                                <div key={key} className="flex items-center justify-between p-3 rounded-lg bg-off-white border border-gray-200">
-                                    <span className="text-xs text-gray-500 font-body uppercase tracking-wide">{label}</span>
-                                    <span className="text-sm font-body font-medium text-gray-900">
-                                        {fmt(citizenProfile[key])}
-                                    </span>
+                                {hasLocation ? (
+                                    <div className="space-y-0.5">
+                                        {locationFields.map(({ key, label, icon }) => (
+                                            <LocationField key={key} icon={icon} label={label} value={citizenProfile[key]} />
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-8 px-4">
+                                        <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-3">
+                                            <MapPin size={24} className="text-blue-400" />
+                                        </div>
+                                        <p className="font-body text-sm text-gray-500 mb-3">Set your location to connect with your local panchayat</p>
+                                        <button
+                                            onClick={() => navigate('/setup-location')}
+                                            className="inline-flex items-center gap-2 h-10 px-5 rounded-xl bg-blue-500 text-white font-body text-sm font-medium hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/20"
+                                        >
+                                            <MapPin size={16} /> Set Your Location
+                                        </button>
+                                    </div>
+                                )}
+                            </Card>
+                        </M>
+
+                        {/* Quick Links Card */}
+                        <M delay={0.15}>
+                            <Card className="p-6" hover>
+                                <div className="flex items-center gap-2 mb-5">
+                                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                                        <ChevronRight size={16} className="text-emerald-500" />
+                                    </div>
+                                    <h2 className="font-body text-[15px] font-bold text-gray-900">Quick Links</h2>
                                 </div>
-                            ))}
-                        </div>
-                    </MotionWrapper>
-                )}
+                                <div className="space-y-1.5">
+                                    {[
+                                        { label: 'My Dashboard', path: '/dashboard', icon: BarChart3, desc: 'Overview and stats' },
+                                        { label: 'Browse Schemes', path: '/schemes', icon: FileText, desc: 'Find government schemes' },
+                                        { label: 'My Applications', path: '/applications', icon: Clock, desc: `${appliedCount} application${appliedCount !== 1 ? 's' : ''}` },
+                                        { label: 'Ask Sarathi', path: '/chat', icon: Star, desc: 'AI welfare assistant' },
+                                    ].map((link) => (
+                                        <button
+                                            key={link.path}
+                                            onClick={() => navigate(link.path)}
+                                            className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-all group text-left"
+                                        >
+                                            <div className="w-9 h-9 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center flex-shrink-0 group-hover:bg-saffron/10 group-hover:border-saffron/20 transition-colors">
+                                                <link.icon size={16} className="text-gray-400 group-hover:text-saffron transition-colors" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-body text-sm font-medium text-gray-800 group-hover:text-saffron transition-colors">{link.label}</p>
+                                                <p className="font-body text-[11px] text-gray-400">{link.desc}</p>
+                                            </div>
+                                            <ChevronRight size={14} className="text-gray-300 group-hover:text-saffron transition-colors" />
+                                        </button>
+                                    ))}
+                                </div>
+                            </Card>
+                        </M>
 
-                {/* Quick Links */}
-                <MotionWrapper delay={0.4} className="bg-white rounded-xl border border-gray-200 p-5 shadow-card">
-                    <h2 className="font-body text-lg font-bold text-gray-900 mb-4">Quick Links</h2>
-                    <div className="space-y-2">
-                        {[
-                            { label: 'My Dashboard', path: '/dashboard' },
-                            { label: 'Browse Schemes', path: '/schemes' },
-                            { label: 'My Applications', path: '/applications' },
-                            { label: 'Ask Sarathi', path: '/chat' },
-                        ].map((link) => (
+                        {/* Sign Out */}
+                        <M delay={0.2}>
                             <button
-                                key={link.path}
-                                onClick={() => navigate(link.path)}
-                                className="w-full flex items-center justify-between p-3 rounded-lg bg-off-white border border-gray-200 hover:border-saffron/40 transition-colors group"
+                                onClick={handleLogout}
+                                className="w-full flex items-center justify-center gap-2 h-12 rounded-2xl border border-red-200 bg-white text-red-500 font-body text-sm font-semibold hover:bg-red-50 hover:border-red-300 transition-all shadow-sm"
                             >
-                                <span className="font-body text-sm text-gray-700 group-hover:text-saffron transition-colors">
-                                    {link.label}
-                                </span>
-                                <ChevronRight size={16} className="text-gray-400 group-hover:text-saffron transition-colors" />
+                                <LogOut size={16} /> Sign Out
                             </button>
-                        ))}
+                        </M>
                     </div>
-                </MotionWrapper>
-
-                {/* Logout */}
-                <MotionWrapper delay={0.5}>
-                    <button
-                        onClick={handleLogout}
-                        className="w-full flex items-center justify-center gap-2 h-12 rounded-xl border border-red-200 bg-red-50 text-danger font-body text-sm font-semibold hover:bg-red-100 hover:border-red-300 transition-colors"
-                    >
-                        <LogOut size={16} /> Sign Out
-                    </button>
-                </MotionWrapper>
+                </div>
             </div>
         </div>
     );

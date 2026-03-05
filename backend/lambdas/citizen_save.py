@@ -117,7 +117,15 @@ def lambda_handler(event, context):
 
             # Additional fields
             'educationLevel': body.get('educationLevel', ''),
-            'panchayatId': (body.get('panchayatId') or '').strip(),
+
+            # Location fields
+            'district': body.get('district', '').strip() if body.get('district') else '',
+            'block': body.get('block', '').strip() if body.get('block') else '',
+            'village': body.get('village', '').strip() if body.get('village') else '',
+            'villageCode': body.get('villageCode', '').strip() if body.get('villageCode') else '',
+            'panchayatCode': body.get('panchayatCode', '').strip() if body.get('panchayatCode') else '',
+            'panchayatName': body.get('panchayatName', '').strip() if body.get('panchayatName') else '',
+            'panchayatId': (body.get('panchayatId') or body.get('panchayatCode') or '').strip() or 'unassigned',
 
             # Scheme data
             'matchedSchemes': convert_to_dynamodb(body.get('matchedSchemes', [])),
