@@ -28,7 +28,8 @@ def convert_to_dynamodb(obj):
 def cors_headers():
     return {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+        'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Amz-Date,X-Api-Key',
+        'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS',
         'Content-Type': 'application/json',
     }
 
@@ -115,9 +116,16 @@ def lambda_handler(event, context):
             'hasEnterprise': to_bool(body.get('hasEnterprise', False)),
             'seekingWork': to_bool(body.get('seekingWork', False)),
 
-            # Additional fields
             'educationLevel': body.get('educationLevel', ''),
-            'panchayatId': (body.get('panchayatId') or '').strip(),
+
+            # Location fields
+            'district': body.get('district', '').strip() if body.get('district') else '',
+            'block': body.get('block', '').strip() if body.get('block') else '',
+            'village': body.get('village', '').strip() if body.get('village') else '',
+            'villageCode': body.get('villageCode', '').strip() if body.get('villageCode') else '',
+            'panchayatCode': body.get('panchayatCode', '').strip() if body.get('panchayatCode') else '',
+            'panchayatName': body.get('panchayatName', '').strip() if body.get('panchayatName') else '',
+            'panchayatId': (body.get('panchayatId') or body.get('panchayatCode') or '').strip() or 'unassigned',
 
             # Scheme data
             'matchedSchemes': convert_to_dynamodb(body.get('matchedSchemes', [])),

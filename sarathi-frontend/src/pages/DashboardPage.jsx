@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCitizen } from '../context/CitizenContext';
 import { motion } from 'framer-motion';
@@ -10,10 +10,10 @@ import StatCard from '../components/ui/StatCard';
 import { CATEGORY_STYLE, FALLBACK_STYLE } from '../constants/categories';
 
 const STATUS_CONFIG = {
-    pending:   { color: 'text-amber-600',   bg: 'bg-amber-100'   },
-    submitted: { color: 'text-blue-600',    bg: 'bg-blue-100'    },
-    approved:  { color: 'text-success',     bg: 'bg-success-light' },
-    rejected:  { color: 'text-danger',      bg: 'bg-danger/10'   },
+    pending: { color: 'text-amber-600', bg: 'bg-amber-100' },
+    submitted: { color: 'text-blue-600', bg: 'bg-blue-100' },
+    approved: { color: 'text-success', bg: 'bg-success-light' },
+    rejected: { color: 'text-danger', bg: 'bg-danger/10' },
 };
 
 const MotionWrapper = ({ children, delay = 0, className = '' }) => (
@@ -32,8 +32,13 @@ const COMPLETION_FIELDS = ['name', 'age', 'gender', 'state', 'income', 'category
 
 function DashboardPage() {
     const { user } = useAuth();
-    const { eligibleSchemes, citizenProfile, isLoadingProfile, applications } = useCitizen();
+    const { eligibleSchemes, citizenProfile, isLoadingProfile, applications, hasLocation } = useCitizen();
     const navigate = useNavigate();
+
+    // Redirect to location setup if citizen hasn't set their village yet
+    if (!isLoadingProfile && !hasLocation) {
+        return <Navigate to="/setup-location" replace />;
+    }
 
     const userName = user?.email ? user.email.split('@')[0] : 'Citizen';
     const hasProfile = citizenProfile?.name && citizenProfile.name !== '';

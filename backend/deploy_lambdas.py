@@ -15,6 +15,7 @@ LAMBDAS = {
     'sarathi-bedrock-explainer': 'bedrock_explainer.py',
     'sarathi-panchayat-notifier': 'panchayat_notifier.py',
     'sarathi-applications': 'applications.py',
+    'sarathi-panchayat-onboarding': 'panchayat_onboarding.py',
 }
 
 # Extra files to bundle alongside specific lambdas

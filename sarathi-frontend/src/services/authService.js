@@ -8,7 +8,7 @@ import {
     ResendConfirmationCodeCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
 
-const region = import.meta.env.VITE_AWS_REGION || "ap-south-1";
+const region = import.meta.env.VITE_AWS_REGION || "us-east-1";
 const citizenClientId = import.meta.env.VITE_CITIZEN_CLIENT_ID || import.meta.env.VITE_CLIENT_ID;
 const panchayatClientId = import.meta.env.VITE_PANCHAYAT_CLIENT_ID;
 
@@ -76,13 +76,43 @@ export const authService = {
     },
 
     // ── Panchayat ─────────────────────────────────────────────────────────────
-    panchayatSignUp: async (email, password) => {
-        return panchayatClient.send(new SignUpCommand({
-            ClientId: panchayatClientId,
-            Username: email,
-            Password: password,
-            UserAttributes: [{ Name: "email", Value: email }],
-        }));
+    // ── Panchayat ─────────────────────────────────────────────────────────────
+    panchayatSignUp: async (email, password, customAttributes = {}) => {
+        try {
+            // Base attributes
+            const userAttributes = [
+                { Name: "email", Value: email }
+            ];
+
+            // Map frontend naming to Cognito schema names
+            const attrMap = {
+                panchayatId: 'panchayatId',
+                lgdCode: 'lgdCode',
+                role: 'panchayatRole',
+                state: 'panchayatState',
+                district: 'district',
+                panchayatName: 'panchayatName',
+                officialName: 'officialName',
+                mobileNumber: 'mobileNumber'
+            };
+
+            for (const [key, value] of Object.entries(customAttributes)) {
+                if (value && attrMap[key]) {
+                    // Cognito add_custom_attributes doesn't use prefix, but user registration requires 'custom:' prefix
+                    userAttributes.push({ Name: `custom:${attrMap[key]}`, Value: String(value) });
+                }
+            }
+
+            return await panchayatClient.send(new SignUpCommand({
+                ClientId: panchayatClientId,
+                Username: email,
+                Password: password,
+                UserAttributes: userAttributes,
+            }));
+        } catch (error) {
+            console.error('Panchayat SignUp Error:', error);
+            throw error;
+        }
     },
 
     panchayatConfirmSignUp: async (email, code) => {
@@ -99,6 +129,15 @@ export const authService = {
             ClientId: panchayatClientId,
             AuthParameters: { USERNAME: email, PASSWORD: password },
         }));
+        if (response.ChallengeName) {
+            const err = new Error(
+                response.ChallengeName === 'NEW_PASSWORD_REQUIRED'
+                    ? 'A password reset is required. Please use "Forgot Password?"'
+                    : `Authentication challenge required: ${response.ChallengeName}. Please contact support.`
+            );
+            err.name = response.ChallengeName;
+            throw err;
+        }
         if (response.AuthenticationResult) {
             localStorage.setItem("panchayatAccessToken", response.AuthenticationResult.AccessToken);
             localStorage.setItem("panchayatIdToken", response.AuthenticationResult.IdToken);
@@ -106,6 +145,8 @@ export const authService = {
                 localStorage.setItem("panchayatRefreshToken", response.AuthenticationResult.RefreshToken);
             }
             localStorage.setItem("userType", "panchayat");
+        } else {
+            throw new Error('Login failed: no authentication tokens received. Please try again.');
         }
         return response;
     },
