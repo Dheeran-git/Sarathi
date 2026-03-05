@@ -99,6 +99,15 @@ export const authService = {
             ClientId: panchayatClientId,
             AuthParameters: { USERNAME: email, PASSWORD: password },
         }));
+        if (response.ChallengeName) {
+            const err = new Error(
+                response.ChallengeName === 'NEW_PASSWORD_REQUIRED'
+                    ? 'A password reset is required. Please use "Forgot Password?"'
+                    : `Authentication challenge required: ${response.ChallengeName}. Please contact support.`
+            );
+            err.name = response.ChallengeName;
+            throw err;
+        }
         if (response.AuthenticationResult) {
             localStorage.setItem("panchayatAccessToken", response.AuthenticationResult.AccessToken);
             localStorage.setItem("panchayatIdToken", response.AuthenticationResult.IdToken);
@@ -106,6 +115,8 @@ export const authService = {
                 localStorage.setItem("panchayatRefreshToken", response.AuthenticationResult.RefreshToken);
             }
             localStorage.setItem("userType", "panchayat");
+        } else {
+            throw new Error('Login failed: no authentication tokens received. Please try again.');
         }
         return response;
     },

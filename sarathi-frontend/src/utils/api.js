@@ -23,17 +23,36 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// 401 handler — redirect to correct login page
+// 401 handler — only redirect on genuine auth expiry, not cross-pool token mismatch
 api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401) {
-      const isPanchayat = !!localStorage.getItem('panchayatAccessToken');
+      const url = err.config?.url || '';
+      const userType = localStorage.getItem('userType');
+
+      // If a citizen API call fails but user is panchayat, just reject — don't wipe session
+      if (url.includes('/citizen/') && userType === 'panchayat') {
+        console.warn('[api] Citizen API 401 for panchayat user — skipping redirect');
+        return Promise.reject(err);
+      }
+      // If a panchayat API call fails but user is citizen, just reject
+      if (url.includes('/panchayat/') && userType === 'citizen') {
+        console.warn('[api] Panchayat API 401 for citizen user — skipping redirect');
+        return Promise.reject(err);
+      }
+
+      // Genuine auth failure — clear everything and redirect
+      console.warn('[api] 401 — clearing tokens and redirecting');
       localStorage.removeItem('panchayatAccessToken');
       localStorage.removeItem('panchayatIdToken');
+      localStorage.removeItem('panchayatRefreshToken');
       localStorage.removeItem('accessToken');
       localStorage.removeItem('idToken');
-      window.location.href = isPanchayat ? '/panchayat/login' : '/citizen/login';
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('userType');
+      localStorage.removeItem('userEmail');
+      window.location.href = userType === 'panchayat' ? '/panchayat/login' : '/citizen/login';
     }
     return Promise.reject(err);
   }

@@ -104,7 +104,7 @@ export function CitizenProvider({ children }) {
     const [isLoadingApplications, setIsLoadingApplications] = useState(false);
 
     const [isLoadingProfile, setIsLoadingProfile] = useState(false);
-    const { isAuthenticated, isLoading: isAuthLoading, user } = useAuth();
+    const { isAuthenticated, isLoading: isAuthLoading, user, userType } = useAuth();
 
     const userId = user?.email || localStorage.getItem('userEmail');
 
@@ -145,7 +145,8 @@ export function CitizenProvider({ children }) {
         // Don't do anything while auth state is still being determined
         if (isAuthLoading) return;
 
-        if (isAuthenticated && userId) {
+        // Only load citizen profile/applications for citizen users, NOT panchayat
+        if (isAuthenticated && userId && userType === 'citizen') {
             loadProfile();
             loadApplications(userId);
         } else if (!isAuthenticated) {
@@ -155,7 +156,7 @@ export function CitizenProvider({ children }) {
             clearStorage();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isAuthenticated, isAuthLoading, userId]);
+    }, [isAuthenticated, isAuthLoading, userId, userType]);
 
     useEffect(() => {
         return () => {
