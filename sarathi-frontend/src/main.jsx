@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { LanguageProvider } from './context/LanguageContext';
 import { CitizenProvider } from './context/CitizenContext';
+import { PanchayatProvider } from './context/PanchayatContext';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './components/ui/Toast';
 import './index.css';
@@ -14,9 +15,11 @@ createRoot(document.getElementById('root')).render(
       <LanguageProvider>
         <AuthProvider>
           <CitizenProvider>
-            <ToastProvider>
-              <App />
-            </ToastProvider>
+            <PanchayatProvider>
+              <ToastProvider>
+                <App />
+              </ToastProvider>
+            </PanchayatProvider>
           </CitizenProvider>
         </AuthProvider>
       </LanguageProvider>

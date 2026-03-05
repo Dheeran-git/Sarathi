@@ -91,8 +91,29 @@ export async function fetchAllSchemes() {
 }
 
 /** GET /panchayat/{panchayatId} */
-export async function getPanchayatStats(panchayatId = 'rampur-barabanki-up') {
+export async function getPanchayatStats(panchayatId) {
+  if (!panchayatId) throw new Error('panchayatId is required');
   return unwrapBody(await api.get(`/panchayat/${panchayatId}`));
+}
+
+/** GET /panchayat/search */
+export async function searchPanchayats(state, district, block) {
+  const params = new URLSearchParams();
+  if (state) params.append('state', state);
+  if (district) params.append('district', district);
+  if (block) params.append('block', block);
+  return unwrapBody(await api.get(`/panchayat/search?${params.toString()}`));
+}
+
+/** POST /panchayat/claim */
+export async function claimPanchayat(payload) {
+  return unwrapBody(await api.post('/panchayat/claim', payload));
+}
+
+/** GET /panchayat/{id}/profile */
+export async function getPanchayatProfile(panchayatId) {
+  if (!panchayatId) throw new Error('panchayatId is required');
+  return unwrapBody(await api.get(`/panchayat/${panchayatId}/profile`));
 }
 
 /** POST /conflicts */

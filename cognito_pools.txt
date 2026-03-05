@@ -1,0 +1,8 @@
+SarathiAdmins (us-east-1_7lFWvsXg3)
+  Client: SarathiAdminWeb -> 20fqfsonh73oh9gh82ba7d8nef
+SarathiCitizens (us-east-1_FoiBWBYwO)
+  Client: SarathiCitizenWeb -> 5lqb4vhfnr4b628vn0iims85a9
+Sarathi-Users (us-east-1_hgLGrsvUd)
+  Client: Sarathi-Frontend -> cpa4u0iae1n3kqgg9hkt3m0ql
+SarathiPanchayat (us-east-1_lvbRzfVqx)
+  Client: SarathiPanchayatWeb -> 651tokiesm7j7fpujseb96kjda

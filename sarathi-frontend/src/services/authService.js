@@ -76,13 +76,43 @@ export const authService = {
     },
 
     // ── Panchayat ─────────────────────────────────────────────────────────────
-    panchayatSignUp: async (email, password) => {
-        return panchayatClient.send(new SignUpCommand({
-            ClientId: panchayatClientId,
-            Username: email,
-            Password: password,
-            UserAttributes: [{ Name: "email", Value: email }],
-        }));
+    // ── Panchayat ─────────────────────────────────────────────────────────────
+    panchayatSignUp: async (email, password, customAttributes = {}) => {
+        try {
+            // Base attributes
+            const userAttributes = [
+                { Name: "email", Value: email }
+            ];
+
+            // Map frontend naming to Cognito schema names
+            const attrMap = {
+                panchayatId: 'panchayatId',
+                lgdCode: 'lgdCode',
+                role: 'panchayatRole',
+                state: 'panchayatState',
+                district: 'district',
+                panchayatName: 'panchayatName',
+                officialName: 'officialName',
+                mobileNumber: 'mobileNumber'
+            };
+
+            for (const [key, value] of Object.entries(customAttributes)) {
+                if (value && attrMap[key]) {
+                    // Cognito add_custom_attributes doesn't use prefix, but user registration requires 'custom:' prefix
+                    userAttributes.push({ Name: `custom:${attrMap[key]}`, Value: String(value) });
+                }
+            }
+
+            return await panchayatClient.send(new SignUpCommand({
+                ClientId: panchayatClientId,
+                Username: email,
+                Password: password,
+                UserAttributes: userAttributes,
+            }));
+        } catch (error) {
+            console.error('Panchayat SignUp Error:', error);
+            throw error;
+        }
     },
 
     panchayatConfirmSignUp: async (email, code) => {

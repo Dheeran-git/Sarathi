@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronRight, RefreshCw, Download, Loader2 } from 'lucide-react';
+import { ChevronRight, RefreshCw, Download, Loader2, Users, BarChart3, FileText, Megaphone, MapPin, CalendarDays, AlertTriangle, ClipboardList, Settings, TrendingUp } from 'lucide-react';
 import StatCard from '../components/ui/StatCard';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
@@ -37,13 +37,13 @@ function PanchayatDashboard() {
   const { addToast } = useToast();
 
   // B1: Dynamic panchayat ID from auth context
-  const panchayatId = user?.panchayatId || 'rampur-barabanki-up';
+  const panchayatId = user?.panchayatId;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [stats, setStats] = useState({
     totalHouseholds: 0, enrolled: 0, eligibleNotEnrolled: 0, zeroBenefits: 0,
-    panchayatName: 'Rampur Panchayat', district: 'Barabanki', state: 'Uttar Pradesh',
+    panchayatName: user?.panchayatName || 'Panchayat', district: user?.district || '', state: user?.state || '',
   });
   const [alerts, setAlerts] = useState([]);
   const [households, setHouseholds] = useState([]);
@@ -337,6 +337,49 @@ function PanchayatDashboard() {
           <StatCard icon="✅" value={`${stats.enrolled} (${stats.receivingPercent || 0}%)`} label={T('panchReceiving')} variant="success" progress={stats.receivingPercent} />
           <StatCard icon="⚠️" value={stats.eligibleNotEnrolled} label={T('panchEligibleNot')} variant="warning" />
           <StatCard icon="🔴" value={stats.zeroBenefits} label={T('panchZero')} variant="danger" />
+        </div>
+
+        {/* Welfare Gap + Performance Score Row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+            className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200 p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <TrendingUp className="w-5 h-5 text-amber-600" />
+              <span className="font-body text-xs text-amber-700 font-medium uppercase tracking-wider">{isHi ? 'कल्याण अंतर' : 'Welfare Gap'}</span>
+            </div>
+            <p className="font-display text-2xl text-amber-900">₹{(((stats.eligibleNotEnrolled || 0) * 15000)).toLocaleString('en-IN')}</p>
+            <p className="font-body text-xs text-amber-600 mt-1">{isHi ? 'यदि सभी पात्र नागरिक नामांकित हों' : 'Potential if all eligible citizens enrolled'}</p>
+          </motion.div>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+            className="bg-gradient-to-br from-teal-50 to-emerald-50 rounded-xl border border-teal-200 p-5 flex items-center gap-4">
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center font-display text-xl text-white shrink-0 ${(stats.receivingPercent || 0) >= 70 ? 'bg-emerald-500' : (stats.receivingPercent || 0) >= 40 ? 'bg-amber-500' : 'bg-red-500'
+              }`}>{stats.receivingPercent || 0}</div>
+            <div>
+              <p className="font-body text-xs text-teal-700 font-medium uppercase tracking-wider">{isHi ? 'प्रदर्शन स्कोर' : 'Performance Score'}</p>
+              <p className="font-body text-sm text-teal-900 mt-0.5">{(stats.receivingPercent || 0) >= 70 ? (isHi ? 'बहुत अच्छा प्रदर्शन' : 'Excellent performance') : (stats.receivingPercent || 0) >= 40 ? (isHi ? 'अच्छा, सुधार की जरूरत' : 'Good, room for improvement') : (isHi ? 'तत्काल कार्रवाई जरूरी' : 'Urgent action needed')}</p>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Quick-Link Navigation Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+          {[
+            { to: '/panchayat/citizens', icon: Users, label: isHi ? 'नागरिक' : 'Citizens', color: 'text-blue-500', bg: 'bg-blue-50' },
+            { to: '/panchayat/analytics', icon: BarChart3, label: isHi ? 'विश्लेषण' : 'Analytics', color: 'text-teal-500', bg: 'bg-teal-50' },
+            { to: '/panchayat/applications', icon: FileText, label: isHi ? 'आवेदन' : 'Applications', color: 'text-purple-500', bg: 'bg-purple-50' },
+            { to: '/panchayat/outreach', icon: Megaphone, label: isHi ? 'अभियान' : 'Outreach', color: 'text-orange-500', bg: 'bg-orange-50' },
+            { to: '/panchayat/village', icon: MapPin, label: isHi ? 'गाँव' : 'Village', color: 'text-emerald-500', bg: 'bg-emerald-50' },
+          ].map((item, i) => (
+            <Link key={item.to} to={item.to}>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 * i }}
+                className={`${item.bg} rounded-xl border border-slate-200 p-3 text-center hover:shadow-md transition-all group cursor-pointer`}
+              >
+                <item.icon className={`w-6 h-6 ${item.color} mx-auto mb-1.5 group-hover:scale-110 transition-transform`} />
+                <p className="font-body text-xs font-medium text-slate-700">{item.label}</p>
+              </motion.div>
+            </Link>
+          ))}
         </div>
 
         {/* AI Insights */}
