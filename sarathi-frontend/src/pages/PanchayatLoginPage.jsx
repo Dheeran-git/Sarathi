@@ -27,17 +27,19 @@ export default function PanchayatLoginPage() {
             login(email, 'panchayat');
             navigate(from, { replace: true });
         } catch (err) {
+            console.error('[PanchayatLogin] Login error:', err.name, err.message, err);
             const errorMap = {
                 UserNotConfirmedException: null, // handled below
                 NotAuthorizedException: 'Incorrect email or password.',
                 UserNotFoundException: 'No account found with this email.',
                 TooManyRequestsException: 'Too many login attempts. Please try again later.',
-                PasswordResetRequiredException: 'A password reset is required.',
+                PasswordResetRequiredException: 'A password reset is required. Please use "Forgot Password?"',
+                NEW_PASSWORD_REQUIRED: 'A password reset is required. Please use "Forgot Password?"',
             };
             if (err.name === 'UserNotConfirmedException') {
                 navigate('/panchayat/verify', { state: { email } });
             } else {
-                setError(errorMap[err.name] || err.message || 'Failed to login');
+                setError(errorMap[err.name] || err.message || 'Failed to login. Please try again.');
             }
         } finally {
             setIsLoading(false);

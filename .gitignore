@@ -1,21 +1,2 @@
-# Python
-__pycache__/
-*.py[cod]
-*.egg-info/
-dist/
-.venv/
-venv/
-*.zip
-
-# Environment
+node_modules/
 .env
-.env.*
-!.env.example
-
-# AWS
-.aws/
-*.pem
-
-# OS
-.DS_Store
-Thumbs.db

@@ -16,24 +16,43 @@ const api = axios.create({
   timeout: 15000,
 });
 
-// Request interceptor — send whichever token is active
+// Request interceptor — send ID Token (required by Cognito User Pool authorizer)
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('panchayatAccessToken') || localStorage.getItem('accessToken');
+  const token = localStorage.getItem('panchayatIdToken') || localStorage.getItem('idToken');
   if (token) config.headers['Authorization'] = token;
   return config;
 });
 
-// 401 handler — redirect to correct login page
+// 401 handler — only redirect on genuine auth expiry, not cross-pool token mismatch
 api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401) {
-      const isPanchayat = !!localStorage.getItem('panchayatAccessToken');
+      const url = err.config?.url || '';
+      const userType = localStorage.getItem('userType');
+
+      // If a citizen API call fails but user is panchayat, just reject — don't wipe session
+      if (url.includes('/citizen/') && userType === 'panchayat') {
+        console.warn('[api] Citizen API 401 for panchayat user — skipping redirect');
+        return Promise.reject(err);
+      }
+      // If a panchayat API call fails but user is citizen, just reject
+      if (url.includes('/panchayat/') && userType === 'citizen') {
+        console.warn('[api] Panchayat API 401 for citizen user — skipping redirect');
+        return Promise.reject(err);
+      }
+
+      // Genuine auth failure — clear everything and redirect
+      console.warn('[api] 401 — clearing tokens and redirecting');
       localStorage.removeItem('panchayatAccessToken');
       localStorage.removeItem('panchayatIdToken');
+      localStorage.removeItem('panchayatRefreshToken');
       localStorage.removeItem('accessToken');
       localStorage.removeItem('idToken');
-      window.location.href = isPanchayat ? '/panchayat/login' : '/citizen/login';
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('userType');
+      localStorage.removeItem('userEmail');
+      window.location.href = userType === 'panchayat' ? '/panchayat/login' : '/citizen/login';
     }
     return Promise.reject(err);
   }
@@ -72,8 +91,29 @@ export async function fetchAllSchemes() {
 }
 
 /** GET /panchayat/{panchayatId} */
-export async function getPanchayatStats(panchayatId = 'rampur-barabanki-up') {
+export async function getPanchayatStats(panchayatId) {
+  if (!panchayatId) throw new Error('panchayatId is required');
   return unwrapBody(await api.get(`/panchayat/${panchayatId}`));
+}
+
+/** GET /panchayat/search */
+export async function searchPanchayats(state, district, block) {
+  const params = new URLSearchParams();
+  if (state) params.append('state', state);
+  if (district) params.append('district', district);
+  if (block) params.append('block', block);
+  return unwrapBody(await api.get(`/panchayat/search?${params.toString()}`));
+}
+
+/** POST /panchayat/claim */
+export async function claimPanchayat(payload) {
+  return unwrapBody(await api.post('/panchayat/claim', payload));
+}
+
+/** GET /panchayat/{id}/profile */
+export async function getPanchayatProfile(panchayatId) {
+  if (!panchayatId) throw new Error('panchayatId is required');
+  return unwrapBody(await api.get(`/panchayat/${panchayatId}/profile`));
 }
 
 /** POST /conflicts */
