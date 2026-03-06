@@ -53,22 +53,30 @@ def get_panchayat_id(event):
     return None
 
 
+def _normalize_pid(pid):
+    """Ensure panchayatId has the LGD_ prefix if it's numeric."""
+    if not pid: return 'unassigned'
+    p = str(pid).strip()
+    if p.isdigit() and not p.startswith('LGD_'):
+        return f"LGD_{p}"
+    return p
+
+
 def get_panchayat_meta(panchayat_id, citizens=None):
     """Fetch panchayat metadata with multiple fallbacks.
     Priority: 1) DynamoDB table, 2) Derived from citizen records, 3) Slug fallback."""
     # 1. Try DynamoDB lookups
     try:
-        if not panchayat_id.startswith('LGD_'):
-            result = panchayats_table.get_item(Key={'panchayatId': panchayat_id})
-            item = result.get('Item')
-            if item:
-                return {
-                    'panchayatName': item.get('panchayatName', 'Unknown Panchayat'),
-                    'district': item.get('district', 'Unknown'),
-                    'state': item.get('state', 'Unknown'),
-                    'block': item.get('block', ''),
-                    'lgdCode': item.get('lgdCode', ''),
-                }
+        result = panchayats_table.get_item(Key={'panchayatId': panchayat_id})
+        item = result.get('Item')
+        if item:
+            return {
+                'panchayatName': item.get('panchayatName', 'Unknown Panchayat'),
+                'district': item.get('district', 'Unknown'),
+                'state': item.get('state', 'Unknown'),
+                'block': item.get('block', ''),
+                'lgdCode': item.get('lgdCode', ''),
+            }
     except Exception as e:
         print(f"[WARN] Failed to fetch panchayat meta: {e}")
 

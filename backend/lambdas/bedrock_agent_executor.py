@@ -111,15 +111,31 @@ def lambda_handler(event, context):
                 except Exception as e:
                     print(f"Scheme resolution warning: {e}")
 
+                # 2. Get citizen profile to find their panchayatId
+                panchayat_id = 'unassigned'
+                try:
+                    p_resp = dynamo.get_item(TableName='SarathiCitizens', Key={'citizenId': {'S': citizenId}})
+                    if 'Item' in p_resp:
+                        raw_pid = p_resp['Item'].get('panchayatId', {}).get('S', '') or p_resp['Item'].get('panchayatCode', {}).get('S', '')
+                        if raw_pid:
+                            # Normalize: numeric -> LGD_
+                            if raw_pid.isdigit() and not raw_pid.startswith('LGD_'):
+                                panchayat_id = f"LGD_{raw_pid}"
+                            else:
+                                panchayat_id = raw_pid
+                except Exception as e:
+                    print(f"Citizen profile lookup warning: {e}")
+
                 application_id = f"APP-{str(uuid.uuid4())[:8]}"
                 now = time.strftime("%Y-%m-%dT%H:%M:%SZ")
                 
-                # 2. Create the application record using the resolved formal ID
+                # 3. Create the application record
                 dynamo.put_item(
                     TableName='SarathiApplications',
                     Item={
                         'applicationId': {'S': application_id},
                         'citizenId': {'S': citizenId},
+                        'panchayatId': {'S': panchayat_id},
                         'schemeId': {'S': actual_scheme_id},
                         'schemeName': {'S': scheme_name},
                         'status': {'S': 'submitted'},

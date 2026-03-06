@@ -53,11 +53,22 @@ def _body(event):
     return json.loads(raw) if isinstance(raw, str) else raw
 
 
+def _normalize_pid(pid):
+    """Ensure panchayatId has the LGD_ prefix if it's numeric."""
+    if not pid: return 'unassigned'
+    p = str(pid).strip()
+    if p.isdigit() and not p.startswith('LGD_'):
+        return f"LGD_{p}"
+    return p
+
+
 def handle_post_apply(event):
     """POST /apply — create a new application."""
     body = _body(event)
     citizen_id = body.get('citizenId', '').strip()
     scheme_id  = body.get('schemeId', '').strip()
+    panchayat_id = _normalize_pid(body.get('panchayatId', ''))
+    
     if not citizen_id or not scheme_id:
         return _err(400, 'citizenId and schemeId are required')
 
@@ -67,6 +78,7 @@ def handle_post_apply(event):
     item = {
         'applicationId': application_id,
         'citizenId': citizen_id,
+        'panchayatId': panchayat_id or 'unassigned',
         'schemeId': scheme_id,
         'schemeName': body.get('schemeName', ''),
         'status': 'submitted',
@@ -84,6 +96,28 @@ def handle_post_apply(event):
 
     table.put_item(Item=item)
     return _ok({'applicationId': application_id, 'status': 'submitted', 'createdAt': now})
+
+
+def handle_get_panchayat_applications(event):
+    """GET /panchayat-applications/{panchayatId} — query applications in a panchayat."""
+    path_params = event.get('pathParameters') or {}
+    panchayat_id = _normalize_pid(path_params.get('panchayatId', '').strip())
+
+    if not panchayat_id or panchayat_id == 'unassigned':
+        return _err(400, 'panchayatId path parameter is required')
+
+    print(f"[DEBUG] Querying applications for panchayat: {panchayat_id}")
+    try:
+        resp = table.query(
+            IndexName='panchayatId-createdAt-index',
+            KeyConditionExpression=Key('panchayatId').eq(panchayat_id),
+            ScanIndexForward=False,
+            Limit=100
+        )
+        return _ok({'applications': resp.get('Items', []), 'count': resp.get('Count', 0)})
+    except Exception as e:
+        print(f"[ERROR] Panchayat query failed: {str(e)}")
+        return _err(500, f"Database query failed: {str(e)}")
 
 
 def handle_get_all_applications(event):
@@ -172,6 +206,9 @@ def lambda_handler(event, context):
 
         if method == 'POST' and path == '/apply':
             return handle_post_apply(event)
+
+        if method == 'GET' and path.startswith('/panchayat-applications/'):
+            return handle_get_panchayat_applications(event)
 
         if method == 'GET' and path.startswith('/applications/'):
             return handle_get_applications(event)

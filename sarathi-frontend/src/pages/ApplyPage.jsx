@@ -84,6 +84,7 @@ function ApplyPage() {
             const checkedDocNames = docList.filter((_, i) => checkedDocs[i]);
             const result = await submitApplication({
                 citizenId: userId,
+                panchayatId: citizenProfile?.panchayatId || citizenProfile?.panchayatCode || '',
                 schemeId,
                 schemeName: scheme.nameEnglish || scheme.name || schemeId,
                 documentsChecked: checkedDocNames,

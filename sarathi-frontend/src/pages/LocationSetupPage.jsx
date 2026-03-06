@@ -97,13 +97,19 @@ export default function LocationSetupPage() {
     const handleConfirm = async () => {
         if (!selectedVillage) return;
         setSaving(true);
+        // Special patch for Haadli: local data has 219293, but claimed ID is 614744
+        let pCode = selectedVillage.panchayatCode || '';
+        if (pCode === '219293' || selectedVillage.panchayatName === 'Haadli') {
+            pCode = '614744';
+        }
+
         const locationData = {
             state: selectedState, district: selectedDistrict, block: selectedBlock,
             village: selectedVillage.name, villageCode: selectedVillage.code,
-            panchayatCode: selectedVillage.panchayatCode || '',
+            panchayatCode: pCode,
             panchayatName: selectedVillage.panchayatName || '',
-            panchayatId: selectedVillage.panchayatCode
-                ? selectedVillage.panchayatCode
+            panchayatId: pCode
+                ? pCode
                 : `${slugify(selectedVillage.name)}-${slugify(selectedDistrict)}-${slugify(selectedState)}`,
         };
         updateProfile(locationData);
@@ -162,8 +168,8 @@ export default function LocationSetupPage() {
                             {STEPS.map((step, i) => (
                                 <div key={step.key} className="flex items-center">
                                     <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold transition-all duration-300 ${i < currentStep ? 'bg-emerald-100 text-emerald-600' :
-                                            i === currentStep && currentStep < 4 ? 'bg-saffron/10 text-saffron ring-2 ring-saffron/20' :
-                                                'bg-gray-100 text-gray-400'
+                                        i === currentStep && currentStep < 4 ? 'bg-saffron/10 text-saffron ring-2 ring-saffron/20' :
+                                            'bg-gray-100 text-gray-400'
                                         }`}>
                                         {i < currentStep ? <Check size={14} /> : i + 1}
                                     </div>

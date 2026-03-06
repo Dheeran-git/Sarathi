@@ -164,6 +164,12 @@ export async function getApplications(userId) {
   return unwrapBody(await api.get(endpoint));
 }
 
+/** GET /panchayat-applications/{panchayatId} — list applications for a specific panchayat */
+export async function getPanchayatApplications(panchayatId) {
+  if (!panchayatId) throw new Error('panchayatId is required');
+  return unwrapBody(await api.get(`/panchayat-applications/${panchayatId}`));
+}
+
 /** POST /apply/{applicationId} — update application status (using POST for better compatibility) */
 export async function updateApplicationStatus(applicationId, status) {
   return unwrapBody(await api.post(`/apply/${applicationId}`, { status }));

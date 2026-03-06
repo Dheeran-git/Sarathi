@@ -5,7 +5,7 @@
  */
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
-import { getPanchayatStats } from '../utils/api';
+import { getPanchayatStats, getPanchayatApplications } from '../utils/api';
 import {
     households as mockHouseholds,
     alerts as mockAlerts,
@@ -96,19 +96,26 @@ export function PanchayatProvider({ children }) {
         setCalendarEvents(mockCalendarEvents);
         setVillageProfile(mockVillageProfile);
 
-        // Generate mock applications from citizens
-        const mockApps = citizens.slice(0, 15).map((c, i) => ({
-            applicationId: `APP-${String(i + 1).padStart(3, '0')}`,
-            citizenId: c.citizenId || c.name?.toLowerCase().replace(/\s/g, '-') || `citizen-${i}`,
-            citizenName: c.name || 'Unknown',
-            schemeId: ['pm-kisan', 'pmay-g', 'ayushman-bharat', 'mgnregs', 'pm-ujjwala'][i % 5],
-            schemeName: ['PM-KISAN', 'PMAY-G', 'Ayushman Bharat', 'MGNREGS', 'PM Ujjwala'][i % 5],
-            status: ['submitted', 'pending', 'approved', 'rejected', 'submitted'][i % 5],
-            documentsChecked: i % 3 === 0 ? ['Aadhaar', 'Bank Passbook'] : ['Aadhaar'],
-            createdAt: new Date(Date.now() - i * 86400000 * 3).toISOString(),
-            updatedAt: new Date(Date.now() - i * 86400000).toISOString(),
-        }));
-        setApplications(mockApps);
+        // Fetch live applications
+        try {
+            const appsData = await getPanchayatApplications(panchayatId);
+            setApplications(appsData?.applications || []);
+        } catch (appErr) {
+            console.warn('[PanchayatContext] Failed to fetch live applications:', appErr.message);
+            // Fallback to mock applications if needed
+            const mockApps = citizens.slice(0, 15).map((c, i) => ({
+                applicationId: `APP-${String(i + 1).padStart(3, '0')}`,
+                citizenId: c.citizenId || c.name?.toLowerCase().replace(/\s/g, '-') || `citizen-${i}`,
+                citizenName: c.name || 'Unknown',
+                schemeId: ['pm-kisan', 'pmay-g', 'ayushman-bharat', 'mgnregs', 'pm-ujjwala'][i % 5],
+                schemeName: ['PM-KISAN', 'PMAY-G', 'Ayushman Bharat', 'MGNREGS', 'PM Ujjwala'][i % 5],
+                status: ['submitted', 'pending', 'approved', 'rejected', 'submitted'][i % 5],
+                documentsChecked: i % 3 === 0 ? ['Aadhaar', 'Bank Passbook'] : ['Aadhaar'],
+                createdAt: new Date(Date.now() - i * 86400000 * 3).toISOString(),
+                updatedAt: new Date(Date.now() - i * 86400000).toISOString(),
+            }));
+            setApplications(mockApps);
+        }
 
         setLastFetched(new Date());
         setIsLoading(false);
