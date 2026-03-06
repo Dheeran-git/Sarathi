@@ -28,22 +28,23 @@ def lambda_handler(event, context):
             resp = dynamo.scan(TableName='SarathiSchemes')
             schemes = resp.get('Items', [])
             
-            # Search in nameEnglish, nameHindi, ministry, and categories
+            # Search in nameEnglish, nameHindi, ministry, categories, tags, and schemeId
             if query.lower() != "all" and query.lower() != "":
-                q = query.lower()
+                q = query.lower().replace("-", " ")
                 matched = []
                 for s in schemes:
                     search_text = (
-                        s.get('nameEnglish', {'S':''})['S'].lower() + " " +
-                        s.get('nameHindi', {'S':''})['S'].lower() + " " +
-                        s.get('ministry', {'S':''})['S'].lower() + " " +
-                        s.get('category', {'S':''})['S'].lower()
+                        s.get('schemeId', {}).get('S', '').lower().replace("-", " ") + " " +
+                        s.get('nameEnglish', {}).get('S', '').lower() + " " +
+                        s.get('nameHindi', {}).get('S', '').lower() + " " +
+                        s.get('ministry', {}).get('S', '').lower() + " " +
+                        s.get('department', {}).get('S', '').lower() + " " +
+                        str(s.get('tags', {}).get('L', [])).lower()
                     )
                     if q in search_text:
                         matched.append(s)
                 schemes = matched
             
-            # Return RICH data for the agent to reason about
             formatted_schemes = []
             for s in schemes[:3]: # limit to 3 for token efficiency, but with full details
                 formatted_schemes.append({
@@ -52,20 +53,16 @@ def lambda_handler(event, context):
                     "hindiName": s.get('nameHindi', {}).get('S', ''),
                     "annualBenefit": s.get('annualBenefit', {}).get('N', '0'),
                     "ministry": s.get('ministry', {}).get('S', ''),
-                    "details": s.get('benefitDescription', {}).get('S', ''),
-                    "eligibility": s.get('eligibilityTags', {}).get('SS', []),
-                    "documents": s.get('documentsRequired', {}).get('SS', []),
-                    "howToApply": s.get('howToApply', {}).get('SS', [])
+                    "details": s.get('briefDescription', {}).get('S', '')[:200],  # Shortened to save tokens
+                    "eligibility": s.get('eligibilityMd', {}).get('S', '')[:200],  # Markdown excerpt
+                    "categories": s.get('categories', {}).get('L', []),
+                    "howToApply": s.get('applyUrl', {}).get('S', '')
                 })
             
-            response_text = f"Found {len(formatted_schemes)} matching schemes."
-            if not formatted_schemes:
-                response_text = "I couldn't find any schemes matching that description. Could you try different keywords?"
-                
             responseBody = {
                 "TEXT": {
                     "body": json.dumps({
-                        "summary": response_text,
+                        "found": len(formatted_schemes),
                         "schemes": formatted_schemes
                     })
                 }
@@ -97,17 +94,27 @@ def lambda_handler(event, context):
                     if 'Item' in s_resp:
                         scheme_name = s_resp['Item'].get('nameEnglish', {}).get('S', 'Unknown Scheme')
                     else:
-                        # If not found, it might be a name passed as an ID (like 'test6')
-                        print(f"Scheme ID {schemeId} not found directly, attempting name-based resolution...")
+                        print(f"Scheme ID {schemeId} not found directly, attempting fuzzy name-based resolution...")
                         all_schemes = dynamo.scan(TableName='SarathiSchemes')['Items']
+                        search_term = schemeId.lower().replace("-", " ")
+                        
+                        best_match = None
                         for s in all_schemes:
                             s_name = s.get('nameEnglish', {}).get('S', '').lower()
-                            s_name_raw = s.get('name', {}).get('S', '').lower()
-                            if schemeId.lower() in [s_name, s_name_raw]:
-                                actual_scheme_id = s.get('schemeId', {}).get('S')
-                                scheme_name = s.get('nameEnglish', {}).get('S') or s.get('name', {}).get('S')
-                                print(f"Resolved {schemeId} to formal ID: {actual_scheme_id}")
+                            s_name_hindi = s.get('nameHindi', {}).get('S', '').lower()
+                            s_id = s.get('schemeId', {}).get('S', '').lower()
+                            
+                            if search_term in s_name or search_term in s_name_hindi or search_term in s_id.replace("-", " "):
+                                best_match = s
                                 break
+                                
+                        if best_match:
+                            actual_scheme_id = best_match.get('schemeId', {}).get('S')
+                            scheme_name = best_match.get('nameEnglish', {}).get('S') or "Unknown Scheme"
+                            print(f"Resolved {schemeId} to formal ID: {actual_scheme_id}")
+                        else:
+                            print(f"Could not resolve scheme name: {schemeId}")
+                            return {"response": {"actionGroup": actionGroup, "function": function, "functionResponse": {"responseBody": {"TEXT": {"body": f"I couldn't find a scheme matching '{schemeId}'. Please verify the scheme name."}}}}}
                 except Exception as e:
                     print(f"Scheme resolution warning: {e}")
 

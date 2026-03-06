@@ -1,0 +1,619 @@
+{
+  "status": "Success",
+  "statusCode": 200,
+  "errorDescription": "",
+  "error": "{}",
+  "data": {
+    "_id": "62a96601f038bd8499a71b0a",
+    "en": {
+      "basicDetails": {
+        "schemeOpenDate": "2002-04-01",
+        "schemeCloseDate": null,
+        "state": null,
+        "nodalMinistryName": {
+          "value": 498,
+          "label": "Ministry Of Agriculture and Farmers Welfare"
+        },
+        "nodalDepartmentName": {
+          "value": 513,
+          "label": "Department of Agriculture Research and Education"
+        },
+        "otherMinistryName": null,
+        "otherDepartmentNames": null,
+        "targetBeneficiaries": [
+          {
+            "value": "individual",
+            "label": "Individual"
+          }
+        ],
+        "schemeSubCategory": [
+          {
+            "value": "Setting up / start-up / entrepreneurship",
+            "label": "Setting up / start-up / entrepreneurship"
+          },
+          {
+            "value": "Training and Skill Up-gradation",
+            "label": "Training and Skill Up-gradation"
+          },
+          {
+            "value": "Entrepreneurship development",
+            "label": "Entrepreneurship development"
+          }
+        ],
+        "dbtScheme": true,
+        "implementingAgency": "National Bank For Agriculture And Rural Development (NABARD)",
+        "tags": [
+          "Business",
+          "Entrepreneur",
+          "Student",
+          "Training",
+          "Agriculture",
+          "Employment"
+        ],
+        "schemeName": "Agri-Clinics And Agri-Business Centres Scheme",
+        "schemeShortTitle": "AC&ABC",
+        "level": {
+          "value": "central",
+          "label": "Central"
+        },
+        "schemeCategory": [
+          {
+            "value": "628ce6ead6d1a3bde4685252",
+            "label": "Agriculture,Rural & Environment"
+          },
+          {
+            "value": "628ce733d6d1a3bde4685278",
+            "label": "Business & Entrepreneurship"
+          },
+          {
+            "value": "628ce85cd6d1a3bde4685304",
+            "label": "Skills & Employment"
+          }
+        ],
+        "schemeFor": "Individual"
+      },
+      "schemeContent": {
+        "references": [
+          {
+            "title": "Guidelines",
+            "url": "https://agricoop.nic.in/sites/default/files/ACABC.pdf"
+          },
+          {
+            "title": "Scheme Brief By NABARD",
+            "url": "https://www.nabard.org/auth/writereaddata/File/ACABC%20-%20Revised%20guidelines.pdf"
+          },
+          {
+            "title": "List Of Nodal Institutes",
+            "url": "https://acabcmis.gov.in/Institute.aspx"
+          }
+        ],
+        "schemeImageUrl": "",
+        "detailedDescription_md": "A welfare scheme by the Ministry of Agriculture and Farmers&#39; Welfare was launched in 2002. AC&amp;ABC aims at agricultural development by supplementing the efforts of public extension by providing extension and other services to farmers either on a payment basis or free of cost as per the business model of agri-preneur, local needs, and affordability of the target group of farmers. AC&amp;ABC creates gainful self-employment opportunities for unemployed agricultural graduates, agricultural diploma holders, intermediate in agriculture, and biological science graduates with PG in agri-related courses. \nNABARD is acting as a subsidy channelizing agency for this scheme.\n<br>\n\nCommitted to this program, the Government is now also providing start-up training to graduates in Agriculture, or any subject allied to Agriculture like Horticulture, Sericulture, Veterinary Sciences, Forestry, Dairy, Poultry Farming, Fisheries, etc. Those completing the training can apply for special start-up loans for ventures.\n",
+        "benefits_md": "**Agri-Clinics -** \nAgri-Clinics are envisaged to provide expert advice and services to farmers on various aspects to enhance the productivity of crops/animals and increase the incomes of farmers. Agri-Clinics provide support in the following areas:\n\n1. Soil health\n1. Cropping practices\n1. Plant protection\n1. Crop insurance post-harvest technology clinical services for animals, feed and fodder management prices of various crops in the market, etc.\n\n<br>\n\n**Agri-Business Centres -** \nAgri-Business Centres are commercial units of agri-ventures established by trained agriculture professionals. These ventures may include maintenance and custom hiring of farm equipment, sale of inputs, and other services in agriculture and allied areas, including post-harvest management and market linkages for income generation and entrepreneurship development.\n<br>\n\nThe scheme covers full financial support for training and handholding, provision of loans, and credit-linked back-end composite subsidy.\n<br>\n\n**Project activities -** \n\n1. Extension consultancy services\n1. Soil and water quality cum inputs testing laboratories (with Atomic Absorption Spectrophotometers)\n1. Pest surveillance, diagnostic and control services\n1. Maintenance, repairs, and custom hiring of agricultural implements and machinery including micro-irrigation systems (sprinkler and drip)\n1. Agri Service Centres include the three activities mentioned above (Group Activity).\n1. Seed Processing Units\n1. Micro-propagation through Plant Tissue Culture Labs and Hardening Units\n1. Setting up of Vermiculture units, production of bio-fertilizers, bio-pesticides, and bio-control agents.\n1. Setting up of Apiaries (bee-keeping) and honey &amp; bee products&#39; processing units\n1. Provision of Extension Consultancy Services\n1. Hatcheries and production of fish fingerlings for aquaculture\n1. Provision of livestock health cover, setting up veterinary dispensaries &amp; services including frozen semen banks and liquid nitrogen supply\n1. Setting up of Information Technology Kiosks in rural areas for access to various agriculture-related portals\n1. Feed Processing and testing units\n1. Value Addition Centres\n1. Setting up of Cool Chain from the farm level onwards (Group Activity)\n1. Retail marketing outlets for processed agri-products\n1. Rural marketing dealerships of farm inputs and outputs\n\n",
+        "exclusions_md": "Retired Employees Getting Pensionary Benefits Are Not Eligible For Subsidy. However, They Can Undergo Training And Establish Self Financed Projects.\n",
+        "briefDescription": "A welfare scheme by the Ministry of Agriculture and Farmers' Welfare was launched in 2002. AC&ABC aims at agricultural development, supplementing the efforts of public extension by providing extension and other services to farmers either on a payment basis or free of cost as per the business model.",
+        "detailedDescription": [
+          {
+            "type": "paragraph",
+            "children": [
+              {
+                "text": "A welfare scheme by the Ministry of Agriculture and Farmers' Welfare was launched in 2002. AC&ABC aims at agricultural development by supplementing the efforts of public extension by providing extension and other services to farmers either on a payment basis or free of cost as per the business model of agri-preneur, local needs, and affordability of the target group of farmers. AC&ABC creates gainful self-employment opportunities for unemployed agricultural graduates, agricultural diploma holders, intermediate in agriculture, and biological science graduates with PG in agri-related courses. "
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "children": [
+              {
+                "text": "NABARD is acting as a subsidy channelizing agency for this scheme."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "children": [
+              {
+                "text": ""
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "children": [
+              {
+                "text": "Committed to this program, the Government is now also providing start-up training to graduates in Agriculture, or any subject allied to Agriculture like Horticulture, Sericulture, Veterinary Sciences, Forestry, Dairy, Poultry Farming, Fisheries, etc. Those completing the training can apply for special start-up loans for ventures."
+              }
+            ]
+          }
+        ],
+        "benefitTypes": {
+          "value": "composite",
+          "label": "Composite"
+        },
+        "benefits": [
+          {
+            "type": "paragraph",
+            "children": [
+              {
+                "text": "Agri-Clinics - ",
+                "bold": true
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "children": [
+              {
+                "text": "Agri-Clinics are envisaged to provide expert advice and services to farmers on various aspects to enhance the productivity of crops/animals and increase the incomes of farmers. Agri-Clinics provide support in the following areas:"
+              }
+            ]
+          },
+          {
+            "type": "ol_list",
+            "children": [
+              {
+                "type": "list_item",
+                "children": [
+                  {
+                    "text": "Soil health"
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "children": [
+                  {
+                    "text": "Cropping practices"
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "children": [
+                  {
+                    "text": "Plant protection"
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "children": [
+                  {
+                    "text": "Crop insurance post-harvest technology clinical services for animals, feed and fodder management prices of various crops in the market, etc."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "children": [
+              {
+                "text": ""
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "children": [
+              {
+                "text": "Agri-Business Centres - ",
+                "bold": true
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "children": [
+              {
+                "text": "Agri-Business Centres are commercial units of agri-ventures established by trained agriculture professionals. These ventures may include maintenance and custom hiring of farm equipment, sale of inputs, and other services in agriculture and allied areas, including post-harvest management and market linkages for income generation and entrepreneurship development."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "children": [
+              {
+                "text": ""
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "children": [
+              {
+                "text": "The scheme covers full financial support for training and handholding, provision of loans, and credit-linked back-end composite subsidy."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "children": [
+              {
+                "text": ""
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "children": [
+              {
+                "text": "Project activities - ",
+                "bold": true
+              }
+            ]
+          },
+          {
+            "type": "ol_list",
+            "children": [
+              {
+                "type": "list_item",
+                "children": [
+                  {
+                    "text": "Extension consultancy services"
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "children": [
+                  {
+                    "text": "Soil and water quality cum inputs testing laboratories (with Atomic Absorption Spectrophotometers)"
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "children": [
+                  {
+                    "text": "Pest surveillance, diagnostic and control services"
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "children": [
+                  {
+                    "text": "Maintenance, repairs, and custom hiring of agricultural implements and machinery including micro-irrigation systems (sprinkler and drip)"
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "children": [
+                  {
+                    "text": "Agri Service Centres include the three activities mentioned above (Group Activity)."
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "children": [
+                  {
+                    "text": "Seed Processing Units"
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "children": [
+                  {
+                    "text": "Micro-propagation through Plant Tissue Culture Labs and Hardening Units"
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "children": [
+                  {
+                    "text": "Setting up of Vermiculture units, production of bio-fertilizers, bio-pesticides, and bio-control agents."
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "children": [
+                  {
+                    "text": "Setting up of Apiaries (bee-keeping) and honey & bee products' processing units"
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "children": [
+                  {
+                    "text": "Provision of Extension Consultancy Services"
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "children": [
+                  {
+                    "text": "Hatcheries and production of fish fingerlings for aquaculture"
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "children": [
+                  {
+                    "text": "Provision of livestock health cover, setting up veterinary dispensaries & services including frozen semen banks and liquid nitrogen supply"
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "children": [
+                  {
+                    "text": "Setting up of Information Technology Kiosks in rural areas for access to various agriculture-related portals"
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "children": [
+                  {
+                    "text": "Feed Processing and testing units"
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "children": [
+                  {
+                    "text": "Value Addition Centres"
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "children": [
+                  {
+                    "text": "Setting up of Cool Chain from the farm level onwards (Group Activity)"
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "children": [
+                  {
+                    "text": "Retail marketing outlets for processed agri-products"
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "children": [
+                  {
+                    "text": "Rural marketing dealerships of farm inputs and outputs"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "exclusions": [
+          {
+            "type": "paragraph",
+            "children": [
+              {
+                "text": "Retired Employees Getting Pensionary Benefits Are Not Eligible For Subsidy. However, They Can Undergo Training And Establish Self Financed Projects."
+              }
+            ]
+          }
+        ]
+      },
+      "applicationProcess": [
+        {
+          "mode": "Online",
+          "url": "https://acabcmis.gov.in/ApplicantReg.aspx",
+          "process": [
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "text": "Step 1:",
+                  "bold": true
+                },
+                {
+                  "text": " Visit on the "
+                },
+                {
+                  "type": "link",
+                  "link": "https://acabcmis.gov.in/ApplicantReg.aspx",
+                  "children": [
+                    {
+                      "text": "Official Website"
+                    }
+                  ]
+                },
+                {
+                  "text": " "
+                },
+                {
+                  "type": "link",
+                  "link": "https://acabcmis.gov.in/ApplicantReg.aspx",
+                  "children": [
+                    {
+                      "text": ""
+                    }
+                  ]
+                },
+                {
+                  "text": ""
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "text": "Step 2: ",
+                  "bold": true
+                },
+                {
+                  "text": "Fill in the mandatory fields correctly. Upload the required documents in the said format and size."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "text": "Step 3:",
+                  "bold": true
+                },
+                {
+                  "text": " Click \"Submit\" to complete the application process."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "text": ""
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "children": [
+                {
+                  "text": "The applicant can check his/her application status by visiting this"
+                },
+                {
+                  "type": "link",
+                  "link": "https://acabcmis.gov.in/ApplicationStatus_new.aspx",
+                  "children": [
+                    {
+                      "text": " link"
+                    }
+                  ]
+                },
+                {
+                  "text": "."
+                },
+                {
+                  "type": "link",
+                  "link": "https://acabcmis.gov.in/ApplicationStatus_new.aspx",
+                  "children": [
+                    {
+                      "text": ""
+                    }
+                  ]
+                },
+                {
+                  "text": ""
+                },
+                {
+                  "type": "link",
+                  "link": "https://acabcmis.gov.in/ApplicantReg.aspx",
+                  "children": [
+                    {
+                      "text": ""
+                    }
+                  ]
+                },
+                {
+                  "text": ""
+                }
+              ]
+            }
+          ],
+          "process_md": "**Step 1:** Visit on the [Official Website](https://acabcmis.gov.in/ApplicantReg.aspx) \n**Step 2:** Fill in the mandatory fields correctly. Upload the required documents in the said format and size.\n**Step 3:** Click &quot;Submit&quot; to complete the application process.\n<br>\n\nThe applicant can check his/her application status by visiting this[ link](https://acabcmis.gov.in/ApplicationStatus_new.aspx).\n"
+        }
+      ],
+      "schemeDefinitions": [],
+      "eligibilityCriteria": {
+        "eligibilityDescription_md": "\n1. The age of the applicant must be between 18 and 60 years.\n1. The applicant must qualify as one of the following -\n\n\n- Graduates in agriculture and allied subjects from SAUs/ Central Agricultural Universities/ Universities recognized by ICAR/ UGC. Degree in Agriculture and allied subjects offered by other agencies are also considered subject to the approval of the Department of Agriculture &amp; Cooperation, Government of India on the recommendation of the State Government.\n- Diploma (with at least 50% marks)/ Post Graduate Diploma holders in Agriculture and allied subjects from State Agricultural Universities, State Agriculture and Allied Departments, and State Department of Technical Education.\n- Diplomas in Agriculture and allied subjects offered by other agencies are also considered subject to the approval of the Department of Agriculture &amp; Cooperation, Government of India on the recommendation of the State Government.\n- Biological Science Graduates with Post Graduation in Agriculture &amp; allied subjects.\n- Degree courses recognized by UGC have more than 60 percent of the course content in Agriculture and allied subjects.\n- Diploma/Post-graduate Diploma courses with more than 60 percent of course content in Agriculture and allied subjects, after B.Sc. with Biological Sciences, from recognized colleges and universities.\n- Agriculture-related courses at intermediate (i.e. plus two) level, with at least 55% marks.\n\n",
+        "eligibilityDescription": [
+          {
+            "type": "ol_list",
+            "children": [
+              {
+                "type": "list_item",
+                "children": [
+                  {
+                    "text": "The age of the applicant must be between 18 and 60 years."
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "children": [
+                  {
+                    "text": "The applicant must qualify as one of the following -"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "ul_list",
+            "children": [
+              {
+                "type": "list_item",
+                "children": [
+                  {
+                    "text": "Graduates in agriculture and allied subjects from SAUs/ Central Agricultural Universities/ Universities recognized by ICAR/ UGC. Degree in Agriculture and allied subjects offered by other agencies are also considered subject to the approval of the Department of Agriculture & Cooperation, Government of India on the recommendation of the State Government."
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "children": [
+                  {
+                    "text": "Diploma (with at least 50% marks)/ Post Graduate Diploma holders in Agriculture and allied subjects from State Agricultural Universities, State Agriculture and Allied Departments, and State Department of Technical Education."
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "children": [
+                  {
+                    "text": "Diplomas in Agriculture and allied subjects offered by other agencies are also considered subject to the approval of the Department of Agriculture & Cooperation, Government of India on the recommendation of the State Government."
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "children": [
+                  {
+                    "text": "Biological Science Graduates with Post Graduation in Agriculture & allied subjects."
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "children": [
+                  {
+                    "text": "Degree courses recognized by UGC have more than 60 percent of the course content in Agriculture and allied subjects."
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "children": [
+                  {
+                    "text": "Diploma/Post-graduate Diploma courses with more than 60 percent of course content in Agriculture and allied subjects, after B.Sc. with Biological Sciences, from recognized colleges and universities."
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "children": [
+                  {
+                    "text": "Agriculture-related courses at intermediate (i.e. plus two) level, with at least 55% marks."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "slug": "acandabc"
+  }
+}

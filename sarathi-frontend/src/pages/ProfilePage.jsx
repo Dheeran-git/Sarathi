@@ -203,15 +203,32 @@ function ProfilePage() {
     ];
 
     const extraFields = [
+        { key: 'minority', label: 'Minority Community' },
+        { key: 'maritalStatus', label: 'Marital Status', format: v => String(v)[0].toUpperCase() + String(v).slice(1) },
+        { key: 'bplCard', label: 'Ration Card Type' },
         { key: 'landOwned', label: 'Owns Land' },
-        { key: 'shgMember', label: 'SHG Member' },
+        { key: 'landSize', label: 'Land Size (Acres)', format: v => `${v} Acre${v !== 1 ? 's' : ''}` },
+        { key: 'tenantFarmer', label: 'Tenant Farmer' },
+        { key: 'livestock', label: 'Rears Livestock' },
+        { key: 'shgMember', label: 'SHG/FPO Member' },
+        { key: 'mgnregaCard', label: 'MGNREGS Card' },
+        { key: 'streetVendor', label: 'Street Vendor' },
+        { key: 'classLevel', label: 'Class / Education' },
+        { key: 'govtSchool', label: 'Govt School Student' },
+        { key: 'msmeRegistered', label: 'MSME Registered' },
+        { key: 'businessTurnover', label: 'Business Turnover (₹)', format: v => typeof v === 'number' ? v.toLocaleString('en-IN') : v },
+        { key: 'loanNeeded', label: 'Seeking Govt Loan' },
+        { key: 'skillTrained', label: 'Skill Trained' },
+        { key: 'interestedInTraining', label: 'Interested in Skill Training' },
+        { key: 'pensionReceiving', label: 'Receiving Pension' },
+        { key: 'pregnant', label: 'Pregnant' },
+        { key: 'lactating', label: 'Lactating Mother' },
         { key: 'isWidow', label: 'Widow' },
-        { key: 'pregnant', label: 'Pregnant / New Mother' },
-        { key: 'disability', label: 'Disability' },
-        { key: 'hasRationCard', label: 'Ration Card' },
-        { key: 'hasJobCard', label: 'MGNREGS Job Card' },
-        { key: 'educationLevel', label: 'Education Level' },
-        { key: 'hasEnterprise', label: 'Runs Enterprise' },
+        { key: 'disabilityPercent', label: 'Disability (%)', format: v => `${v}%` },
+        { key: 'disabilityCertificate', label: 'UDID / Disability Cert' },
+        { key: 'ownHouse', label: 'Owns Pacca House' },
+        { key: 'kutchaHouse', label: 'Lives in Kutcha House' },
+        { key: 'educationLevel', label: 'Education Qualification' },
         { key: 'seekingWork', label: 'Seeking Work' },
     ].filter(({ key }) => {
         const v = citizenProfile[key];
@@ -393,10 +410,10 @@ function ProfilePage() {
                                         <h2 className="font-body text-[15px] font-bold text-gray-900">Additional Details</h2>
                                     </div>
                                     <div className="grid grid-cols-2 gap-2">
-                                        {extraFields.map(({ key, label }) => (
-                                            <div key={key} className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-gray-50 border border-gray-100">
-                                                <span className="text-[10px] text-gray-500 font-body uppercase tracking-wider">{label}</span>
-                                                <span className="text-xs font-body font-semibold text-gray-800">{fmt(citizenProfile[key])}</span>
+                                        {extraFields.map((f) => (
+                                            <div key={f.key} className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-gray-50 border border-gray-100">
+                                                <span className="text-[10px] text-gray-500 font-body uppercase tracking-wider">{f.label}</span>
+                                                <span className="text-xs font-body font-semibold text-gray-800">{f.format ? f.format(citizenProfile[f.key]) : fmt(citizenProfile[f.key])}</span>
                                             </div>
                                         ))}
                                     </div>

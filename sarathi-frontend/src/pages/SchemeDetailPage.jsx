@@ -1,7 +1,8 @@
 import { useParams, Link } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, ExternalLink, FileText, Users, Coins, ClipboardList, Loader2, Volume2, VolumeX, Sparkles, Share2 } from 'lucide-react';
+import { ArrowLeft, ExternalLink, FileText, Users, Coins, ClipboardList, Loader2, Volume2, VolumeX, Sparkles, Share2, Info } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { fetchScheme, explainScheme } from '../utils/api';
 import { schemeMap, allSchemes } from '../data/schemesDB';
 import { useLanguage } from '../context/LanguageContext';
@@ -11,12 +12,14 @@ import { CATEGORY_STYLE, FALLBACK_STYLE, CATEGORY_LABELS_EN } from '../constants
 
 const tabsData = {
   hi: [
+    { key: 'details', label: 'विवरण', Icon: Info },
     { key: 'eligibility', label: 'पात्रता', Icon: Users },
     { key: 'benefits', label: 'लाभ', Icon: Coins },
     { key: 'apply', label: 'आवेदन कैसे करें', Icon: ClipboardList },
     { key: 'documents', label: 'दस्तावेज़', Icon: FileText },
   ],
   en: [
+    { key: 'details', label: 'Details', Icon: Info },
     { key: 'eligibility', label: 'Eligibility', Icon: Users },
     { key: 'benefits', label: 'Benefits', Icon: Coins },
     { key: 'apply', label: 'How to Apply', Icon: ClipboardList },
@@ -28,7 +31,7 @@ const categoryLabelsHi = { agriculture: 'कृषि', housing: 'आवास',
 
 function SchemeDetailPage() {
   const { schemeId } = useParams();
-  const [activeTab, setActiveTab] = useState('eligibility');
+  const [activeTab, setActiveTab] = useState('details');
   const { language } = useLanguage();
   const { addToast } = useToast();
   const isHi = language === 'hi';
@@ -160,7 +163,8 @@ function SchemeDetailPage() {
       .catch(() => addToast('Could not copy link', 'error'));
   };
   const annualBenefit = parseInt(scheme.annualBenefit || 0);
-  const eligTags = (scheme.categories || 'SC,ST,OBC,General').split(',').map(c => c.trim());
+    const tagsSource = scheme.tags || scheme.categories || "SC,ST,OBC,General";
+  const eligTags = (Array.isArray(tagsSource) ? tagsSource : (tagsSource||'').toString().split(',')).map(c => (typeof c === 'string' ? c.trim() : ''));
 
   return (
     <div className="min-h-screen bg-off-white">
@@ -216,36 +220,49 @@ function SchemeDetailPage() {
               </div>
 
               <div className="p-5 lg:p-6">
+                {/* Details tab */}
+                {activeTab === 'details' && (
+                  <div className="space-y-4">
+                    <h3 className="font-body text-lg font-bold text-gray-900">{isHi ? 'विवरण' : 'Details'}</h3>
+                    <div className="prose max-w-none font-body text-sm text-gray-700 leading-relaxed bg-off-white p-4 rounded-lg [&_ul]:list-disc [&_ul]:ml-4 [&_ol]:list-decimal [&_ol]:ml-4 [&_li]:mb-1">
+                      <ReactMarkdown>{String(scheme.descriptionMd || scheme.briefDescription || (isHi ? 'विवरण उपलब्ध नहीं है।' : 'Details not available.'))}</ReactMarkdown>
+                    </div>
+                  </div>
+                )}
+
                 {/* Eligibility tab */}
                 {activeTab === 'eligibility' && (
                   <div className="space-y-4">
                     <h3 className="font-body text-lg font-bold text-gray-900">{isHi ? 'पात्रता मापदंड' : 'Eligibility Criteria'}</h3>
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {eligTags.map((tag, i) => (
+                    <div className="flex flex-wrap gap-2 mt-3 mb-4">
+                      {eligTags.map((tag, i) => tag && (
                         <span key={i} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-success-light text-success font-body text-xs font-medium">
                           ✓ {tag}
                         </span>
                       ))}
                     </div>
-                    <div className="mt-4 p-4 bg-off-white rounded-lg space-y-2">
-                      {scheme.maxMonthlyIncome && (
-                        <p className="font-body text-sm text-gray-700">
-                          <span className="font-medium">{isHi ? 'अधिकतम मासिक आय:' : 'Max Monthly Income:'}</span> ₹{localizeNum(parseInt(scheme.maxMonthlyIncome).toLocaleString('en-IN'), language)}
-                        </p>
-                      )}
-                      {scheme.minAge && (
-                        <p className="font-body text-sm text-gray-700"><span className="font-medium">{isHi ? 'न्यूनतम आयु:' : 'Min Age:'}</span> {localizeNum(scheme.minAge, language)} {isHi ? 'वर्ष' : 'years'}</p>
-                      )}
-                      {scheme.maxAge && parseInt(scheme.maxAge) < 99 && (
-                        <p className="font-body text-sm text-gray-700"><span className="font-medium">{isHi ? 'अधिकतम आयु:' : 'Max Age:'}</span> {localizeNum(scheme.maxAge, language)} {isHi ? 'वर्ष' : 'years'}</p>
-                      )}
-                      {scheme.gender && scheme.gender !== 'any' && (
-                        <p className="font-body text-sm text-gray-700"><span className="font-medium">{isHi ? 'लिंग:' : 'Gender:'}</span> {scheme.gender === 'female' ? (isHi ? 'महिला' : 'Female') : (isHi ? 'पुरुष' : 'Male')}</p>
-                      )}
-                      <p className="font-body text-sm text-gray-700">
-                        <span className="font-medium">{isHi ? 'वर्ग:' : 'Category:'}</span> {eligTags.join(', ')}
-                      </p>
-                    </div>
+                    {scheme.eligibilityMd ? (
+                      <div className="prose max-w-none font-body text-sm text-gray-700 leading-relaxed bg-off-white p-4 rounded-lg [&_ul]:list-disc [&_ul]:ml-4 [&_ol]:list-decimal [&_ol]:ml-4 [&_li]:mb-1">
+                        <ReactMarkdown>{String(scheme.eligibilityMd)}</ReactMarkdown>
+                      </div>
+                    ) : (
+                      <div className="p-4 bg-off-white rounded-lg space-y-2">
+                        {scheme.maxMonthlyIncome && (
+                          <p className="font-body text-sm text-gray-700">
+                            <span className="font-medium">{isHi ? 'अधिकतम मासिक आय:' : 'Max Monthly Income:'}</span> ₹{localizeNum(parseInt(scheme.maxMonthlyIncome).toLocaleString('en-IN'), language)}
+                          </p>
+                        )}
+                        {scheme.minAge && (
+                          <p className="font-body text-sm text-gray-700"><span className="font-medium">{isHi ? 'न्यूनतम आयु:' : 'Min Age:'}</span> {localizeNum(scheme.minAge, language)} {isHi ? 'वर्ष' : 'years'}</p>
+                        )}
+                        {scheme.maxAge && parseInt(scheme.maxAge) < 99 && (
+                          <p className="font-body text-sm text-gray-700"><span className="font-medium">{isHi ? 'अधिकतम आयु:' : 'Max Age:'}</span> {localizeNum(scheme.maxAge, language)} {isHi ? 'वर्ष' : 'years'}</p>
+                        )}
+                        {scheme.gender && scheme.gender !== 'any' && (
+                          <p className="font-body text-sm text-gray-700"><span className="font-medium">{isHi ? 'लिंग:' : 'Gender:'}</span> {scheme.gender === 'female' ? (isHi ? 'महिला' : 'Female') : (isHi ? 'पुरुष' : 'Male')}</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -253,23 +270,31 @@ function SchemeDetailPage() {
                 {activeTab === 'benefits' && (
                   <div className="space-y-4">
                     <h3 className="font-body text-lg font-bold text-gray-900">{isHi ? 'लाभ विवरण' : 'Benefit Details'}</h3>
-                    <div className="mt-4 p-4 bg-saffron-pale rounded-lg text-center">
-                      <p className="font-body text-sm text-gray-600">{isHi ? 'अनुमानित वार्षिक लाभ' : 'Estimated Annual Benefit'}</p>
-                      <p className="font-mono text-[32px] font-bold text-saffron">
-                        ₹{localizeNum(
-                          annualBenefit >= 100000
-                            ? `${(annualBenefit / 100000).toFixed(annualBenefit % 100000 === 0 ? 0 : 1)}${isHi ? 'लाख' : 'L'}`
-                            : annualBenefit.toLocaleString('en-IN'),
-                          language
-                        )}
-                      </p>
-                    </div>
-                    {scheme.benefitType && (
-                      <div className="p-4 bg-off-white rounded-lg">
-                        <p className="font-body text-sm text-gray-700">
-                          <span className="font-medium">{isHi ? 'लाभ का प्रकार:' : 'Benefit Type:'}</span> {scheme.benefitType}
+                    {annualBenefit > 0 && (
+                      <div className="mt-4 p-4 bg-saffron-pale rounded-lg text-center">
+                        <p className="font-body text-sm text-gray-600">{isHi ? 'अनुमानित वार्षिक लाभ' : 'Estimated Annual Benefit'}</p>
+                        <p className="font-mono text-[32px] font-bold text-saffron">
+                          ₹{localizeNum(
+                            annualBenefit >= 100000
+                              ? `${(annualBenefit / 100000).toFixed(annualBenefit % 100000 === 0 ? 0 : 1)}${isHi ? 'लाख' : 'L'}`
+                              : annualBenefit.toLocaleString('en-IN'),
+                            language
+                          )}
                         </p>
                       </div>
+                    )}
+                    {scheme.benefitsMd ? (
+                      <div className="prose max-w-none font-body text-sm text-gray-700 leading-relaxed bg-off-white p-4 rounded-lg mt-4 [&_ul]:list-disc [&_ul]:ml-4 [&_ol]:list-decimal [&_ol]:ml-4 [&_li]:mb-1">
+                        <ReactMarkdown>{String(scheme.benefitsMd)}</ReactMarkdown>
+                      </div>
+                    ) : (
+                      scheme.benefitType && (
+                        <div className="p-4 bg-off-white rounded-lg mt-4">
+                          <p className="font-body text-sm text-gray-700">
+                            <span className="font-medium">{isHi ? 'लाभ का प्रकार:' : 'Benefit Type:'}</span> {scheme.benefitType}
+                          </p>
+                        </div>
+                      )
                     )}
                   </div>
                 )}
@@ -278,14 +303,18 @@ function SchemeDetailPage() {
                 {activeTab === 'apply' && (
                   <div className="space-y-4">
                     <h3 className="font-body text-lg font-bold text-gray-900">{isHi ? 'आवेदन कैसे करें' : 'How to Apply'}</h3>
-                    <div className="p-4 bg-off-white rounded-lg">
-                      <p className="font-body text-sm text-gray-700 leading-relaxed">
-                        {isHi ? 'आधिकारिक पोर्टल पर जाकर ऑनलाइन आवेदन करें।' : 'Visit the official portal to apply online.'}
-                      </p>
+                    <div className="prose max-w-none font-body text-sm text-gray-700 bg-off-white p-4 rounded-lg leading-relaxed [&_ul]:list-disc [&_ul]:ml-4 [&_ol]:list-decimal [&_ol]:ml-4 [&_li]:mb-1">
+                      {scheme.howToApply ? (
+                         <ReactMarkdown>{typeof scheme.howToApply === 'string' ? scheme.howToApply : (Array.isArray(scheme.howToApply) ? scheme.howToApply.join('\\n') : JSON.stringify(scheme.howToApply))}</ReactMarkdown>
+                      ) : (
+                         <p>{isHi ? 'आधिकारिक पोर्टल पर जाकर ऑनलाइन आवेदन करें।' : 'Visit the official portal to apply online.'}</p>
+                      )}
                     </div>
-                    <Link to={`/apply/${schemeId}`} className="inline-flex items-center gap-2 mt-4 h-10 px-5 rounded-lg bg-saffron text-white font-body text-sm font-medium hover:bg-saffron-light transition-colors">
-                      {isHi ? 'आवेदन करें' : 'Apply Now'} <ExternalLink size={14} />
-                    </Link>
+                    {scheme.applyUrl && (
+                      <a href={scheme.applyUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 mt-4 h-10 px-5 rounded-lg bg-saffron text-white font-body text-sm font-medium hover:bg-saffron-light transition-colors">
+                        {isHi ? 'आवेदन करें' : 'Apply Now'} <ExternalLink size={14} />
+                      </a>
+                    )}
                   </div>
                 )}
 
@@ -293,18 +322,24 @@ function SchemeDetailPage() {
                 {activeTab === 'documents' && (
                   <div className="space-y-4">
                     <h3 className="font-body text-lg font-bold text-gray-900">{isHi ? 'आवश्यक दस्तावेज़' : 'Required Documents'}</h3>
-                    <div className="space-y-2">
-                      {(isHi
-                        ? (scheme.documentsRequired || [])
-                        : (scheme.documentsRequiredEn || scheme.documentsRequired || [])
-                      ).map((doc, i) => (
-                        <div key={i} className="flex items-center gap-3 p-3 bg-off-white rounded-lg">
-                          <div className="w-8 h-8 rounded-lg bg-navy/10 flex items-center justify-center shrink-0">
-                            <FileText size={14} className="text-navy" />
-                          </div>
-                          <p className="font-body text-sm text-gray-700 font-medium">{doc}</p>
+                    <div className="prose max-w-none font-body text-sm text-gray-700 bg-off-white p-4 rounded-lg [&_ul]:list-disc [&_ul]:ml-4 [&_ol]:list-decimal [&_ol]:ml-4 [&_li]:mb-1">
+                      {scheme.documentsRequired && typeof scheme.documentsRequired === 'string' ? (
+                         <ReactMarkdown>{scheme.documentsRequired}</ReactMarkdown>
+                      ) : (
+                        <div className="space-y-2">
+                          {(isHi
+                            ? (scheme.documentsRequired || [])
+                            : (scheme.documentsRequiredEn || scheme.documentsRequired || [])
+                          ).map((doc, i) => (
+                            <div key={i} className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-navy/10 flex items-center justify-center shrink-0">
+                                <FileText size={14} className="text-navy" />
+                              </div>
+                              <p className="font-medium font-body text-sm text-gray-700">{typeof doc === 'string' ? doc : JSON.stringify(doc)}</p>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
                     </div>
                   </div>
                 )}

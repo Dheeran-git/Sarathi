@@ -13,7 +13,7 @@ if (!BASE_URL) {
 const api = axios.create({
   baseURL: BASE_URL || '',
   headers: { 'Content-Type': 'application/json' },
-  timeout: 15000,
+  timeout: 30000,
 });
 
 // Request interceptor — send ID Token (required by Cognito User Pool authorizer)
@@ -131,6 +131,12 @@ export async function claimPanchayat(payload) {
   return unwrapBody(await api.post('/panchayat/claim', payload));
 }
 
+/** GET /panchayat/check-role — check if panchayatId + role combo is already taken */
+export async function checkPanchayatRole(panchayatId, role) {
+  if (!panchayatId || !role) return { available: true };
+  return unwrapBody(await api.get(`/panchayat/check-role?panchayatId=${encodeURIComponent(panchayatId)}&role=${encodeURIComponent(role)}`));
+}
+
 /** GET /panchayat/{id}/profile */
 export async function getPanchayatProfile(panchayatId) {
   if (!panchayatId) throw new Error('panchayatId is required');
@@ -189,7 +195,11 @@ export async function updateScheme(schemeId, schemeData) {
 
 /** POST /explain */
 export async function explainScheme(scheme) {
-  return unwrapBody(await api.post('/explain', { scheme }));
+  return unwrapBody(await api.post('/explain', {
+    schemeId: scheme.schemeId || scheme.id,
+    schemeName: scheme.nameEnglish || scheme.name || '',
+    description: scheme.descriptionMd || scheme.briefDescription || ''
+  }));
 }
 
 /** POST /notify */
@@ -204,7 +214,7 @@ export async function sendToLex(message, sessionId = 'default', locale = 'en_US'
 
 /** POST /agent */
 export async function invokeAgent(prompt, sessionId, citizenId) {
-  return unwrapBody(await api.post('/agent', { prompt, sessionId, citizenId }));
+  return unwrapBody(await api.post('/agent', { message: prompt, sessionId, citizenId }));
 }
 
 export default api;

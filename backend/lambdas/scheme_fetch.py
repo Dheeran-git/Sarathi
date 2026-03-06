@@ -36,6 +36,24 @@ def lambda_handler(event, context):
             # Filter for Published schemes only for public endpoint
             items = [item for item in items if item.get('status') == 'Published']
             
+            # Return lightweight data for listing (full details via individual fetch)
+            listing = []
+            for item in items:
+                listing.append({
+                    'schemeId': item.get('schemeId', ''),
+                    'nameEnglish': item.get('nameEnglish', ''),
+                    'shortTitle': item.get('shortTitle', ''),
+                    'level': item.get('level', ''),
+                    'type': item.get('type', ''),
+                    'state': item.get('state', []),
+                    'ministry': item.get('ministry', ''),
+                    'categories': item.get('categories', []),
+                    'tags': item.get('tags', []),
+                    'briefDescription': str(item.get('briefDescription', ''))[:200],
+                    'applyUrl': item.get('applyUrl', ''),
+                    'annualBenefit': item.get('annualBenefit', 0),
+                })
+            
             return {
                 'statusCode': 200,
                 'headers': {
@@ -44,7 +62,7 @@ def lambda_handler(event, context):
                     'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS',
                     'Content-Type': 'application/json'
                 },
-                'body': json.dumps(items, cls=DecimalEncoder)
+                'body': json.dumps(listing, cls=DecimalEncoder)
             }
 
         response = table.get_item(Key={ 'schemeId': scheme_id })

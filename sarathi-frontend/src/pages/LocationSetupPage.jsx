@@ -103,14 +103,18 @@ export default function LocationSetupPage() {
             pCode = '614744';
         }
 
+        const pIdRaw = pCode
+            ? pCode
+            : `${slugify(selectedVillage.name)}-${slugify(selectedDistrict)}-${slugify(selectedState)}`;
+            
+        const finalPanchayatId = /^\d+$/.test(pIdRaw) ? `LGD_${pIdRaw}` : pIdRaw;
+
         const locationData = {
             state: selectedState, district: selectedDistrict, block: selectedBlock,
             village: selectedVillage.name, villageCode: selectedVillage.code,
             panchayatCode: pCode,
             panchayatName: selectedVillage.panchayatName || '',
-            panchayatId: pCode
-                ? pCode
-                : `${slugify(selectedVillage.name)}-${slugify(selectedDistrict)}-${slugify(selectedState)}`,
+            panchayatId: finalPanchayatId,
         };
         updateProfile(locationData);
         try {

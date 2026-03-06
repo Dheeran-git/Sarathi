@@ -64,9 +64,16 @@ function ApplyPage() {
         );
     }
 
-    const docList = isHi
+    const rawDocs = isHi
         ? (scheme.documentsRequired || [])
         : (scheme.documentsRequiredEn || scheme.documentsRequired || []);
+
+    // Kaggle dataset may store docs as a Markdown string — normalize to array
+    const docList = Array.isArray(rawDocs)
+        ? rawDocs
+        : typeof rawDocs === 'string'
+            ? rawDocs.split(/\n|\\n/).map(d => d.replace(/^[\s\-*•\d.]+/, '').trim()).filter(Boolean)
+            : [];
 
     const handleDocToggle = (i) => {
         setCheckedDocs((prev) => ({ ...prev, [i]: !prev[i] }));

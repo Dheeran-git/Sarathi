@@ -41,6 +41,15 @@ def to_bool(val):
     return str(val).lower().strip() in ('true', '1', 'yes')
 
 
+def _normalize_pid(pid):
+    """Ensure panchayatId has the LGD_ prefix if it's numeric."""
+    if not pid: return 'unassigned'
+    p = str(pid).strip()
+    if p.isdigit() and not p.startswith('LGD_'):
+        return f"LGD_{p}"
+    return p
+
+
 def lambda_handler(event, context):
     http_method = event.get('httpMethod', 'POST')
     path_params = event.get('pathParameters') or {}
@@ -126,7 +135,7 @@ def lambda_handler(event, context):
             'villageCode': body.get('villageCode', '').strip() if body.get('villageCode') else '',
             'panchayatCode': body.get('panchayatCode', '').strip() if body.get('panchayatCode') else '',
             'panchayatName': body.get('panchayatName', '').strip() if body.get('panchayatName') else '',
-            'panchayatId': (body.get('panchayatId') or body.get('panchayatCode') or '').strip() or 'unassigned',
+            'panchayatId': _normalize_pid(body.get('panchayatId') or body.get('panchayatCode')),
 
             # Scheme data
             'matchedSchemes': convert_to_dynamodb(body.get('matchedSchemes', [])),

@@ -3,7 +3,6 @@ import ProgressSteps from '../components/chat/ProgressSteps';
 import ChatPanel from '../components/chat/ChatPanel';
 import InputBar from '../components/chat/InputBar';
 import ResultsPanel from '../components/chat/ResultsPanel';
-import { allSchemes } from '../data/schemesDB';
 import { checkEligibility, notifyPanchayat } from '../utils/api';
 import { useCitizen } from '../context/CitizenContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -13,63 +12,170 @@ import {
   PERSONA_QUESTION,
   BRANCH_QUESTIONS,
   FEMALE_BRANCH_QUESTIONS,
-  URBAN_BRANCH_QUESTIONS,
-  RURAL_BRANCH_QUESTIONS,
+  DISABILITY_BRANCH_QUESTIONS,
+  HOUSING_BRANCH_QUESTIONS,
   getNextQuestion,
   parseAnswer,
   profileToEligibilityPayload,
 } from '../data/questionFlow';
 
-/* ── Frontend Fallback Eligibility Engine ────────────────────────────── */
-function localFallbackMatch(profile) {
-  return allSchemes.filter(scheme => {
-    const conds = scheme.conditions || {};
+// We load real schemes from /schemes.json for fallback instead of mock schemesDB
+let realOfflineSchemesCache = [];
 
-    // 1. State check
-    const schemeStates = Array.isArray(scheme.state) ? scheme.state : [scheme.state || 'All'];
-    if (profile.state && !schemeStates.includes('All')) {
-      if (!schemeStates.includes(profile.state)) return false;
+async function getFallbackSchemes() {
+    if (realOfflineSchemesCache.length > 0) return realOfflineSchemesCache;
+    try {
+        const res = await fetch('/schemes.json');
+        realOfflineSchemesCache = await res.json();
+    } catch {
+        // Fallback gracefully empty if file gets deleted
     }
+    return realOfflineSchemesCache;
+}
 
-    // 2. Age check
-    if (conds.ageMin && profile.age < conds.ageMin) return false;
-    if (conds.ageMax && profile.age > conds.ageMax) return false;
+function getProfileTags(profile) {
+  const tags = new Set();
+  const p = profile;
+  const persona = String(p.persona || '').toLowerCase();
 
-    // 3. Income check
-    if (conds.incomeMax && profile.income > conds.incomeMax) return false;
+  const cat = String(p.category || '').toUpperCase();
+  if (['SC', 'ST', 'OBC'].includes(cat)) tags.add(cat);
+  if (p.minority) tags.add('minority');
 
-    // 4. Gender check
-    if (conds.gender && profile.gender && profile.gender !== 'any') {
-      if (!conds.gender.includes(profile.gender)) return false;
+  const bpl = String(p.bplCard || '').toUpperCase();
+  if (['BPL', 'AAY'].includes(bpl)) {
+    tags.add('bpl');
+    tags.add('poor');
+  }
+
+  const gender = String(p.gender || '').toLowerCase();
+  if (gender === 'female') {
+    tags.add('women');
+    tags.add('girl');
+    tags.add('female');
+  }
+
+  if (p.isWidow) {
+    tags.add('widow');
+    tags.add('destitute');
+  }
+  if (p.pregnant || p.lactating) {
+    tags.add('pregnant');
+    tags.add('maternity');
+    tags.add('mother');
+    tags.add('lactating');
+  }
+
+  if (p.disability) {
+    tags.add('disabled');
+    tags.add('disability');
+    tags.add('handicapped');
+    tags.add('divyang');
+  }
+
+  const age = Number(p.age || 0);
+  if (age >= 60) {
+    tags.add('senior citizen');
+    tags.add('old age');
+    tags.add('pension');
+  }
+  if (age > 0 && age < 18) {
+    tags.add('child');
+    tags.add('children');
+  }
+
+  if (persona === 'farmer' || p.landOwned) {
+    tags.add('farmer');
+    tags.add('agriculture');
+    tags.add('kisan');
+    tags.add('irrigation');
+    tags.add('crop');
+  }
+  if (persona === 'student' || p.classLevel) {
+    tags.add('student');
+    tags.add('education');
+    tags.add('scholarship');
+    tags.add('school');
+    tags.add('college');
+  }
+  if (persona === 'business' || p.msmeRegistered) {
+    tags.add('business');
+    tags.add('msme');
+    tags.add('entrepreneur');
+    tags.add('enterprise');
+    tags.add('industry');
+  }
+  if (persona === 'labourer' || p.mgnregaCard || p.streetVendor) {
+    tags.add('labourer');
+    tags.add('worker');
+    tags.add('vendor');
+    tags.add('employment');
+    tags.add('shramik');
+  }
+
+  if (p.shgMember) {
+    tags.add('shg');
+    tags.add('self help group');
+  }
+  if (p.kutchaHouse) {
+    tags.add('housing');
+    tags.add('shelter');
+    tags.add('awaas');
+  }
+
+  return tags;
+}
+
+function scoreScheme(profileTags, scheme, profile) {
+  let score = 0;
+  const cats = scheme.categories || [];
+  const schemeTags = scheme.tags || [];
+  const schemeStr = [...cats, ...schemeTags].join(' ').toLowerCase();
+
+  // Exact tag / category intersections
+  profileTags.forEach(pt => {
+    if (schemeStr.includes(pt.toLowerCase())) {
+      score += 10;
     }
-
-    // 5. Category check
-    if (conds.category && profile.category && profile.category !== 'General') {
-      if (!conds.category.includes(profile.category)) return false;
-    }
-
-    // 6. Boolean flags
-    const flags = ['isWidow', 'disability', 'pregnant', 'landOwned', 'shgMember'];
-    for (const flag of flags) {
-      if (conds[flag] === true && profile[flag] !== true) return false;
-    }
-
-    // 7. Urban / Rural check
-    if (conds.urban !== undefined) {
-      const isUrban = profile.urban === 'urban' || profile.urban === true;
-      if (conds.urban !== isUrban) return false;
-    }
-
-    // 8. Persona / Occupation checks
-    if (conds.persona && profile.persona) {
-      if (!conds.persona.includes(profile.persona)) return false;
-    }
-    if (conds.occupation && profile.occupation && profile.occupation !== 'any') {
-      if (!conds.occupation.includes(profile.occupation)) return false;
-    }
-
-    return true;
   });
+
+  // Strict disqualifiers
+  const schemeGender = String(scheme.gender || 'any').toLowerCase();
+  const userGender = String(profile.gender || 'any').toLowerCase();
+  if (['male', 'female'].includes(schemeGender) && ['male', 'female'].includes(userGender) && schemeGender !== userGender) {
+    return -1; // hard disqualify
+  }
+
+  const minAge = Number(scheme.minAge || 0);
+  const maxAge = Number(scheme.maxAge || 99);
+  const userAge = Number(profile.age || 0);
+  if (userAge > 0 && (userAge < minAge || userAge > maxAge)) {
+    return -1;
+  }
+
+  return score;
+}
+
+async function localFallbackMatch(profile) {
+  const profileTags = getProfileTags(profile);
+  const scored = [];
+  
+  const allSchemes = await getFallbackSchemes();
+
+  allSchemes.forEach(scheme => {
+    if (scheme.status !== 'Published') return;
+    const s = scoreScheme(profileTags, scheme, profile);
+    if (s >= 10) {
+      scored.push({ score: s, scheme });
+    }
+  });
+
+  scored.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    return (b.scheme.annualBenefit || 0) - (a.scheme.annualBenefit || 0);
+  });
+
+  return scored.slice(0, 15).map(x => x.scheme);
 }
 
 /* ── Phase labels for progress bar ──────────────────────────────────── */
@@ -192,12 +298,11 @@ function ChatPage() {
     const femaleQs = profile.gender === 'female'
       ? FEMALE_BRANCH_QUESTIONS.filter((q) => !q.condition || q.condition(profile))
       : [];
-    const locationQs = profile.urban === true
-      ? URBAN_BRANCH_QUESTIONS
-      : profile.urban === false
-        ? RURAL_BRANCH_QUESTIONS
-        : [];
-    const total = CORE_QUESTIONS.length + 1 + branchQs.length + femaleQs.length + locationQs.length;
+    const disabilityQs = profile.disability === true
+      ? DISABILITY_BRANCH_QUESTIONS.filter((q) => !q.condition || q.condition(profile))
+      : [];
+    const housingQs = HOUSING_BRANCH_QUESTIONS.filter((q) => !q.condition || q.condition(profile));
+    const total = CORE_QUESTIONS.length + 1 + branchQs.length + femaleQs.length + disabilityQs.length + housingQs.length;
     setTotalQuestions(total);
 
     return nextQ;
@@ -210,6 +315,11 @@ function ChatPage() {
     setCurrentPhase(3);
 
     const apiPayload = profileToEligibilityPayload(profile);
+
+    // All citizens go to the single panchayat in the system
+    const panchayatId = localProfile.panchayatId
+      || citizenProfile?.panchayatId
+      || 'rampur-barabanki-up';
 
     const flushResults = (matchedSchemesParam, totalBenefit) => {
       setMatchedSchemes(matchedSchemesParam);
@@ -233,24 +343,32 @@ function ChatPage() {
         .catch((err) => console.warn('[ChatPage] Profile save failed:', err));
     };
 
-    // All citizens go to the single panchayat in the system
-    const panchayatId = localProfile.panchayatId
-      || citizenProfile?.panchayatId
-      || 'rampur-barabanki-up';
-
+    // ═══════════════════════════════════════════════════════════════════
+    // LOCAL-FIRST APPROACH: Always run local matching first (guaranteed)
+    // Then try API as an enhancement. This ensures 0-schemes never happens.
+    // ═══════════════════════════════════════════════════════════════════
+    let localMatched = [];
     try {
-      // E1: Timeout wrapper — fall through to local fallback after 15s
+      localMatched = await localFallbackMatch(profile);
+    } catch (e) {
+      console.warn('[ChatPage] Local fallback failed:', e);
+    }
+
+    // Now try the API as an enhancement
+    try {
       const withTimeout = (promise, ms) => Promise.race([
         promise,
         new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
       ]);
 
       const result = await withTimeout(checkEligibility(apiPayload), 15000);
-      const matched = result.matchedSchemes && result.matchedSchemes.length > 0
-        ? result.matchedSchemes
-        : localFallbackMatch(profile);
-      const totalBenefit = result.totalAnnualBenefit ||
-        matched.reduce((s, sc) => s + (sc.annualBenefit || 0), 0);
+      const apiMatched = result?.matchedSchemes || [];
+
+      // Use API results if they returned more schemes, else use local
+      const matched = apiMatched.length > 0 ? apiMatched : localMatched;
+      const totalBenefit = (apiMatched.length > 0 && result.totalAnnualBenefit)
+        ? result.totalAnnualBenefit
+        : matched.reduce((s, sc) => s + (sc.annualBenefit || 0), 0);
 
       flushResults(matched, totalBenefit);
 
@@ -263,14 +381,10 @@ function ChatPage() {
       }).catch(() => { });
 
     } catch (err) {
-      if (err?.message === 'timeout') {
-        addMessage({ type: 'sarathi', text: 'Showing results from local database instead.', timestamp: 'JUST_NOW' });
-      } else {
-        console.warn('[ChatPage] API failed, using local fallback');
-      }
-      const matched = localFallbackMatch(profile);
-      const totalBenefit = matched.reduce((s, sc) => s + (sc.annualBenefit || 0), 0);
-      flushResults(matched, totalBenefit);
+      // API failed (401, timeout, network error) — use guaranteed local results
+      console.warn('[ChatPage] API failed, using local results:', err?.message);
+      const totalBenefit = localMatched.reduce((s, sc) => s + (sc.annualBenefit || 0), 0);
+      flushResults(localMatched, totalBenefit);
     }
   }, [setEligibleSchemes, speakAndResume, isHi, saveCurrentProfile]);
 

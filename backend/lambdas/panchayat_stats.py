@@ -19,6 +19,7 @@ REGION = os.environ.get('AWS_REGION', 'us-east-1')
 dynamodb = boto3.resource('dynamodb', region_name=REGION)
 citizens_table = dynamodb.Table('SarathiCitizens')
 panchayats_table = dynamodb.Table('SarathiPanchayats')
+apps_table = dynamodb.Table('SarathiApplications')
 
 class DecimalEncoder(json.JSONEncoder):
     def default(self, o):
@@ -40,15 +41,24 @@ def get_panchayat_id(event):
     """Extract panchayatId: JWT first, then path param. No hardcoded default."""
     # 1. Try JWT claims
     claims = (event.get('requestContext', {}).get('authorizer', {}).get('claims') or {})
+    
+    # Priority A: Check for lgdCode (most reliable for legacy mapping)
+    lgd = claims.get('custom:lgdCode', '').strip()
+    if lgd == '614744': return 'LGD_614744'
+    if lgd: return f"LGD_{lgd}"
+
+    # Priority B: Check for panchayatId
     jwt_pid = claims.get('custom:panchayatId', '').strip()
+    if jwt_pid == '219293': return 'LGD_614744'
     if jwt_pid:
-        return jwt_pid
+        return _normalize_pid(jwt_pid)
 
     # 2. Try path parameter
     path_params = event.get('pathParameters') or {}
     path_pid = path_params.get('panchayatId', '').strip()
+    if path_pid == '219293': return 'LGD_614744'
     if path_pid:
-        return path_pid
+        return _normalize_pid(path_pid)
 
     return None
 
@@ -122,22 +132,109 @@ def lambda_handler(event, context):
                 'body': json.dumps({'error': 'No panchayatId found. Please log in with a panchayat account.'}),
             }
 
-        # Query citizens via GSI
-        citizens = []
-        response = citizens_table.query(
-            IndexName='panchayatId-updatedAt-index',
-            KeyConditionExpression=Key('panchayatId').eq(panchayat_id),
-            ScanIndexForward=False,
-        )
-        citizens.extend(response.get('Items', []))
-        while 'LastEvaluatedKey' in response:
+        # Helper to fetch all pages for a given panchayat ID
+        def fetch_citizens_for_pid(pid):
+            items = []
             response = citizens_table.query(
                 IndexName='panchayatId-updatedAt-index',
-                KeyConditionExpression=Key('panchayatId').eq(panchayat_id),
+                KeyConditionExpression=Key('panchayatId').eq(pid),
                 ScanIndexForward=False,
-                ExclusiveStartKey=response['LastEvaluatedKey'],
             )
-            citizens.extend(response.get('Items', []))
+            items.extend(response.get('Items', []))
+            while 'LastEvaluatedKey' in response:
+                response = citizens_table.query(
+                    IndexName='panchayatId-updatedAt-index',
+                    KeyConditionExpression=Key('panchayatId').eq(pid),
+                    ScanIndexForward=False,
+                    ExclusiveStartKey=response['LastEvaluatedKey'],
+                )
+                items.extend(response.get('Items', []))
+            return items
+
+        # Query citizens via GSI (Dual Query for backward compatibility)
+        citizens = fetch_citizens_for_pid(panchayat_id)
+        
+        # If the ID has an LGD_ prefix, also try finding the legacy bare number
+        legacy_pid = panchayat_id.replace('LGD_', '') if panchayat_id.startswith('LGD_') else None
+        if legacy_pid and legacy_pid != panchayat_id and legacy_pid.isdigit():
+            legacy_citizens = fetch_citizens_for_pid(legacy_pid)
+            
+            # Combine them, ensuring no duplication by citizenId
+            seen_ids = {c.get('citizenId') for c in citizens if c.get('citizenId')}
+            for lc in legacy_citizens:
+                cid = lc.get('citizenId')
+                if cid and cid not in seen_ids:
+                    citizens.append(lc)
+                    seen_ids.add(cid)
+
+        # Build citizen map for name lookups
+        citizen_map = {c['citizenId']: c.get('name', 'Unknown Citizen') for c in citizens if 'citizenId' in c}
+        citizen_ids = list(citizen_map.keys())
+
+        # FETCH APPLICATIONS FOR ALL IDENTIFIED CITIZENS
+        # This ensures we get all applications from "our" citizens even if they tagged with a different GP ID
+        applications = []
+        app_ids_seen = set()
+
+        def fetch_apps_for_citizen(cid):
+            try:
+                resp = apps_table.query(
+                    IndexName='citizenId-createdAt-index',
+                    KeyConditionExpression=Key('citizenId').eq(cid),
+                    ScanIndexForward=False,
+                    Limit=20
+                )
+                return resp.get('Items', [])
+            except Exception as e:
+                print(f"[WARN] Failed to fetch apps for citizen {cid}: {e}")
+                return []
+
+        # For performance in a demo, we'll fetch apps for the first 100 citizens
+        # In a real system, we'd use a more efficient way or a proper search index
+        for cid in citizen_ids[:100]:
+            citizen_apps = fetch_apps_for_citizen(cid)
+            for app in citizen_apps:
+                aid = app.get('applicationId')
+                if aid and aid not in app_ids_seen:
+                    # Inject citizen name since we have it
+                    app['citizenName'] = citizen_map.get(cid)
+                    applications.append(app)
+                    app_ids_seen.add(aid)
+
+        # Also fetch by panchayat_id directly as a fallback for citizens not in our registry
+        def fetch_apps_by_pid(pid):
+            try:
+                resp = apps_table.query(
+                    IndexName='panchayatId-createdAt-index',
+                    KeyConditionExpression=Key('panchayatId').eq(pid),
+                    ScanIndexForward=False,
+                    Limit=50
+                )
+                return resp.get('Items', [])
+            except:
+                return []
+
+        extra_apps = fetch_apps_by_pid(panchayat_id)
+        if legacy_pid:
+            extra_apps.extend(fetch_apps_by_pid(legacy_pid))
+
+        for app in extra_apps:
+            aid = app.get('applicationId')
+            cid = app.get('citizenId')
+            if aid and aid not in app_ids_seen:
+                # If citizen is in our map, use that name
+                if cid in citizen_map:
+                    app['citizenName'] = citizen_map.get(cid)
+                else:
+                    # Fallback to name in personalDetails or generic
+                    app['citizenName'] = app.get('personalDetails', {}).get('name', 'Resident')
+                
+                applications.append(app)
+                app_ids_seen.add(aid)
+
+        # Sort all combined applications
+        applications.sort(key=lambda x: x.get('createdAt', ''), reverse=True)
+        applications = applications[:100]
 
         # Count by status
         enrolled = [c for c in citizens if c.get('status') == 'enrolled']
@@ -196,6 +293,7 @@ def lambda_handler(event, context):
                 'performanceScore': performance_score,
                 'welfareGapAmount': welfare_gap,
                 'households': citizens,
+                'applications': applications,
                 'alerts': alerts,
             }, cls=DecimalEncoder),
         }

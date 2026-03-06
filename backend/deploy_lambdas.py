@@ -19,6 +19,7 @@ LAMBDAS = {
     'sarathi-invoke-agent': 'invoke_bedrock_agent.py',
     'sarathi-admin-schemes': 'admin_schemes.py',
     'sarathi-panchayat-onboarding': 'panchayat_onboarding.py',
+    'sarathi-agent-invoke': 'agent_invoke.py',
 }
 
 # Extra files to bundle alongside specific lambdas
