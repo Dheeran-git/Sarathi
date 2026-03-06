@@ -16,10 +16,17 @@ const api = axios.create({
   timeout: 15000,
 });
 
-// Request interceptor — send ID Token (required by Cognito User Pool authorizer)
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('panchayatIdToken') || localStorage.getItem('idToken');
-  if (token) config.headers['Authorization'] = token;
+  const userType = localStorage.getItem('userType');
+
+  let token = null;
+  if (userType === 'panchayat') token = localStorage.getItem('panchayatIdToken');
+  else if (userType === 'admin') token = localStorage.getItem('adminIdToken');
+  else token = localStorage.getItem('idToken');
+
+  const finalToken = token || localStorage.getItem('adminIdToken') || localStorage.getItem('panchayatIdToken') || localStorage.getItem('idToken');
+
+  if (finalToken) config.headers['Authorization'] = finalToken;
   return config;
 });
 
@@ -47,12 +54,18 @@ api.interceptors.response.use(
       localStorage.removeItem('panchayatAccessToken');
       localStorage.removeItem('panchayatIdToken');
       localStorage.removeItem('panchayatRefreshToken');
+      localStorage.removeItem('adminAccessToken');
+      localStorage.removeItem('adminIdToken');
+      localStorage.removeItem('adminRefreshToken');
       localStorage.removeItem('accessToken');
       localStorage.removeItem('idToken');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('userType');
       localStorage.removeItem('userEmail');
-      window.location.href = userType === 'panchayat' ? '/panchayat/login' : '/citizen/login';
+
+      if (userType === 'panchayat') window.location.href = '/panchayat/login';
+      else if (userType === 'admin') window.location.href = '/admin/login';
+      else window.location.href = '/citizen/login';
     }
     return Promise.reject(err);
   }
@@ -61,6 +74,14 @@ api.interceptors.response.use(
 // B4: Unified body unwrapper — handles both proxied and direct Lambda responses
 function unwrapBody(res) {
   const data = res.data;
+
+  // If the Lambda returned a 200 response with a nested statusCode (Proxy integration wrapper)
+  if (data && typeof data.statusCode === 'number' && data.statusCode >= 400) {
+    const error = new Error(data.body ? (typeof data.body === 'string' ? JSON.parse(data.body).error || data.body : data.body.error) : 'API Error');
+    error.response = { status: data.statusCode, data: data };
+    throw error;
+  }
+
   if (data && typeof data.body === 'string') {
     try { return JSON.parse(data.body); } catch { return data; }
   }
@@ -116,14 +137,25 @@ export async function submitApplication(payload) {
   return unwrapBody(await api.post('/apply', payload));
 }
 
-/** GET /applications/{userId} — list citizen's applications */
+/** GET /applications/{userId} — list applications (citizen or 'all' for admin) */
 export async function getApplications(userId) {
-  return unwrapBody(await api.get(`/applications/${userId}`));
+  const endpoint = userId === 'all' ? '/applications/all' : `/applications/${userId}`;
+  return unwrapBody(await api.get(endpoint));
 }
 
-/** PATCH /apply/{applicationId} — update application status */
+/** POST /apply/{applicationId} — update application status (using POST for better compatibility) */
 export async function updateApplicationStatus(applicationId, status) {
-  return unwrapBody(await api.patch(`/apply/${applicationId}`, { status }));
+  return unwrapBody(await api.post(`/apply/${applicationId}`, { status }));
+}
+
+/** POST /scheme — create a new scheme (Admin) */
+export async function createScheme(schemeData) {
+  return unwrapBody(await api.post('/scheme', schemeData));
+}
+
+/** PUT /scheme/{id} — update an existing scheme (Admin) */
+export async function updateScheme(schemeId, schemeData) {
+  return unwrapBody(await api.put(`/scheme/${schemeId}`, schemeData));
 }
 
 /* ── AI / Polly services ──────────────────────────────────────────────── */
@@ -141,6 +173,11 @@ export async function notifyPanchayat(notificationData) {
 /** POST /lex */
 export async function sendToLex(message, sessionId = 'default', locale = 'en_US') {
   return unwrapBody(await api.post('/lex', { message, sessionId, locale }));
+}
+
+/** POST /agent */
+export async function invokeAgent(prompt, sessionId, citizenId) {
+  return unwrapBody(await api.post('/agent', { prompt, sessionId, citizenId }));
 }
 
 export default api;

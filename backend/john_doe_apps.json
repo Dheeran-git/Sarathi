@@ -1,0 +1,170 @@
+[
+  {
+    "citizenId": {
+      "S": "tentanms2006@gmail.com"
+    },
+    "updatedAt": {
+      "S": "2026-03-06T05:06:41Z"
+    },
+    "status": {
+      "S": "submitted"
+    },
+    "createdAt": {
+      "S": "2026-03-06T05:06:41Z"
+    },
+    "appliedDate": {
+      "S": "2026-03-06T05:06:41Z"
+    },
+    "schemeName": {
+      "S": "Unknown Scheme"
+    },
+    "personalDetails": {
+      "M": {
+        "name": {
+          "S": "John Doe"
+        },
+        "aadhaarLast4": {
+          "S": "1234"
+        },
+        "mobile": {
+          "S": "9876543210"
+        },
+        "bankAccountLast4": {
+          "S": "5555"
+        }
+      }
+    },
+    "schemeId": {
+      "S": "test6"
+    },
+    "applicationId": {
+      "S": "APP-1f383c44"
+    }
+  },
+  {
+    "citizenId": {
+      "S": "tentanms2006@gmail.com"
+    },
+    "updatedAt": {
+      "S": "2026-03-06T05:07:37Z"
+    },
+    "status": {
+      "S": "submitted"
+    },
+    "createdAt": {
+      "S": "2026-03-06T05:07:37Z"
+    },
+    "appliedDate": {
+      "S": "2026-03-06T05:07:37Z"
+    },
+    "schemeName": {
+      "S": "Unknown Scheme"
+    },
+    "personalDetails": {
+      "M": {
+        "name": {
+          "S": "John Doe"
+        },
+        "aadhaarLast4": {
+          "S": "1234"
+        },
+        "mobile": {
+          "S": "9876543210"
+        },
+        "bankAccountLast4": {
+          "S": "5555"
+        }
+      }
+    },
+    "schemeId": {
+      "S": "test6"
+    },
+    "applicationId": {
+      "S": "APP-282b8eb7"
+    }
+  },
+  {
+    "citizenId": {
+      "S": "tentanms2006@gmail.com"
+    },
+    "updatedAt": {
+      "S": "2026-03-06T05:07:01Z"
+    },
+    "status": {
+      "S": "submitted"
+    },
+    "createdAt": {
+      "S": "2026-03-06T05:07:01Z"
+    },
+    "appliedDate": {
+      "S": "2026-03-06T05:07:01Z"
+    },
+    "schemeName": {
+      "S": "Unknown Scheme"
+    },
+    "personalDetails": {
+      "M": {
+        "name": {
+          "S": "John Doe"
+        },
+        "aadhaarLast4": {
+          "S": "1234"
+        },
+        "mobile": {
+          "S": "9876543210"
+        },
+        "bankAccountLast4": {
+          "S": "5555"
+        }
+      }
+    },
+    "schemeId": {
+      "S": "test6"
+    },
+    "applicationId": {
+      "S": "APP-6ccd02ae"
+    }
+  },
+  {
+    "citizenId": {
+      "S": "tentanms2006@gmail.com"
+    },
+    "updatedAt": {
+      "S": "2026-03-06T04:50:47Z"
+    },
+    "status": {
+      "S": "submitted"
+    },
+    "createdAt": {
+      "S": "2026-03-06T04:50:47Z"
+    },
+    "appliedDate": {
+      "S": "2026-03-06T04:50:47Z"
+    },
+    "schemeName": {
+      "S": "test3"
+    },
+    "personalDetails": {
+      "M": {
+        "name": {
+          "S": "John Doe"
+        },
+        "aadhaarLast4": {
+          "S": "1234"
+        },
+        "mobile": {
+          "S": "9876543210"
+        },
+        "bankAccountLast4": {
+          "S": "5555"
+        }
+      }
+    },
+    "schemeId": {
+      "S": "SCH-6f904979"
+    },
+    "applicationId": {
+      "S": "APP-108cf026"
+    }
+  }
+]

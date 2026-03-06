@@ -32,6 +32,10 @@ def lambda_handler(event, context):
             while 'LastEvaluatedKey' in response:
                 response = table.scan(ExclusiveStartKey=response['LastEvaluatedKey'])
                 items.extend(response.get('Items', []))
+            
+            # Filter for Published schemes only for public endpoint
+            items = [item for item in items if item.get('status') == 'Published']
+            
             return {
                 'statusCode': 200,
                 'headers': {

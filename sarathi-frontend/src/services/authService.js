@@ -11,9 +11,11 @@ import {
 const region = import.meta.env.VITE_AWS_REGION || "us-east-1";
 const citizenClientId = import.meta.env.VITE_CITIZEN_CLIENT_ID || import.meta.env.VITE_CLIENT_ID;
 const panchayatClientId = import.meta.env.VITE_PANCHAYAT_CLIENT_ID;
+const adminClientId = import.meta.env.VITE_ADMIN_CLIENT_ID;
 
 const citizenClient = new CognitoIdentityProviderClient({ region });
 const panchayatClient = new CognitoIdentityProviderClient({ region });
+const adminClient = new CognitoIdentityProviderClient({ region });
 
 export const authService = {
     // ── Citizen ──────────────────────────────────────────────────────────────
@@ -145,6 +147,64 @@ export const authService = {
         }));
     },
 
+    // ── Admin ────────────────────────────────────────────────────────────────
+    adminSignUp: async (email, password) => {
+        return adminClient.send(new SignUpCommand({
+            ClientId: adminClientId,
+            Username: email,
+            Password: password,
+            UserAttributes: [{ Name: "email", Value: email }],
+        }));
+    },
+
+    adminConfirmSignUp: async (email, code) => {
+        return adminClient.send(new ConfirmSignUpCommand({
+            ClientId: adminClientId,
+            Username: email,
+            ConfirmationCode: code,
+        }));
+    },
+
+    adminSignIn: async (email, password) => {
+        const response = await adminClient.send(new InitiateAuthCommand({
+            AuthFlow: "USER_PASSWORD_AUTH",
+            ClientId: adminClientId,
+            AuthParameters: { USERNAME: email, PASSWORD: password },
+        }));
+        if (response.AuthenticationResult) {
+            localStorage.setItem("adminAccessToken", response.AuthenticationResult.AccessToken);
+            localStorage.setItem("adminIdToken", response.AuthenticationResult.IdToken);
+            if (response.AuthenticationResult.RefreshToken) {
+                localStorage.setItem("adminRefreshToken", response.AuthenticationResult.RefreshToken);
+            }
+            localStorage.setItem("userType", "admin");
+        }
+        return response;
+    },
+
+    adminForgotPassword: async (email) => {
+        return adminClient.send(new ForgotPasswordCommand({
+            ClientId: adminClientId,
+            Username: email,
+        }));
+    },
+
+    adminConfirmForgotPassword: async (email, code, newPassword) => {
+        return adminClient.send(new ConfirmForgotPasswordCommand({
+            ClientId: adminClientId,
+            Username: email,
+            ConfirmationCode: code,
+            Password: newPassword,
+        }));
+    },
+
+    adminResendConfirmationCode: async (email) => {
+        return adminClient.send(new ResendConfirmationCodeCommand({
+            ClientId: adminClientId,
+            Username: email,
+        }));
+    },
+
     // ── Shared ────────────────────────────────────────────────────────────────
     signOut: () => {
         localStorage.removeItem("accessToken");
@@ -153,12 +213,16 @@ export const authService = {
         localStorage.removeItem("panchayatAccessToken");
         localStorage.removeItem("panchayatIdToken");
         localStorage.removeItem("panchayatRefreshToken");
+        localStorage.removeItem("adminAccessToken");
+        localStorage.removeItem("adminIdToken");
+        localStorage.removeItem("adminRefreshToken");
         localStorage.removeItem("userEmail");
         localStorage.removeItem("userType");
     },
 
     getToken: () => localStorage.getItem("accessToken"),
     getPanchayatToken: () => localStorage.getItem("panchayatAccessToken"),
+    getAdminToken: () => localStorage.getItem("adminAccessToken"),
 
     // Legacy aliases (kept so old code still compiles)
     signUp: async (email, password) => authService.citizenSignUp(email, password),

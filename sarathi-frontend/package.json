@@ -11,8 +11,12 @@
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.1000.0",
+    "amazon-cognito-identity-js": "^6.3.16",
     "axios": "^1.13.5",
+    "cross-fetch": "^4.1.0",
     "framer-motion": "^12.34.3",
+    "jspdf": "^4.2.0",
+    "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.575.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

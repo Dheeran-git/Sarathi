@@ -17,8 +17,7 @@ table = dynamodb.Table('SarathiApplications')
 
 CORS_HEADERS = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token',
-    'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
     'Content-Type': 'application/json',
 }
 
@@ -54,8 +53,33 @@ def _body(event):
 
 
 def handle_post_apply(event):
-    """POST /apply — create a new application."""
+    """POST /apply — create a new application, OR list applications via action param."""
     body = _body(event)
+
+    # Action-based routing: 'list' for citizen, 'listAll' for admin
+    action = body.get('action', '').strip()
+
+    if action == 'listAll':
+        resp = table.scan(Limit=200)
+        items = resp.get('Items', [])
+        while 'LastEvaluatedKey' in resp and len(items) < 500:
+            resp = table.scan(ExclusiveStartKey=resp['LastEvaluatedKey'], Limit=200)
+            items.extend(resp.get('Items', []))
+        return _ok({'applications': items, 'count': len(items)})
+
+    if action == 'list':
+        citizen_id = body.get('citizenId', '').strip()
+        if not citizen_id:
+            return _err(400, 'citizenId is required for action=list')
+        resp = table.query(
+            IndexName='citizenId-createdAt-index',
+            KeyConditionExpression=Key('citizenId').eq(citizen_id),
+            ScanIndexForward=False,
+            Limit=50,
+        )
+        return _ok({'applications': resp.get('Items', []), 'count': resp.get('Count', 0)})
+
+    # Default: create a new application
     citizen_id = body.get('citizenId', '').strip()
     scheme_id  = body.get('schemeId', '').strip()
     if not citizen_id or not scheme_id:
@@ -88,36 +112,18 @@ def handle_post_apply(event):
 
 def handle_get_all_applications(event):
     """GET /applications/all — admin view of all applications."""
-    print("[DEBUG] Scanning all applications...")
-    try:
-        # Scan all applications for admin view. 
-        # For very large tables we would use pagination, but for now scan is fine.
-        resp = table.scan() 
-        items = resp.get('Items', [])
-        
-        # Log count
-        print(f"[DEBUG] Found {len(items)} applications in first scan.")
-        
-        # Don't iterate overly many times in a single Lambda call to avoid 29s API GW timeout
-        return _ok({'applications': items, 'count': len(items)})
-    except Exception as e:
-        print(f"[ERROR] Scan failed: {str(e)}")
-        return _err(500, f"Database scan failed: {str(e)}")
+    resp = table.scan(Limit=100)
+    items = resp.get('Items', [])
+    while 'LastEvaluatedKey' in resp and len(items) < 500:
+        resp = table.scan(ExclusiveStartKey=resp['LastEvaluatedKey'], Limit=100)
+        items.extend(resp.get('Items', []))
+    return _ok({'applications': items, 'count': len(items)})
 
 
 def handle_get_applications(event):
     """GET /applications/{userId} — query citizen's applications."""
-    print(f"[DEBUG] event: {json.dumps(event)}")
     path_params = event.get('pathParameters') or {}
-    path = event.get('path', '')
-    
     user_id = path_params.get('userId', '').strip()
-    
-    # Robust fallback: extract from path if parameter is missing
-    if not user_id and '/applications/' in path:
-        user_id = path.split('/applications/')[-1].split('/')[0].strip()
-        print(f"[DEBUG] Parsed user_id from path: {user_id}")
-
     if not user_id:
         return _err(400, 'userId path parameter is required')
 
@@ -136,14 +142,7 @@ def handle_get_applications(event):
 def handle_patch_apply(event):
     """PATCH /apply/{applicationId} — update status."""
     path_params = event.get('pathParameters') or {}
-    path = event.get('path', '')
     application_id = path_params.get('applicationId', '').strip()
-    
-    # Robust fallback: extract from path if parameter is missing (matches /apply/ID)
-    if not application_id and '/apply/' in path:
-        application_id = path.split('/apply/')[-1].split('/')[0].strip()
-        print(f"[DEBUG] Parsed application_id from path: {application_id}")
-
     if not application_id:
         return _err(400, 'applicationId path parameter is required')
 
@@ -176,15 +175,12 @@ def lambda_handler(event, context):
         if method == 'GET' and path.startswith('/applications/'):
             return handle_get_applications(event)
 
-        if (method == 'PATCH' or method == 'POST') and path.startswith('/apply/') and path != '/apply':
+        if method == 'PATCH' and path.startswith('/apply/'):
             return handle_patch_apply(event)
 
         return _err(404, f'No handler for {method} {path}')
 
     except Exception as e:
-        print(f"[FATAL] Global error: {str(e)}")
-        import traceback
-        traceback.print_exc()
         return {
             'statusCode': 500,
             'headers': CORS_HEADERS,
