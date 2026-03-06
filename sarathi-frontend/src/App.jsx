@@ -37,6 +37,18 @@ import DashboardPage from './pages/DashboardPage';
 import EligibleSchemesPage from './pages/EligibleSchemesPage';
 import PrivateRoute from './components/auth/PrivateRoute';
 
+// Panchayat Portal Pages
+import PanchayatCitizenRegistry from './pages/panchayat/PanchayatCitizenRegistry';
+import PanchayatAnalytics from './pages/panchayat/PanchayatAnalytics';
+import PanchayatApplicationsManager from './pages/panchayat/PanchayatApplicationsManager';
+import PanchayatOutreach from './pages/panchayat/PanchayatOutreach';
+import PanchayatSettings from './pages/panchayat/PanchayatSettings';
+import VillageProfile from './pages/panchayat/VillageProfile';
+import WelfareCalendar from './pages/panchayat/WelfareCalendar';
+import GrievanceTracker from './pages/panchayat/GrievanceTracker';
+import PerformanceReport from './pages/panchayat/PerformanceReport';
+import PanchayatSidebar from './components/panchayat/PanchayatSidebar';
+
 function PageTransition({ children }) {
   return (
     <motion.div
@@ -47,6 +59,15 @@ function PageTransition({ children }) {
     >
       {children}
     </motion.div>
+  );
+}
+
+/** Wraps panchayat pages in the sidebar layout */
+function PanchayatLayout({ children }) {
+  return (
+    <PanchayatSidebar>
+      <PageTransition>{children}</PageTransition>
+    </PanchayatSidebar>
   );
 }
 
@@ -76,8 +97,17 @@ function App() {
             <Route path="/applications" element={<PrivateRoute requiredRole="citizen"><PageTransition><ApplicationsPage /></PageTransition></PrivateRoute>} />
             <Route path="/smart-assistant" element={<PrivateRoute requiredRole="citizen"><PageTransition><AgentPage /></PageTransition></PrivateRoute>} />
 
-            {/* Panchayat-only routes */}
-            <Route path="/panchayat" element={<PrivateRoute requiredRole="panchayat"><PageTransition><PanchayatDashboard /></PageTransition></PrivateRoute>} />
+            {/* Panchayat-only routes — wrapped in sidebar layout */}
+            <Route path="/panchayat" element={<PrivateRoute requiredRole="panchayat"><PanchayatLayout><PanchayatDashboard /></PanchayatLayout></PrivateRoute>} />
+            <Route path="/panchayat/citizens" element={<PrivateRoute requiredRole="panchayat"><PanchayatLayout><PanchayatCitizenRegistry /></PanchayatLayout></PrivateRoute>} />
+            <Route path="/panchayat/analytics" element={<PrivateRoute requiredRole="panchayat"><PanchayatLayout><PanchayatAnalytics /></PanchayatLayout></PrivateRoute>} />
+            <Route path="/panchayat/applications" element={<PrivateRoute requiredRole="panchayat"><PanchayatLayout><PanchayatApplicationsManager /></PanchayatLayout></PrivateRoute>} />
+            <Route path="/panchayat/outreach" element={<PrivateRoute requiredRole="panchayat"><PanchayatLayout><PanchayatOutreach /></PanchayatLayout></PrivateRoute>} />
+            <Route path="/panchayat/village" element={<PrivateRoute requiredRole="panchayat"><PanchayatLayout><VillageProfile /></PanchayatLayout></PrivateRoute>} />
+            <Route path="/panchayat/calendar" element={<PrivateRoute requiredRole="panchayat"><PanchayatLayout><WelfareCalendar /></PanchayatLayout></PrivateRoute>} />
+            <Route path="/panchayat/grievances" element={<PrivateRoute requiredRole="panchayat"><PanchayatLayout><GrievanceTracker /></PanchayatLayout></PrivateRoute>} />
+            <Route path="/panchayat/report" element={<PrivateRoute requiredRole="panchayat"><PanchayatLayout><PerformanceReport /></PanchayatLayout></PrivateRoute>} />
+            <Route path="/panchayat/settings" element={<PrivateRoute requiredRole="panchayat"><PanchayatLayout><PanchayatSettings /></PanchayatLayout></PrivateRoute>} />
 
             {/* Admin routes (Authentication temporarily disabled for testing) */}
             <Route element={<AdminLayout />}>
@@ -104,11 +134,10 @@ function App() {
             <Route path="/admin/signup" element={<PageTransition><AdminSignupPage /></PageTransition>} />
             <Route path="/admin/verify" element={<PageTransition><AdminVerifyPage /></PageTransition>} />
 
-            {/* Legacy redirects — old /login and /signup point to citizen flow */}
+            {/* Legacy redirects */}
             <Route path="/login" element={<PageTransition><LoginPage /></PageTransition>} />
             <Route path="/signup" element={<PageTransition><SignupPage /></PageTransition>} />
             <Route path="/verify" element={<PageTransition><VerifyPage /></PageTransition>} />
-
             <Route path="/forgot-password" element={<PageTransition><ForgotPasswordPage /></PageTransition>} />
             <Route path="/about" element={<PageTransition><AboutPage /></PageTransition>} />
 

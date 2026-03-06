@@ -112,10 +112,20 @@ export function AuthProvider({ children }) {
         } else if (storedType === 'panchayat' && panchayatToken) {
             const idToken = localStorage.getItem('panchayatIdToken');
             const payload = idToken ? decodeJwt(idToken) : {};
+
+            // Extract all real claims
             const panchayatId = payload['custom:panchayatId'] || '';
+            const lgdCode = payload['custom:lgdCode'] || '';
+            const role = payload['custom:panchayatRole'] || 'sarpanch';
+            const state = payload['custom:panchayatState'] || '';
+            const district = payload['custom:district'] || '';
+            const panchayatName = payload['custom:panchayatName'] || '';
+            const officialName = payload['custom:officialName'] || '';
+            const mobileNumber = payload['custom:mobileNumber'] || '';
+
             setIsAuthenticated(true);
             setUserType('panchayat');
-            setUser({ email, panchayatId });
+            setUser({ email, panchayatId, lgdCode, role, state, district, panchayatName, officialName, mobileNumber });
             if (panchayatRefreshTimerRef.current) clearInterval(panchayatRefreshTimerRef.current);
             panchayatRefreshTimerRef.current = setInterval(refreshPanchayatSession, 45 * 60 * 1000);
         } else if (storedType === 'admin' && localStorage.getItem('adminAccessToken')) {
@@ -146,7 +156,15 @@ export function AuthProvider({ children }) {
             const idToken = localStorage.getItem('panchayatIdToken');
             const payload = idToken ? decodeJwt(idToken) : {};
             const panchayatId = payload['custom:panchayatId'] || '';
-            setUser({ email, panchayatId });
+            const lgdCode = payload['custom:lgdCode'] || '';
+            const role = payload['custom:panchayatRole'] || 'sarpanch';
+            const state = payload['custom:panchayatState'] || '';
+            const district = payload['custom:district'] || '';
+            const panchayatName = payload['custom:panchayatName'] || '';
+            const officialName = payload['custom:officialName'] || '';
+            const mobileNumber = payload['custom:mobileNumber'] || '';
+
+            setUser({ email, panchayatId, lgdCode, role, state, district, panchayatName, officialName, mobileNumber });
             if (panchayatRefreshTimerRef.current) clearInterval(panchayatRefreshTimerRef.current);
             panchayatRefreshTimerRef.current = setInterval(refreshPanchayatSession, 45 * 60 * 1000);
         } else if (type === 'admin') {

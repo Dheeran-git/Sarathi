@@ -16,6 +16,7 @@ const api = axios.create({
   timeout: 15000,
 });
 
+// Request interceptor — send ID Token (required by Cognito User Pool authorizer)
 api.interceptors.request.use((config) => {
   const userType = localStorage.getItem('userType');
 
@@ -62,7 +63,6 @@ api.interceptors.response.use(
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('userType');
       localStorage.removeItem('userEmail');
-
       if (userType === 'panchayat') window.location.href = '/panchayat/login';
       else if (userType === 'admin') window.location.href = '/admin/login';
       else window.location.href = '/citizen/login';
@@ -112,8 +112,29 @@ export async function fetchAllSchemes() {
 }
 
 /** GET /panchayat/{panchayatId} */
-export async function getPanchayatStats(panchayatId = 'rampur-barabanki-up') {
+export async function getPanchayatStats(panchayatId) {
+  if (!panchayatId) throw new Error('panchayatId is required');
   return unwrapBody(await api.get(`/panchayat/${panchayatId}`));
+}
+
+/** GET /panchayat/search */
+export async function searchPanchayats(state, district, block) {
+  const params = new URLSearchParams();
+  if (state) params.append('state', state);
+  if (district) params.append('district', district);
+  if (block) params.append('block', block);
+  return unwrapBody(await api.get(`/panchayat/search?${params.toString()}`));
+}
+
+/** POST /panchayat/claim */
+export async function claimPanchayat(payload) {
+  return unwrapBody(await api.post('/panchayat/claim', payload));
+}
+
+/** GET /panchayat/{id}/profile */
+export async function getPanchayatProfile(panchayatId) {
+  if (!panchayatId) throw new Error('panchayatId is required');
+  return unwrapBody(await api.get(`/panchayat/${panchayatId}/profile`));
 }
 
 /** POST /conflicts */

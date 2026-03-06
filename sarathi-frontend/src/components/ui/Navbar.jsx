@@ -12,7 +12,9 @@ const CITIZEN_NAV_LINKS = [
 ];
 
 const PANCHAYAT_NAV_LINKS = [
-  { to: '/panchayat', label: 'Panchayat Dashboard' },
+  { to: '/panchayat', label: 'Dashboard' },
+  { to: '/panchayat/citizens', label: 'Citizens' },
+  { to: '/panchayat/analytics', label: 'Analytics' },
 ];
 
 const ADMIN_NAV_LINKS = []; // Admins now use the sidebar

@@ -2,11 +2,13 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { authService } from '../services/authService';
 import { Loader2 } from 'lucide-react';
+import { claimPanchayat } from '../utils/api';
 
 export default function PanchayatVerifyPage() {
     const location = useLocation();
     const navigate = useNavigate();
     const defaultEmail = location.state?.email || '';
+    const claimData = location.state?.claimData || null;
 
     const [email, setEmail] = useState(defaultEmail);
     const [code, setCode] = useState('');
@@ -34,7 +36,25 @@ export default function PanchayatVerifyPage() {
         setIsLoading(true);
 
         try {
+            // 1. Confirm Cognito Signup
             await authService.panchayatConfirmSignUp(email, code);
+
+            // 2. Claim Panchayat in DynamoDB if we came from the signup flow
+            if (claimData && claimData.lgdCode) {
+                try {
+                    await claimPanchayat({
+                        lgdCode: claimData.lgdCode,
+                        officialName: claimData.officialName,
+                        role: claimData.role,
+                        email: email,
+                        cognitoSub: 'pending_login' // The backend will sync it if needed, or we rely on email
+                    });
+                } catch (claimErr) {
+                    console.error("Failed to claim panchayat:", claimErr);
+                    // We don't block login if claim failed, but it might need admin resolution
+                }
+            }
+
             navigate('/panchayat/login', { state: { message: 'Verification successful! You can now log in.' } });
         } catch (err) {
             setError(err.message || 'Verification failed. Please check the code and try again.');
