@@ -35,6 +35,8 @@ import PanchayatVerifyPage from './pages/PanchayatVerifyPage';
 import PanchayatForgotPasswordPage from './pages/PanchayatForgotPasswordPage';
 import DashboardPage from './pages/DashboardPage';
 import EligibleSchemesPage from './pages/EligibleSchemesPage';
+import AgentChatPage from './pages/AgentChatPage';
+import DocumentUploadPage from './pages/DocumentUploadPage';
 import PrivateRoute from './components/auth/PrivateRoute';
 
 // Panchayat Portal Pages
@@ -96,6 +98,8 @@ function App() {
             <Route path="/my-schemes" element={<PrivateRoute requiredRole="citizen"><PageTransition><EligibleSchemesPage /></PageTransition></PrivateRoute>} />
             <Route path="/applications" element={<PrivateRoute requiredRole="citizen"><PageTransition><ApplicationsPage /></PageTransition></PrivateRoute>} />
             <Route path="/smart-assistant" element={<PrivateRoute requiredRole="citizen"><PageTransition><AgentPage /></PageTransition></PrivateRoute>} />
+            <Route path="/agent" element={<PrivateRoute requiredRole="citizen"><AgentChatPage /></PrivateRoute>} />
+            <Route path="/documents" element={<PrivateRoute requiredRole="citizen"><PageTransition><DocumentUploadPage /></PageTransition></PrivateRoute>} />
 
             {/* Panchayat-only routes — wrapped in sidebar layout */}
             <Route path="/panchayat" element={<PrivateRoute requiredRole="panchayat"><PanchayatLayout><PanchayatDashboard /></PanchayatLayout></PrivateRoute>} />

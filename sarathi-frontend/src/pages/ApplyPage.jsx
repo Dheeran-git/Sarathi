@@ -1,7 +1,7 @@
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, ExternalLink, FileText, CheckCircle, Loader2, ClipboardList, Download } from 'lucide-react';
+import { ArrowLeft, ExternalLink, FileText, CheckCircle, Loader2, ClipboardList, Download, Upload } from 'lucide-react';
 import { fetchScheme, submitApplication } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { useCitizen } from '../context/CitizenContext';
@@ -242,18 +242,37 @@ function ApplyPage() {
                             {docList.length === 0 ? (
                                 <p className="font-body text-sm text-gray-500 italic">No specific documents listed.</p>
                             ) : (
-                                docList.map((doc, i) => (
-                                    <div key={i} className="flex items-center gap-3 p-3 bg-off-white rounded-lg">
-                                        <input
-                                            type="checkbox"
-                                            id={`doc-${i}`}
-                                            checked={!!checkedDocs[i]}
-                                            onChange={() => handleDocToggle(i)}
-                                            className="w-4 h-4 accent-saffron rounded"
-                                        />
-                                        <label htmlFor={`doc-${i}`} className="font-body text-sm text-gray-700 cursor-pointer flex-1">{doc}</label>
-                                    </div>
-                                ))
+                                docList.map((doc, i) => {
+                                    // Map document name to upload type
+                                    const docLower = doc.toLowerCase();
+                                    let uploadType = null;
+                                    if (docLower.includes('aadhaar') || docLower.includes('aadhar')) uploadType = 'aadhaar';
+                                    else if (docLower.includes('income')) uploadType = 'income_cert';
+                                    else if (docLower.includes('ration')) uploadType = 'ration_card';
+                                    else if (docLower.includes('job card') || docLower.includes('mgnregs')) uploadType = 'job_card';
+                                    else if (docLower.includes('bank')) uploadType = 'bank_statement';
+
+                                    return (
+                                        <div key={i} className="flex items-center gap-3 p-3 bg-off-white rounded-lg">
+                                            <input
+                                                type="checkbox"
+                                                id={`doc-${i}`}
+                                                checked={!!checkedDocs[i]}
+                                                onChange={() => handleDocToggle(i)}
+                                                className="w-4 h-4 accent-saffron rounded"
+                                            />
+                                            <label htmlFor={`doc-${i}`} className="font-body text-sm text-gray-700 cursor-pointer flex-1">{doc}</label>
+                                            {uploadType && (
+                                                <Link
+                                                    to={`/documents?type=${uploadType}&returnTo=/apply/${schemeId}`}
+                                                    className="flex items-center gap-1 text-xs font-body text-teal-600 hover:text-teal-700 font-medium shrink-0"
+                                                >
+                                                    <Upload size={12} /> {isHi ? 'अपलोड' : 'Upload'}
+                                                </Link>
+                                            )}
+                                        </div>
+                                    );
+                                })
                             )}
                         </div>
                     </div>

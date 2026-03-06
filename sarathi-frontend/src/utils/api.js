@@ -188,8 +188,45 @@ export async function updateScheme(schemeId, schemeData) {
 /* ── AI / Polly services ──────────────────────────────────────────────── */
 
 /** POST /explain */
-export async function explainScheme(scheme) {
-  return unwrapBody(await api.post('/explain', { scheme }));
+export async function explainScheme(scheme, citizenProfile = null, language = 'en') {
+  const body = {
+    schemeId: scheme.schemeId || scheme.id,
+    schemeName: scheme.nameEnglish || scheme.name,
+    description: scheme.description || scheme.benefitType || '',
+    audio: true,
+    language,
+  };
+  if (citizenProfile) {
+    body.citizenProfile = citizenProfile;
+    body.citizenId = citizenProfile.citizenId || '';
+  }
+  return unwrapBody(await api.post('/explain', body));
+}
+
+/** POST /agent — invoke Bedrock Orchestrator Agent */
+export async function invokeAgent(message, sessionId, citizenId, language = 'en') {
+  return unwrapBody(await api.post('/agent', { message, sessionId, citizenId, language }, { timeout: 65000 }));
+}
+
+/** POST /document/upload-url — get pre-signed S3 PUT URL */
+export async function getUploadUrl(documentType, fileName, citizenId) {
+  return unwrapBody(await api.post('/document/upload-url', { documentType, fileName, citizenId }));
+}
+
+/** POST /document/analyze — analyze uploaded document */
+export async function analyzeDocument(s3Key, documentType, citizenId) {
+  return unwrapBody(await api.post('/document/analyze', { s3Key, documentType, citizenId }));
+}
+
+/** GET /panchayat/{panchayatId}/insights — get AI insights for panchayat */
+export async function getPanchayatInsights(panchayatId) {
+  if (!panchayatId) throw new Error('panchayatId is required');
+  return unwrapBody(await api.get(`/panchayat/${panchayatId}/insights`));
+}
+
+/** POST /apply/workflow — trigger Step Functions application workflow */
+export async function triggerApplicationWorkflow(applicationId, citizenId, schemeId, documents = []) {
+  return unwrapBody(await api.post('/apply/workflow', { applicationId, citizenId, schemeId, documents }));
 }
 
 /** POST /notify */
@@ -200,11 +237,6 @@ export async function notifyPanchayat(notificationData) {
 /** POST /lex */
 export async function sendToLex(message, sessionId = 'default', locale = 'en_US') {
   return unwrapBody(await api.post('/lex', { message, sessionId, locale }));
-}
-
-/** POST /agent */
-export async function invokeAgent(prompt, sessionId, citizenId) {
-  return unwrapBody(await api.post('/agent', { prompt, sessionId, citizenId }));
 }
 
 export default api;

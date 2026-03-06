@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCitizen } from '../context/CitizenContext';
 import { useToast } from '../components/ui/Toast';
@@ -445,6 +445,27 @@ function ProfilePage() {
                                         </button>
                                     </div>
                                 )}
+                            </Card>
+                        </M>
+
+                        {/* Smart Document Import Card */}
+                        <M delay={0.12}>
+                            <Card className="p-6" hover>
+                                <div className="flex items-center gap-2 mb-4">
+                                    <div className="w-8 h-8 rounded-lg bg-teal-500/10 flex items-center justify-center">
+                                        <FileText size={16} className="text-teal-500" />
+                                    </div>
+                                    <h2 className="font-body text-[15px] font-bold text-gray-900">Smart Document Import</h2>
+                                </div>
+                                <p className="font-body text-sm text-gray-500 mb-4">
+                                    Upload Aadhaar, Income Certificate or Ration Card — AI automatically fills your profile.
+                                </p>
+                                <Link
+                                    to="/documents"
+                                    className="inline-flex items-center gap-2 h-10 px-5 rounded-xl bg-teal-500 text-white font-body text-sm font-semibold hover:bg-teal-600 transition-colors"
+                                >
+                                    <FileText size={15} /> Import Documents
+                                </Link>
                             </Card>
                         </M>
 

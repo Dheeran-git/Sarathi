@@ -4,7 +4,7 @@ import { useCitizen } from '../context/CitizenContext';
 import { motion } from 'framer-motion';
 import {
     Bell, CheckCircle2, ChevronRight, Sparkles, TrendingUp,
-    AlertTriangle, ArrowRight, MessageSquare, FileText, Loader2, ClipboardList
+    AlertTriangle, ArrowRight, MessageSquare, FileText, Loader2, ClipboardList, Bot, Upload
 } from 'lucide-react';
 import StatCard from '../components/ui/StatCard';
 import { CATEGORY_STYLE, FALLBACK_STYLE } from '../constants/categories';
@@ -260,8 +260,16 @@ function DashboardPage() {
                                         <h2 className="font-body text-lg font-bold text-gray-900">Quick Actions</h2>
                                     </div>
                                     <div className="space-y-2">
+                                        <button onClick={() => navigate('/agent')} className="w-full flex items-center justify-between p-3 rounded-lg border border-saffron/30 bg-saffron-pale hover:bg-saffron/10 transition-colors text-left">
+                                            <span className="font-body text-sm text-saffron font-medium flex items-center gap-2"><Bot size={14} /> AI Agent</span>
+                                            <ArrowRight size={14} className="text-saffron/60" />
+                                        </button>
                                         <button onClick={() => navigate('/schemes')} className="w-full flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:border-saffron/50 hover:bg-saffron-pale transition-colors text-left">
                                             <span className="font-body text-sm text-gray-700">Browse All Schemes</span>
+                                            <ArrowRight size={14} className="text-gray-400" />
+                                        </button>
+                                        <button onClick={() => navigate('/documents')} className="w-full flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:border-saffron/50 hover:bg-saffron-pale transition-colors text-left">
+                                            <span className="font-body text-sm text-gray-700 flex items-center gap-2"><Upload size={13} /> Upload Documents</span>
                                             <ArrowRight size={14} className="text-gray-400" />
                                         </button>
                                         <button onClick={() => navigate('/chat')} className="w-full flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:border-saffron/50 hover:bg-saffron-pale transition-colors text-left">

@@ -19,6 +19,7 @@ REGION = os.environ.get('AWS_REGION', 'us-east-1')
 dynamodb = boto3.resource('dynamodb', region_name=REGION)
 citizens_table = dynamodb.Table('SarathiCitizens')
 panchayats_table = dynamodb.Table('SarathiPanchayats')
+lambda_client = boto3.client('lambda', region_name=REGION)
 
 class DecimalEncoder(json.JSONEncoder):
     def default(self, o):
@@ -178,6 +179,27 @@ def lambda_handler(event, context):
 
         meta = get_panchayat_meta(panchayat_id, citizens=citizens)
 
+        # Fetch AI insights — invoke insights_generator synchronously (10s timeout)
+        ai_insights = []
+        try:
+            insights_payload = {
+                'httpMethod': 'GET',
+                'pathParameters': {'panchayatId': panchayat_id},
+            }
+            insights_resp = lambda_client.invoke(
+                FunctionName='sarathi-insights-generator',
+                InvocationType='RequestResponse',
+                Payload=json.dumps(insights_payload),
+            )
+            insights_body = json.loads(insights_resp['Payload'].read())
+            if isinstance(insights_body.get('body'), str):
+                insights_data = json.loads(insights_body['body'])
+            else:
+                insights_data = insights_body
+            ai_insights = insights_data.get('insights', [])
+        except Exception as insights_err:
+            print(f"[WARN] Insights generator failed (non-fatal): {insights_err}")
+
         return {
             'statusCode': 200,
             'headers': cors_headers(),
@@ -197,6 +219,7 @@ def lambda_handler(event, context):
                 'welfareGapAmount': welfare_gap,
                 'households': citizens,
                 'alerts': alerts,
+                'insights': ai_insights,
             }, cls=DecimalEncoder),
         }
 

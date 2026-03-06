@@ -19,11 +19,28 @@ LAMBDAS = {
     'sarathi-invoke-agent': 'invoke_bedrock_agent.py',
     'sarathi-admin-schemes': 'admin_schemes.py',
     'sarathi-panchayat-onboarding': 'panchayat_onboarding.py',
+    # Agentic AI Phase 2
+    'sarathi-agent-invoke': 'agent_invoke.py',
+    'sarathi-agent-action-eligibility': 'agent_action_eligibility.py',
+    'sarathi-agent-action-application': 'agent_action_application.py',
+    'sarathi-agent-action-twin': 'agent_action_twin.py',
+    # Document Intelligence Phase 3
+    'sarathi-document-upload-url': 'document_upload_url.py',
+    'sarathi-document-analyzer': 'document_analyzer.py',
+    # Event-Driven Phase 4
+    'sarathi-event-processor': 'event_processor.py',
+    'sarathi-insights-generator': 'insights_generator.py',
+    'sarathi-workflow-trigger': 'workflow_trigger.py',
 }
 
 # Extra files to bundle alongside specific lambdas
 EXTRA_FILES = {
     'sarathi-eligibility-engine': ['schemes.json'],
+    'sarathi-agent-action-eligibility': ['schemes.json'],
+    'sarathi-agent-action-application': ['schemes.json'],
+    'sarathi-agent-action-twin': ['schemes.json'],
+    'sarathi-event-processor': ['schemes.json'],
+    'sarathi-workflow-trigger': ['schemes.json'],
 }
 
 base = os.path.join(os.path.dirname(__file__), 'lambdas')

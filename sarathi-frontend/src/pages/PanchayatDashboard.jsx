@@ -12,7 +12,7 @@ import AlertsPanel from '../components/panchayat/AlertsPanel';
 import CitizenTable from '../components/panchayat/CitizenTable';
 import GovernanceHeatmap from '../components/panchayat/GovernanceHeatmap';
 import AIInsights from '../components/panchayat/AIInsights';
-import { getPanchayatStats, notifyPanchayat } from '../utils/api';
+import { getPanchayatStats, notifyPanchayat, getPanchayatInsights } from '../utils/api';
 import { useToast } from '../components/ui/Toast';
 
 const HEATMAP_SCHEME_IDS = ['pm-kisan', 'pmay-gramin', 'pm-jan-arogya', 'pm-ujjwala', 'mgnregs', 'ignoaps'];
@@ -41,6 +41,8 @@ function PanchayatDashboard() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [insights, setInsights] = useState([]);
+  const [insightsLoading, setInsightsLoading] = useState(false);
   const [stats, setStats] = useState({
     totalHouseholds: 0, enrolled: 0, eligibleNotEnrolled: 0, zeroBenefits: 0,
     panchayatName: user?.panchayatName || 'Panchayat', district: user?.district || '', state: user?.state || '',
@@ -100,6 +102,11 @@ function PanchayatDashboard() {
             setHouseholds(processed);
           }
 
+          // Load insights from API response or empty
+          if (data.insights && data.insights.length > 0) {
+            setInsights(data.insights);
+          }
+
           // Process live alerts
           if (data.alerts && data.alerts.length > 0) {
             const liveAlerts = data.alerts.map((a, i) => ({
@@ -126,40 +133,22 @@ function PanchayatDashboard() {
 
   useEffect(() => { fetchData(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Compute AI Insights dynamically from stats and active alerts
-  const computedInsights = [];
-  if (stats.receivingPercent < 40) {
-    computedInsights.push({
-      severity: 'high',
-      text: 'Overall scheme penetration is critically low (under 40%). Urgent outreach required for PM-KISAN and PMAY.',
-      actionText: 'Send Notification',
-      actionType: 'notify',
-    });
-  }
-  if (stats.eligibleNotEnrolled > stats.enrolled) {
-    computedInsights.push({
-      severity: 'medium',
-      text: 'Deprived households exceed actively enrolled households. Consider organizing a multi-village registration camp.',
-      actionText: 'Send Notification',
-      actionType: 'notify',
-    });
-  }
-  if (stats.zeroBenefits > 10) {
-    computedInsights.push({
-      severity: 'high',
-      text: `Critical Alert: ${stats.zeroBenefits} households are currently receiving absolutely zero welfare benefits.`,
-      actionText: 'View Citizens',
-      actionType: 'view',
-    });
-  }
-  if (computedInsights.length === 0) {
-    computedInsights.push({
-      severity: 'low',
-      text: 'Demographic enrollment is stable. Suggest conducting follow-up KYC validations for older beneficiaries.',
-      actionText: 'Run Analysis',
-      actionType: 'analyze',
-    });
-  }
+  // Handler: refresh insights on demand via API
+  const handleRefreshInsights = async () => {
+    if (!panchayatId || insightsLoading) return;
+    setInsightsLoading(true);
+    try {
+      const data = await getPanchayatInsights(panchayatId);
+      if (data?.insights?.length > 0) {
+        setInsights(data.insights);
+        addToast('Insights refreshed', 'success');
+      }
+    } catch {
+      addToast('Failed to refresh insights', 'error');
+    } finally {
+      setInsightsLoading(false);
+    }
+  };
 
   // B3: AIInsights action handlers
   const handleNotify = async (insight) => {
@@ -384,10 +373,11 @@ function PanchayatDashboard() {
 
         {/* AI Insights */}
         <AIInsights
-          insights={computedInsights}
+          insights={insights}
           onNotify={handleNotify}
           onViewCitizens={handleViewCitizens}
-          onRefresh={fetchData}
+          onRefresh={handleRefreshInsights}
+          insightsLoading={insightsLoading}
         />
 
         {/* Village Map + Alerts */}

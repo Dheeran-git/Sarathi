@@ -1,191 +1,236 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-    Send,
-    Bot,
-    User,
-    Loader2,
-    ArrowLeft,
-    Sparkles,
-    Info,
-    CheckCircle2,
-    AlertCircle
-} from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { invokeAgent, getCitizenProfile } from '../utils/api';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Send, Loader2, Bot, User, ArrowLeft, Sparkles, MessageSquare } from 'lucide-react';
+import { invokeAgent } from '../utils/api';
+import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 
-const AgentChatPage = () => {
-    const [messages, setMessages] = useState([
-        {
-            id: 1,
-            type: 'bot',
-            text: "Namaste! I am Sarathi, your intelligent welfare assistant. I can help you find schemes, check your eligibility, and even apply for them on your behalf. How can I assist you today?",
-            timestamp: new Date()
-        }
-    ]);
-    const [input, setInput] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const [sessionId] = useState(() => `session-${Math.random().toString(36).substring(7)}`);
-    const chatEndRef = useRef(null);
+const SUGGESTED_PROMPTS_EN = [
+  'What schemes am I eligible for?',
+  'How do I apply for PM-KISAN?',
+  'How much can I earn from 3 schemes combined?',
+  'What documents do I need for PMAY housing scheme?',
+  'I am a widow, age 65, what pension schemes apply?',
+];
 
-    const scrollToBottom = () => {
-        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    };
+const SUGGESTED_PROMPTS_HI = [
+  'मैं किन योजनाओं के लिए पात्र हूँ?',
+  'PM-KISAN के लिए आवेदन कैसे करें?',
+  '3 योजनाओं से मुझे कितना लाभ मिल सकता है?',
+  'PMAY आवास योजना के लिए कौन से दस्तावेज़ चाहिए?',
+  'मैं 65 वर्ष की विधवा हूँ, कौन सी पेंशन योजनाएं मिलेंगी?',
+];
 
-    useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
+function ChatMessage({ message }) {
+  const isUser = message.role === 'user';
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'} mb-4`}
+    >
+      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isUser ? 'bg-saffron' : 'bg-navy'}`}>
+        {isUser ? <User size={14} className="text-white" /> : <Bot size={14} className="text-white" />}
+      </div>
+      <div className={`max-w-[80%] px-4 py-3 rounded-2xl font-body text-sm leading-relaxed whitespace-pre-wrap ${
+        isUser
+          ? 'bg-saffron text-white rounded-tr-sm'
+          : 'bg-white border border-gray-200 text-gray-800 rounded-tl-sm shadow-sm'
+      }`}
+        style={!isUser ? { fontFamily: "'Noto Sans Devanagari', sans-serif" } : {}}
+      >
+        {message.text}
+      </div>
+    </motion.div>
+  );
+}
 
-    const handleSend = async (e) => {
-        e.preventDefault();
-        if (!input.trim() || isLoading) return;
+function AgentChatPage() {
+  const { user } = useAuth();
+  const { language } = useLanguage();
+  const isHi = language === 'hi';
 
-        const userMessage = {
-            id: Date.now(),
-            type: 'user',
-            text: input,
-            timestamp: new Date()
-        };
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [sessionId] = useState(() => `session-${Date.now()}`);
+  const [showSuggestions, setShowSuggestions] = useState(true);
 
-        setMessages(prev => [...prev, userMessage]);
-        setInput('');
-        setIsLoading(true);
+  const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
 
-        try {
-            const response = await invokeAgent(input, sessionId);
+  const citizenId = user?.sub || user?.userId || '';
+  const suggestedPrompts = isHi ? SUGGESTED_PROMPTS_HI : SUGGESTED_PROMPTS_EN;
 
-            const botMessage = {
-                id: Date.now() + 1,
-                type: 'bot',
-                text: response.message || "I'm sorry, I encountered an issue processing that. Could you try again?",
-                timestamp: new Date()
-            };
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
-            setMessages(prev => [...prev, botMessage]);
-        } catch (error) {
-            console.error('Agent invocation failed:', error);
-            setMessages(prev => [...prev, {
-                id: Date.now() + 1,
-                type: 'bot',
-                text: "I'm having trouble connecting to my brain right now. Please try again in a moment.",
-                isError: true,
-                timestamp: new Date()
-            }]);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+  const sendMessage = async (text) => {
+    if (!text.trim() || isLoading) return;
 
-    return (
-        <div className="min-h-screen bg-slate-50 flex flex-col pt-20">
-            {/* Header */}
-            <div className="bg-white border-b border-slate-200 sticky top-16 z-10 px-4 py-3 shadow-sm">
-                <div className="max-w-4xl mx-auto flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <Link to="/citizen/home" className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-                            <ArrowLeft className="w-5 h-5 text-slate-600" />
-                        </Link>
-                        <div className="flex items-center gap-2">
-                            <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center shadow-md">
-                                <Sparkles className="w-6 h-6 text-white" />
-                            </div>
-                            <div>
-                                <h1 className="font-bold text-slate-800 leading-tight">Sarathi AI Assistant</h1>
-                                <div className="flex items-center gap-1.5">
-                                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                                    <span className="text-xs text-slate-500 font-medium tracking-wide uppercase">Active Agent</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="hidden sm:flex items-center gap-2 text-xs font-medium text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full">
-                        <Info className="w-3.5 h-3.5" />
-                        Empowered by Bedrock
-                    </div>
-                </div>
-            </div>
+    const userMsg = text.trim();
+    setShowSuggestions(false);
+    setMessages((prev) => [...prev, { role: 'user', text: userMsg }]);
+    setInput('');
+    setIsLoading(true);
 
-            {/* Chat Area */}
-            <div className="flex-1 overflow-y-auto px-4 py-6">
-                <div className="max-w-4xl mx-auto space-y-6">
-                    <AnimatePresence>
-                        {messages.map((msg) => (
-                            <motion.div
-                                key={msg.id}
-                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
-                            >
-                                <div className={`flex gap-3 max-w-[85%] sm:max-w-[75%] ${msg.type === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                                    <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center shadow-sm
-                    ${msg.type === 'user' ? 'bg-indigo-100 text-indigo-600' : 'bg-indigo-600 text-white'}`}>
-                                        {msg.type === 'user' ? <User className="w-5 h-5" /> : <Bot className="w-5 h-5" />}
-                                    </div>
-                                    <div className={`px-4 py-3 rounded-2xl shadow-sm text-sm sm:text-base leading-relaxed
-                    ${msg.type === 'user'
-                                            ? 'bg-indigo-600 text-white rounded-tr-none'
-                                            : msg.isError
-                                                ? 'bg-red-50 text-red-700 border border-red-100 rounded-tl-none'
-                                                : 'bg-white text-slate-700 rounded-tl-none border border-slate-100'}`}>
-                                        {msg.text.split('\n').map((line, i) => (
-                                            <p key={i} className={i > 0 ? 'mt-3' : ''}>
-                                                {line}
-                                            </p>
-                                        ))}
-                                        <div className={`text-[10px] mt-2 opacity-60 font-medium ${msg.type === 'user' ? 'text-right' : 'text-left'}`}>
-                                            {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        </div>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        ))}
-                    </AnimatePresence>
-                    {isLoading && (
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="flex justify-start"
-                        >
-                            <div className="flex gap-3 items-center text-slate-400 font-medium text-sm bg-white px-4 py-3 rounded-2xl border border-slate-100 shadow-sm">
-                                <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
-                                Sarathi is thinking...
-                            </div>
-                        </motion.div>
-                    )}
-                    <div ref={chatEndRef} />
-                </div>
-            </div>
+    // Prepend Hindi instruction if language is Hindi
+    const agentMessage = isHi
+      ? `Please respond in Hindi. ${userMsg}`
+      : userMsg;
 
-            {/* Input Area */}
-            <div className="bg-white border-t border-slate-200 p-4 pb-8 sm:pb-4">
-                <form onSubmit={handleSend} className="max-w-4xl mx-auto relative group">
-                    <input
-                        type="text"
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        placeholder="Type your question in Hindi or English..."
-                        disabled={isLoading}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-5 pr-14 
-              focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500
-              transition-all duration-200 placeholder:text-slate-400 text-slate-700"
-                    />
-                    <button
-                        type="submit"
-                        disabled={isLoading || !input.trim()}
-                        className="absolute right-2 top-2 bottom-2 w-11 h-11 bg-indigo-600 text-white rounded-xl
-              flex items-center justify-center transition-all duration-200
-              hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400
-              hover:shadow-lg hover:shadow-indigo-500/20 active:scale-95 group-focus-within:bg-indigo-600"
-                    >
-                        {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-                    </button>
-                </form>
-                <p className="max-w-4xl mx-auto text-center text-[10px] text-slate-400 mt-3 font-medium tracking-wide uppercase">
-                    AI assistant may provide details about scheme eligibility. Always verify documents before applying.
-                </p>
-            </div>
+    try {
+      const result = await invokeAgent(agentMessage, sessionId, citizenId, language);
+      const agentResponse = result?.response || (isHi
+        ? 'क्षमा करें, कोई उत्तर नहीं मिला। कृपया पुनः प्रयास करें।'
+        : 'Sorry, no response received. Please try again.');
+      setMessages((prev) => [...prev, { role: 'agent', text: agentResponse }]);
+    } catch (err) {
+      const errMsg = isHi
+        ? 'एजेंट से संपर्क नहीं हो पा रहा। कृपया बाद में प्रयास करें।'
+        : 'Could not reach the AI agent. Please try again later.';
+      setMessages((prev) => [...prev, { role: 'agent', text: errMsg }]);
+    } finally {
+      setIsLoading(false);
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    sendMessage(input);
+  };
+
+  return (
+    <div className="flex flex-col h-[calc(100vh-64px)] bg-off-white">
+      {/* Header */}
+      <div className="bg-navy px-4 py-3 flex items-center gap-3 shrink-0">
+        <Link to="/chat" className="text-gray-300 hover:text-white transition-colors">
+          <ArrowLeft size={18} />
+        </Link>
+        <div className="w-8 h-8 rounded-full bg-saffron/20 flex items-center justify-center">
+          <Sparkles size={15} className="text-saffron" />
         </div>
-    );
-};
+        <div className="flex-1 min-w-0">
+          <p className="font-body text-sm font-semibold text-white leading-none">
+            {isHi ? 'सारथी AI एजेंट' : 'Sarathi AI Agent'}
+          </p>
+          <p className="font-body text-xs text-gray-400 leading-tight">
+            {isHi ? 'बहु-विशेषज्ञ AI सहायक' : 'Multi-specialist AI • Beta'}
+          </p>
+        </div>
+        <Link
+          to="/chat"
+          className="flex items-center gap-1.5 h-8 px-3 rounded-lg border border-white/20 text-gray-300 font-body text-xs hover:bg-white/10 transition-colors"
+        >
+          <MessageSquare size={13} />
+          {isHi ? 'प्रश्नोत्तरी' : 'Questionnaire'}
+        </Link>
+      </div>
+
+      {/* Messages area */}
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+        {/* Welcome state with suggestions */}
+        {messages.length === 0 && showSuggestions && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="max-w-xl mx-auto pt-8"
+          >
+            <div className="text-center mb-8">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-saffron to-orange-400 flex items-center justify-center mx-auto mb-3 shadow-lg">
+                <Sparkles size={24} className="text-white" />
+              </div>
+              <h2 className="font-display text-2xl text-gray-900 mb-1">
+                {isHi ? 'सारथी AI एजेंट' : 'Sarathi AI Agent'}
+              </h2>
+              <p className="font-body text-sm text-gray-500">
+                {isHi
+                  ? 'पात्रता, आवेदन या वित्तीय योजना के बारे में कुछ भी पूछें'
+                  : 'Ask anything about eligibility, applications, or financial planning'}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <p className="font-body text-xs text-gray-400 uppercase tracking-wider mb-3">
+                {isHi ? 'सुझाए गए प्रश्न' : 'Suggested questions'}
+              </p>
+              {suggestedPrompts.map((prompt, i) => (
+                <button
+                  key={i}
+                  onClick={() => sendMessage(prompt)}
+                  className="w-full text-left p-3 rounded-xl bg-white border border-gray-200 font-body text-sm text-gray-700 hover:border-saffron/40 hover:bg-saffron-pale transition-all"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Message list */}
+        <div className="max-w-2xl mx-auto">
+          <AnimatePresence>
+            {messages.map((msg, i) => (
+              <ChatMessage key={i} message={msg} />
+            ))}
+          </AnimatePresence>
+
+          {isLoading && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex gap-3 mb-4"
+            >
+              <div className="w-8 h-8 rounded-full bg-navy flex items-center justify-center shrink-0">
+                <Bot size={14} className="text-white" />
+              </div>
+              <div className="bg-white border border-gray-200 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <Loader2 size={14} className="animate-spin text-saffron" />
+                  <span className="font-body text-sm text-gray-500">
+                    {isHi ? 'सोच रहे हैं...' : 'Thinking...'}
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
+      </div>
+
+      {/* Input bar */}
+      <div className="shrink-0 bg-white border-t border-gray-200 px-4 py-3">
+        <form onSubmit={handleSubmit} className="max-w-2xl mx-auto flex gap-2">
+          <input
+            ref={inputRef}
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={isHi ? 'अपना प्रश्न लिखें...' : 'Ask anything about welfare schemes...'}
+            disabled={isLoading}
+            className="flex-1 h-11 px-4 rounded-xl border border-gray-200 bg-off-white font-body text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-saffron/50 focus:ring-2 focus:ring-saffron/10 disabled:opacity-60 transition-all"
+            style={{ fontFamily: "'Noto Sans Devanagari', 'Inter', sans-serif" }}
+          />
+          <button
+            type="submit"
+            disabled={!input.trim() || isLoading}
+            className="w-11 h-11 rounded-xl bg-saffron text-white flex items-center justify-center hover:bg-saffron-light transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+          >
+            <Send size={16} />
+          </button>
+        </form>
+        <p className="font-body text-center text-xs text-gray-400 mt-2 max-w-2xl mx-auto">
+          {isHi
+            ? 'AI एजेंट गलतियाँ कर सकता है। महत्वपूर्ण जानकारी के लिए आधिकारिक पोर्टल देखें।'
+            : 'AI Agent can make mistakes. Verify important details at official government portals.'}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 export default AgentChatPage;

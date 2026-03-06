@@ -13,6 +13,7 @@ SNS_TOPIC_ARN = os.environ.get(
 )
 
 sns = boto3.client('sns', region_name=REGION)
+translate = boto3.client('translate', region_name=REGION)
 
 
 def cors_headers():
@@ -34,6 +35,7 @@ def lambda_handler(event, context):
         subject = body.get('subject', f'Sarathi Alert — {panchayat_id}')
         citizen_count = body.get('citizenCount', 0)
         scheme_name = body.get('schemeName', '')
+        language = body.get('language', 'en')
 
         if not message:
             # Auto-generate message from structured fields
@@ -47,6 +49,18 @@ def lambda_handler(event, context):
                 )
             else:
                 message = f"Sarathi notification for panchayat {panchayat_id}: {notification_type}"
+
+        # Translate to Hindi if requested
+        if language == 'hi' and message:
+            try:
+                tr = translate.translate_text(
+                    Text=message,
+                    SourceLanguageCode='en',
+                    TargetLanguageCode='hi',
+                )
+                message = tr['TranslatedText']
+            except Exception as tr_err:
+                print(f"[WARN] Translate error: {tr_err}")
 
         response = sns.publish(
             TopicArn=SNS_TOPIC_ARN,

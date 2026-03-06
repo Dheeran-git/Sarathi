@@ -5,6 +5,7 @@ import { ArrowLeft, ExternalLink, FileText, Users, Coins, ClipboardList, Loader2
 import { fetchScheme, explainScheme } from '../utils/api';
 import { schemeMap, allSchemes } from '../data/schemesDB';
 import { useLanguage } from '../context/LanguageContext';
+import { useCitizen } from '../context/CitizenContext';
 import { localizeNum } from '../utils/formatters';
 import { useToast } from '../components/ui/Toast';
 import { CATEGORY_STYLE, FALLBACK_STYLE, CATEGORY_LABELS_EN } from '../constants/categories';
@@ -31,6 +32,7 @@ function SchemeDetailPage() {
   const [activeTab, setActiveTab] = useState('eligibility');
   const { language } = useLanguage();
   const { addToast } = useToast();
+  const { citizenProfile } = useCitizen();
   const isHi = language === 'hi';
   const tabs = tabsData[language] || tabsData.en;
   const catLabels = isHi ? categoryLabelsHi : CATEGORY_LABELS_EN;
@@ -79,7 +81,7 @@ function SchemeDetailPage() {
     if (explanation || !scheme) return;
     setIsExplaining(true);
     try {
-      const result = await explainScheme(scheme);
+      const result = await explainScheme(scheme, citizenProfile || null, language);
       setExplanation({ ...result, explanationHindi: result.explanationHindi || result.explanation || '' });
     } catch (err) {
       console.warn('[SchemeDetail] Explain API failed, using fallback:', err);
@@ -320,8 +322,8 @@ function SchemeDetailPage() {
               <Link to={`/apply/${schemeId}`} className="flex items-center justify-center gap-2 h-11 w-full rounded-lg bg-saffron text-white font-body text-sm font-semibold hover:bg-saffron-light transition-colors">
                 {isHi ? 'आवेदन पोर्टल' : 'Application Portal'} <ExternalLink size={14} />
               </Link>
-              <Link to="/chat" className="flex items-center justify-center h-10 w-full mt-2 rounded-lg border border-gray-200 text-gray-600 font-body text-sm hover:bg-gray-50 transition-colors">
-                {isHi ? '💬 सारथी से पूछें' : '💬 Ask Sarathi'}
+              <Link to="/agent" className="flex items-center justify-center h-10 w-full mt-2 rounded-lg border border-gray-200 text-gray-600 font-body text-sm hover:bg-gray-50 transition-colors">
+                {isHi ? '🤖 AI एजेंट से पूछें' : '🤖 Ask AI Agent'}
               </Link>
               {/* D4: Share button */}
               <button
@@ -362,8 +364,11 @@ function SchemeDetailPage() {
 
               {explanation && (
                 <div className="space-y-3">
-                  <p className="font-body text-sm text-gray-800 leading-relaxed bg-white/70 p-3 rounded-lg">
-                    {explanation.explanationHindi}
+                  <p className="font-body text-sm text-gray-800 leading-relaxed bg-white/70 p-3 rounded-lg"
+                    style={{ fontFamily: isHi ? "'Noto Sans Devanagari', sans-serif" : 'inherit' }}>
+                    {isHi && explanation.explanationHindi
+                      ? explanation.explanationHindi
+                      : (explanation.explanation || explanation.explanationHindi)}
                   </p>
                   <button
                     onClick={toggleAudio}
@@ -380,6 +385,16 @@ function SchemeDetailPage() {
                       <><Volume2 size={16} /> 🔊 {isHi ? 'सुनें' : 'Listen'}</>
                     )}
                   </button>
+                  {explanation.applicationGuidance && (
+                    <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
+                      <p className="font-body text-xs font-semibold text-blue-700 uppercase tracking-wider mb-1.5">
+                        {isHi ? 'आवेदन मार्गदर्शन' : 'Application Guidance'}
+                      </p>
+                      <p className="font-body text-xs text-blue-800 leading-relaxed whitespace-pre-wrap">
+                        {explanation.applicationGuidance}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -424,7 +439,7 @@ function SchemeDetailPage() {
                   </div>
                 ))}
               </div>
-              <Link to="/chat" className="block mt-4 text-center font-body text-xs text-saffron hover:underline">
+              <Link to="/agent" className="block mt-4 text-center font-body text-xs text-saffron hover:underline">
                 {isHi ? 'पूरी पात्रता जाँच करें →' : 'Full Eligibility Check →'}
               </Link>
             </div>

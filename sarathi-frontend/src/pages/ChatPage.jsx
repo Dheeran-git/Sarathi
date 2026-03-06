@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import ProgressSteps from '../components/chat/ProgressSteps';
 import ChatPanel from '../components/chat/ChatPanel';
 import InputBar from '../components/chat/InputBar';
@@ -385,6 +386,16 @@ function ChatPage() {
 
       {/* Main chat area */}
       <div className="flex-1 flex flex-col bg-off-white">
+        {/* Agent Banner */}
+        <Link
+          to="/agent"
+          className="flex items-center justify-between px-4 py-2 bg-gradient-to-r from-saffron/10 to-orange-50 border-b border-saffron/20 hover:from-saffron/15 transition-colors group"
+        >
+          <span className="font-body text-xs text-saffron font-medium">
+            {isHi ? '✨ सारथी AI एजेंट (Beta) — मुफ़्त-प्रश्न AI' : '✨ Try Sarathi AI Agent (Beta) — Free-text AI'}
+          </span>
+          <span className="font-body text-xs text-saffron/70 group-hover:text-saffron transition-colors">→</span>
+        </Link>
         <ProgressSteps currentStep={progressStep} labels={stepLabels} totalSteps={totalSteps} />
 
         {/* Profile Saved toast */}
