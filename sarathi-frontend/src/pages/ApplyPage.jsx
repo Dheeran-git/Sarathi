@@ -1,12 +1,14 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, ExternalLink, FileText, CheckCircle, Loader2, ClipboardList } from 'lucide-react';
+import { ArrowLeft, ExternalLink, FileText, CheckCircle, Loader2, ClipboardList, Download } from 'lucide-react';
 import { fetchScheme, submitApplication } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { useCitizen } from '../context/CitizenContext';
 import { useToast } from '../components/ui/Toast';
 import { useLanguage } from '../context/LanguageContext';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 function ApplyPage() {
     const { schemeId } = useParams();
@@ -82,6 +84,7 @@ function ApplyPage() {
             const checkedDocNames = docList.filter((_, i) => checkedDocs[i]);
             const result = await submitApplication({
                 citizenId: userId,
+                panchayatId: citizenProfile?.panchayatId || citizenProfile?.panchayatCode || '',
                 schemeId,
                 schemeName: scheme.nameEnglish || scheme.name || schemeId,
                 documentsChecked: checkedDocNames,
@@ -104,6 +107,72 @@ function ApplyPage() {
 
     // F1: Success state
     if (submittedAppId) {
+        const handleDownloadAcknowledgement = () => {
+            const doc = new jsPDF();
+
+            // Header
+            doc.setFontSize(20);
+            doc.setTextColor(220, 104, 3); // Saffron
+            doc.text('Sarathi Application Acknowledgement', 15, 20);
+
+            doc.setFontSize(12);
+            doc.setTextColor(80, 80, 80);
+            doc.text(`Application ID: ${submittedAppId}`, 15, 30);
+            doc.text(`Date: ${new Date().toLocaleDateString()}`, 15, 38);
+
+            // Scheme Details
+            doc.setFontSize(14);
+            doc.setTextColor(30, 41, 59); // Navy
+            doc.text('Scheme Details', 15, 50);
+
+            const schemeData = [
+                ['Scheme Name', scheme.nameEnglish || scheme.name],
+                ['Category', scheme.category || 'N/A'],
+                ['Benefit Amount', scheme.annualBenefit ? `Rs. ${scheme.annualBenefit}` : 'N/A']
+            ];
+
+            doc.autoTable({
+                startY: 55,
+                body: schemeData,
+                theme: 'grid',
+                headStyles: { fillColor: [241, 245, 249] },
+                styles: { fontSize: 10 }
+            });
+
+            // Profile Details
+            const finalY = doc.lastAutoTable.finalY || 55;
+            doc.setFontSize(14);
+            doc.text('Applicant Details', 15, finalY + 10);
+
+            const profileMap = [
+                ['Name', citizenProfile.name || personalDetails.name || 'N/A'],
+                ['Age', citizenProfile.age || 'N/A'],
+                ['Gender', citizenProfile.gender || 'N/A'],
+                ['Location', `${citizenProfile.village || ''} ${citizenProfile.district || ''} ${citizenProfile.state || ''}`.trim() || 'N/A'],
+                ['Income (Annual)', citizenProfile.income ? `Rs. ${citizenProfile.income}` : 'N/A'],
+                ['Category', citizenProfile.category || 'N/A'],
+                ['Area Type', citizenProfile.urban === true ? 'Urban' : citizenProfile.urban === false ? 'Rural' : 'N/A'],
+                ['Occupation', citizenProfile.persona || citizenProfile.occupation || 'N/A'],
+                ['Education', citizenProfile.educationLevel || 'N/A'],
+                ['Aadhaar (Last 4)', personalDetails.aadhaarLast4 || 'N/A'],
+                ['Mobile', personalDetails.mobile || 'N/A'],
+                ['Bank Account (Last 4)', personalDetails.bankAccountLast4 || 'N/A'],
+            ];
+
+            doc.autoTable({
+                startY: finalY + 15,
+                body: profileMap.filter(r => r[1] && r[1] !== 'N/A'),
+                theme: 'grid',
+                styles: { fontSize: 10 }
+            });
+
+            doc.setFontSize(10);
+            doc.setTextColor(150, 150, 150);
+            doc.text('This is a computer-generated acknowledgement.', 15, doc.internal.pageSize.height - 15);
+
+            doc.save(`Sarathi_Acknowledgement_${submittedAppId}.pdf`);
+        };
+
         return (
             <div className="min-h-screen bg-off-white flex items-center justify-center px-4">
                 <div className="bg-white rounded-xl border border-gray-200 shadow-card p-8 max-w-md w-full text-center">
@@ -118,19 +187,27 @@ function ApplyPage() {
                         <p className="font-body text-xs text-gray-500 mb-1">Application ID</p>
                         <code className="font-mono text-lg font-bold text-navy">{submittedAppId}</code>
                     </div>
-                    <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="flex flex-col gap-3">
                         <button
-                            onClick={() => navigate('/applications')}
-                            className="flex-1 h-11 rounded-lg bg-saffron text-white font-body text-sm font-semibold hover:bg-saffron-light transition-colors"
+                            onClick={handleDownloadAcknowledgement}
+                            className="w-full h-11 flex justify-center items-center gap-2 rounded-lg bg-teal-600 text-white font-body text-sm font-semibold hover:bg-teal-700 transition-colors"
                         >
-                            Track Application
+                            <Download size={16} /> Download Acknowledgement
                         </button>
-                        <button
-                            onClick={() => navigate('/dashboard')}
-                            className="flex-1 h-11 rounded-lg border border-gray-300 text-gray-700 font-body text-sm font-medium hover:bg-gray-50 transition-colors"
-                        >
-                            Dashboard
-                        </button>
+                        <div className="flex flex-col sm:flex-row gap-3">
+                            <button
+                                onClick={() => navigate('/applications')}
+                                className="flex-1 h-11 rounded-lg bg-saffron text-white font-body text-sm font-semibold hover:bg-saffron-light transition-colors"
+                            >
+                                Track Application
+                            </button>
+                            <button
+                                onClick={() => navigate('/dashboard')}
+                                className="flex-1 h-11 rounded-lg border border-gray-300 text-gray-700 font-body text-sm font-medium hover:bg-gray-50 transition-colors"
+                            >
+                                Dashboard
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

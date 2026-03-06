@@ -462,13 +462,24 @@ function LandingPage() {
               </div>
             </div>
             <div>
-              <h4 className="font-body text-sm font-bold text-white mb-3">{T('footerAbout')}</h4>
-              <p className="font-body text-sm text-gray-300">{T('footerBuilt')}</p>
-              <p className="font-body text-xs text-gray-400 mt-2">Team Boolean Bandits</p>
+              <h4 className="font-body text-sm font-bold text-white mb-3">For Administrators</h4>
+              <div className="space-y-2">
+                {[
+                  { to: '/admin', label: 'Admin Panel 🏛️' },
+                  { to: '/admin/schemes/new', label: 'Launch New Scheme' },
+                ].map((l) => (
+                  <Link key={l.label} to={l.to} className="block font-body text-sm text-gray-300 hover:text-saffron transition-colors">{l.label}</Link>
+                ))}
+              </div>
             </div>
           </div>
-          <div className="mt-10 pt-6 border-t border-navy-light/20 text-center">
-            <p className="font-body text-xs text-gray-400">{T('footerOpen')}</p>
+          <div className="mt-20 pt-8 border-t border-navy-light/20 flex flex-col md:flex-row justify-between items-center gap-6">
+            <p className="font-body text-gray-500 text-sm">© 2026 Sarathi AI Welfare Engine. Official Government Portal.</p>
+            <div className="flex gap-8">
+              <Link to="/admin/login" className="font-body text-gray-500 text-sm hover:text-saffron transition-colors">Admin Login</Link>
+              <a href="#" className="font-body text-gray-500 text-sm hover:text-white transition-colors">Privacy Policy</a>
+              <a href="#" className="font-body text-gray-500 text-sm hover:text-white transition-colors">Terms of Service</a>
+            </div>
           </div>
         </div>
       </footer>

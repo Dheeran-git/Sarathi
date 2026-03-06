@@ -1,0 +1,348 @@
+Scheme ID: nsp-scholarship
+Name (English): National Scholarship Portal
+Name (Hindi): राष्ट्रीय छात्रवृत्ति पोर्टल
+Ministry: Ministry of Education
+Category: education
+Description: 
+Annual Benefit: ₹25000
+Eligibility Tags: 
+Required Documents: आधार कार्ड, अंकतालिका, विद्यालय/महाविद्यालय प्रमाण पत्र, जन्म प्रमाण पत्र, आय प्रमाण पत्र
+How to Apply: 
+--------------------------------------------------
+
+Scheme ID: pm-ujjwala
+Name (English): PM Ujjwala Yojana
+Name (Hindi): प्रधानमंत्री उज्ज्वला योजना
+Ministry: Ministry of Petroleum & Natural Gas
+Category: women
+Description: 
+Annual Benefit: ₹1600
+Eligibility Tags: 
+Required Documents: आधार कार्ड, BPL राशन कार्ड, बैंक खाता विवरण, निवास प्रमाण पत्र
+How to Apply: 
+--------------------------------------------------
+
+Scheme ID: ayushman-bharat
+Name (English): Ayushman Bharat PMJAY
+Name (Hindi): आयुष्मान भारत प्रधानमंत्री जन आरोग्य योजना
+Ministry: Ministry of Health & Family Welfare
+Category: health
+Description: 
+Annual Benefit: ₹500000
+Eligibility Tags: 
+Required Documents: आधार कार्ड, राशन कार्ड, आय प्रमाण पत्र, निवास प्रमाण पत्र
+How to Apply: 
+--------------------------------------------------
+
+Scheme ID: SCH-7f5eeac0
+Name (English): Final Test Scheme
+Name (Hindi): 
+Ministry: Housing Ministry
+Category: Housing
+Description: 
+Annual Benefit: ₹15000
+Eligibility Tags: 
+Required Documents: 
+How to Apply: 
+--------------------------------------------------
+
+Scheme ID: SCH-6707be8a
+Name (English): abc
+Name (Hindi): 
+Ministry: adksyg
+Category: Education
+Description: 
+Annual Benefit: ₹9876654
+Eligibility Tags: 
+Required Documents: 
+How to Apply: 
+--------------------------------------------------
+
+Scheme ID: pmay-g
+Name (English): PM Awas Yojana (Gramin)
+Name (Hindi): प्रधानमंत्री आवास योजना (ग्रामीण)
+Ministry: Ministry of Rural Development
+Category: housing
+Description: 
+Annual Benefit: ₹120000
+Eligibility Tags: 
+Required Documents: आधार कार्ड, बैंक खाता विवरण, BPL प्रमाण पत्र, आय प्रमाण पत्र, निवास प्रमाण पत्र
+How to Apply: 
+--------------------------------------------------
+
+Scheme ID: SCH-956f6f08
+Name (English): SGAH
+Name (Hindi): 
+Ministry: SGAJHG
+Category: Education
+Description: 
+Annual Benefit: ₹0
+Eligibility Tags: 
+Required Documents: 
+How to Apply: 
+--------------------------------------------------
+
+Scheme ID: SCH-29c43548
+Name (English): ajbf
+Name (Hindi): 
+Ministry: dgkj
+Category: Education
+Description: 
+Annual Benefit: ₹0
+Eligibility Tags: 
+Required Documents: 
+How to Apply: 
+--------------------------------------------------
+
+Scheme ID: nrlm-shg
+Name (English): Aajeevika — NRLM
+Name (Hindi): आजीविका — राष्ट्रीय ग्रामीण आजीविका मिशन
+Ministry: Ministry of Rural Development
+Category: employment
+Description: 
+Annual Benefit: ₹15000
+Eligibility Tags: 
+Required Documents: आधार कार्ड, SHG सदस्यता प्रमाण, बैंक खाता विवरण, निवास प्रमाण पत्र
+How to Apply: 
+--------------------------------------------------
+
+Scheme ID: atal-pension
+Name (English): Atal Pension Yojana
+Name (Hindi): अटल पेंशन योजना
+Ministry: Ministry of Finance
+Category: employment
+Description: 
+Annual Benefit: ₹60000
+Eligibility Tags: 
+Required Documents: आधार कार्ड, बैंक पासबुक, बैंक खाता विवरण, मोबाइल नंबर
+How to Apply: 
+--------------------------------------------------
+
+Scheme ID: widow-pension
+Name (English): Indira Gandhi Widow Pension
+Name (Hindi): इंदिरा गांधी विधवा पेंशन योजना
+Ministry: Ministry of Rural Development
+Category: women
+Description: 
+Annual Benefit: ₹18000
+Eligibility Tags: 
+Required Documents: आधार कार्ड, पति का मृत्यु प्रमाण पत्र, बैंक खाता विवरण, आय प्रमाण पत्र, निवास प्रमाण पत्र
+How to Apply: 
+--------------------------------------------------
+
+Scheme ID: old-age-pension
+Name (English): Indira Gandhi Old Age Pension
+Name (Hindi): इंदिरा गांधी राष्ट्रीय वृद्धावस्था पेंशन योजना
+Ministry: Ministry of Rural Development
+Category: health
+Description: 
+Annual Benefit: ₹12000
+Eligibility Tags: 
+Required Documents: आधार कार्ड, आयु प्रमाण पत्र, आय प्रमाण पत्र, BPL प्रमाण पत्र, बैंक खाता विवरण
+How to Apply: 
+--------------------------------------------------
+
+Scheme ID: SCH-5600e8fa
+Name (English): newScheme1
+Name (Hindi): 
+Ministry: ABC
+Category: Education
+Description: 
+Annual Benefit: ₹4000
+Eligibility Tags: 
+Required Documents: 
+How to Apply: 
+--------------------------------------------------
+
+Scheme ID: nfbs
+Name (English): National Family Benefit Scheme
+Name (Hindi): राष्ट्रीय परिवार लाभ योजना
+Ministry: Ministry of Rural Development
+Category: women
+Description: 
+Annual Benefit: ₹20000
+Eligibility Tags: 
+Required Documents: आधार कार्ड, मृत्यु प्रमाण पत्र, आय प्रमाण पत्र, बैंक खाता विवरण, निवास प्रमाण पत्र
+How to Apply: 
+--------------------------------------------------
+
+Scheme ID: SCH-8a5169ad
+Name (English): bcd
+Name (Hindi): 
+Ministry: ljsfkjjdf
+Category: Education
+Description: 
+Annual Benefit: ₹0
+Eligibility Tags: 
+Required Documents: 
+How to Apply: 
+--------------------------------------------------
+
+Scheme ID: SCH-0cb57037
+Name (English): asdjh
+Name (Hindi): 
+Ministry: askjhhf
+Category: Education
+Description: 
+Annual Benefit: ₹974328957
+Eligibility Tags: 
+Required Documents: 
+How to Apply: 
+--------------------------------------------------
+
+Scheme ID: pmegp
+Name (English): PM Employment Generation Programme
+Name (Hindi): प्रधानमंत्री रोजगार सृजन कार्यक्रम
+Ministry: Ministry of MSME
+Category: employment
+Description: 
+Annual Benefit: ₹250000
+Eligibility Tags: 
+Required Documents: आधार कार्ड, जाति प्रमाण पत्र, शैक्षिक योग्यता प्रमाण, बैंक खाता विवरण, परियोजना रिपोर्ट
+How to Apply: 
+--------------------------------------------------
+
+Scheme ID: pmjjby
+Name (English): PM Jeevan Jyoti Bima Yojana
+Name (Hindi): प्रधानमंत्री जीवन ज्योति बीमा योजना
+Ministry: Ministry of Finance
+Category: health
+Description: 
+Annual Benefit: ₹200000
+Eligibility Tags: 
+Required Documents: आधार कार्ड, बैंक पासबुक, बैंक खाता विवरण, निवास प्रमाण पत्र
+How to Apply: 
+--------------------------------------------------
+
+Scheme ID: SCH-3a4a6d95
+Name (English): ne1
+Name (Hindi): 
+Ministry: as,f
+Category: Education
+Description: 
+Annual Benefit: ₹0
+Eligibility Tags: 
+Required Documents: 
+How to Apply: 
+--------------------------------------------------
+
+Scheme ID: pm-kisan
+Name (English): PM-KISAN
+Name (Hindi): प्रधानमंत्री किसान सम्मान निधि
+Ministry: Ministry of Agriculture & Farmers Welfare
+Category: agriculture
+Description: 
+Annual Benefit: ₹6000
+Eligibility Tags: 
+Required Documents: आधार कार्ड, बैंक खाता विवरण, भूमि अभिलेख, निवास प्रमाण पत्र
+How to Apply: 
+--------------------------------------------------
+
+Scheme ID: beti-bachao
+Name (English): Beti Bachao Beti Padhao
+Name (Hindi): बेटी बचाओ बेटी पढ़ाओ
+Ministry: Ministry of Women & Child Development
+Category: women
+Description: 
+Annual Benefit: ₹15000
+Eligibility Tags: 
+Required Documents: आधार कार्ड, जन्म प्रमाण पत्र, निवास प्रमाण पत्र, विद्यालय नामांकन प्रमाण
+How to Apply: 
+--------------------------------------------------
+
+Scheme ID: SCH-90ade8f5
+Name (English): JHkh
+Name (Hindi): 
+Ministry: aKDHKJSHD
+Category: Education
+Description: 
+Annual Benefit: ₹34858
+Eligibility Tags: 
+Required Documents: 
+How to Apply: 
+--------------------------------------------------
+
+Scheme ID: vayoshri
+Name (English): Rashtriya Vayoshri Yojana
+Name (Hindi): राष्ट्रीय वयोश्री योजना
+Ministry: Ministry of Social Justice
+Category: health
+Description: 
+Annual Benefit: ₹5000
+Eligibility Tags: 
+Required Documents: आधार कार्ड, आयु प्रमाण पत्र, आय प्रमाण पत्र, BPL प्रमाण पत्र, विकलांगता प्रमाण पत्र (यदि लागू हो)
+How to Apply: 
+--------------------------------------------------
+
+Scheme ID: jan-dhan
+Name (English): PM Jan Dhan Yojana
+Name (Hindi): प्रधानमंत्री जन धन योजना
+Ministry: Ministry of Finance
+Category: employment
+Description: 
+Annual Benefit: ₹10000
+Eligibility Tags: 
+Required Documents: आधार कार्ड, निवास प्रमाण पत्र, पासपोर्ट साइज फोटो
+How to Apply: 
+--------------------------------------------------
+
+Scheme ID: SCH-36e70b87
+Name (English): hhfh
+Name (Hindi): 
+Ministry: kjgjhf
+Category: Education
+Description: 
+Annual Benefit: ₹897654
+Eligibility Tags: 
+Required Documents: 
+How to Apply: 
+--------------------------------------------------
+
+Scheme ID: mgnregs
+Name (English): MGNREGS
+Name (Hindi): महात्मा गांधी राष्ट्रीय ग्रामीण रोज़गार गारंटी योजना
+Ministry: Ministry of Rural Development
+Category: employment
+Description: 
+Annual Benefit: ₹36000
+Eligibility Tags: 
+Required Documents: आधार कार्ड, जॉब कार्ड आवेदन, निवास प्रमाण पत्र, बैंक खाता विवरण
+How to Apply: 
+--------------------------------------------------
+
+Scheme ID: pm-matru
+Name (English): PM Matru Vandana Yojana
+Name (Hindi): प्रधानमंत्री मातृ वंदना योजना
+Ministry: Ministry of Women & Child Development
+Category: women
+Description: 
+Annual Benefit: ₹5000
+Eligibility Tags: 
+Required Documents: आधार कार्ड, गर्भावस्था प्रमाण, बैंक खाता विवरण, निवास प्रमाण पत्र
+How to Apply: 
+--------------------------------------------------
+
+Scheme ID: SCH-eccdf28d
+Name (English): cde
+Name (Hindi): 
+Ministry: oasuioriueri
+Category: Education
+Description: 
+Annual Benefit: ₹89734857285
+Eligibility Tags: 
+Required Documents: 
+How to Apply: 
+--------------------------------------------------
+
+Scheme ID: sukanya
+Name (English): Sukanya Samridhi Yojana
+Name (Hindi): सुकन्या समृद्धि योजना
+Ministry: Ministry of Finance
+Category: education
+Description: 
+Annual Benefit: ₹65000
+Eligibility Tags: 
+Required Documents: बालिका का जन्म प्रमाण पत्र, माता-पिता का आधार कार्ड, निवास प्रमाण पत्र, पासपोर्ट साइज फोटो
+How to Apply: 
+--------------------------------------------------
+

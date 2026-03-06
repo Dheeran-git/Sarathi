@@ -149,7 +149,8 @@ add_options(apply_id, 'POST')
 # --- 4. Create /apply/{applicationId} ---
 app_id_id = create_resource(apply_id, '{applicationId}')
 add_lambda_method(app_id_id, 'PATCH')
-add_options(app_id_id, 'PATCH')
+add_lambda_method(app_id_id, 'POST')
+add_options(app_id_id, 'PATCH,POST')
 
 # --- 5. Create /applications ---
 apps_id = create_resource(root_id, 'applications')

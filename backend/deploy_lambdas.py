@@ -15,6 +15,9 @@ LAMBDAS = {
     'sarathi-bedrock-explainer': 'bedrock_explainer.py',
     'sarathi-panchayat-notifier': 'panchayat_notifier.py',
     'sarathi-applications': 'applications.py',
+    'sarathi-agent-executor': 'bedrock_agent_executor.py',
+    'sarathi-invoke-agent': 'invoke_bedrock_agent.py',
+    'sarathi-admin-schemes': 'admin_schemes.py',
     'sarathi-panchayat-onboarding': 'panchayat_onboarding.py',
 }
 
@@ -36,7 +39,10 @@ for fn_name, filename in LAMBDAS.items():
     # Create zip in memory
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+        # Write to both names to handle mixed AWS handler configurations
         zf.writestr('lambda_function.py', code)
+        zf.writestr(filename, code)
+        
         # Bundle any extra files (e.g. schemes.json for eligibility engine)
         for extra in EXTRA_FILES.get(fn_name, []):
             extra_path = os.path.join(base, extra)

@@ -181,14 +181,12 @@ function SchemeDetailPage() {
               </div>
               <h1 className="font-display text-[24px] lg:text-[32px] text-white">{isHi ? scheme.nameHindi : scheme.nameEnglish}</h1>
             </div>
-            <a
-              href={scheme.applyUrl || '#'}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              to={`/apply/${schemeId}`}
               className="inline-flex items-center gap-2 h-10 px-5 rounded-lg bg-saffron text-white font-body text-sm font-medium hover:bg-saffron-light transition-colors shrink-0"
             >
               {isHi ? 'आवेदन करें' : 'Apply Now'} <ExternalLink size={14} />
-            </a>
+            </Link>
           </motion.div>
         </div>
       </div>
@@ -285,9 +283,9 @@ function SchemeDetailPage() {
                         {isHi ? 'आधिकारिक पोर्टल पर जाकर ऑनलाइन आवेदन करें।' : 'Visit the official portal to apply online.'}
                       </p>
                     </div>
-                    <a href={scheme.applyUrl || '#'} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 mt-4 h-10 px-5 rounded-lg bg-saffron text-white font-body text-sm font-medium hover:bg-saffron-light transition-colors">
-                      {isHi ? 'आधिकारिक पोर्टल पर जाएं' : 'Visit Official Portal'} <ExternalLink size={14} />
-                    </a>
+                    <Link to={`/apply/${schemeId}`} className="inline-flex items-center gap-2 mt-4 h-10 px-5 rounded-lg bg-saffron text-white font-body text-sm font-medium hover:bg-saffron-light transition-colors">
+                      {isHi ? 'आवेदन करें' : 'Apply Now'} <ExternalLink size={14} />
+                    </Link>
                   </div>
                 )}
 
@@ -319,9 +317,9 @@ function SchemeDetailPage() {
             {/* Quick Apply */}
             <div className="bg-white rounded-xl shadow-card p-5">
               <h4 className="font-body text-sm font-bold text-gray-900 mb-3">{isHi ? 'तुरंत आवेदन करें' : 'Quick Apply'}</h4>
-              <a href={scheme.applyUrl || '#'} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 h-11 w-full rounded-lg bg-saffron text-white font-body text-sm font-semibold hover:bg-saffron-light transition-colors">
+              <Link to={`/apply/${schemeId}`} className="flex items-center justify-center gap-2 h-11 w-full rounded-lg bg-saffron text-white font-body text-sm font-semibold hover:bg-saffron-light transition-colors">
                 {isHi ? 'आवेदन पोर्टल' : 'Application Portal'} <ExternalLink size={14} />
-              </a>
+              </Link>
               <Link to="/chat" className="flex items-center justify-center h-10 w-full mt-2 rounded-lg border border-gray-200 text-gray-600 font-body text-sm hover:bg-gray-50 transition-colors">
                 {isHi ? '💬 सारथी से पूछें' : '💬 Ask Sarathi'}
               </Link>
@@ -372,7 +370,7 @@ function SchemeDetailPage() {
                     className={`w-full flex items-center justify-center gap-2 h-10 rounded-lg font-body text-sm font-medium transition-all ${isPlayingAudio
                       ? 'bg-red-500 text-white'
                       : 'bg-saffron/10 text-saffron hover:bg-saffron/20 border border-saffron/20'
-                    }`}
+                      }`}
                   >
                     {isLoadingAudio ? (
                       <Loader2 size={16} className="animate-spin" />

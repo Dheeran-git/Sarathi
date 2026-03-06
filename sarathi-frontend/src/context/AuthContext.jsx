@@ -7,6 +7,7 @@ const AuthContext = createContext();
 const region = import.meta.env.VITE_AWS_REGION || 'us-east-1';
 const citizenClientId = import.meta.env.VITE_CITIZEN_CLIENT_ID || import.meta.env.VITE_CLIENT_ID;
 const panchayatClientId = import.meta.env.VITE_PANCHAYAT_CLIENT_ID;
+const adminClientId = import.meta.env.VITE_ADMIN_CLIENT_ID;
 const cognitoClient = new CognitoIdentityProviderClient({ region });
 
 function decodeJwt(token) {
@@ -25,6 +26,7 @@ export function AuthProvider({ children }) {
 
     const refreshTimerRef = useRef(null);
     const panchayatRefreshTimerRef = useRef(null);
+    const adminRefreshTimerRef = useRef(null);
 
     // Token refresh for citizen sessions (45-min interval)
     const refreshSession = useCallback(async () => {
@@ -66,11 +68,32 @@ export function AuthProvider({ children }) {
         }
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+    // Token refresh for admin sessions (45-min interval)
+    const refreshAdminSession = useCallback(async () => {
+        const refreshToken = localStorage.getItem('adminRefreshToken');
+        if (!refreshToken) return;
+        try {
+            const response = await cognitoClient.send(new InitiateAuthCommand({
+                AuthFlow: 'REFRESH_TOKEN_AUTH',
+                ClientId: adminClientId,
+                AuthParameters: { REFRESH_TOKEN: refreshToken },
+            }));
+            if (response.AuthenticationResult) {
+                const { AccessToken, IdToken } = response.AuthenticationResult;
+                if (AccessToken) localStorage.setItem('adminAccessToken', AccessToken);
+                if (IdToken) localStorage.setItem('adminIdToken', IdToken);
+            }
+        } catch {
+            logout();
+        }
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
     useEffect(() => {
         checkAuth();
         return () => {
             if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
             if (panchayatRefreshTimerRef.current) clearInterval(panchayatRefreshTimerRef.current);
+            if (adminRefreshTimerRef.current) clearInterval(adminRefreshTimerRef.current);
         };
     }, []);
 
@@ -105,6 +128,12 @@ export function AuthProvider({ children }) {
             setUser({ email, panchayatId, lgdCode, role, state, district, panchayatName, officialName, mobileNumber });
             if (panchayatRefreshTimerRef.current) clearInterval(panchayatRefreshTimerRef.current);
             panchayatRefreshTimerRef.current = setInterval(refreshPanchayatSession, 45 * 60 * 1000);
+        } else if (storedType === 'admin' && localStorage.getItem('adminAccessToken')) {
+            setIsAuthenticated(true);
+            setUserType('admin');
+            setUser({ email });
+            if (adminRefreshTimerRef.current) clearInterval(adminRefreshTimerRef.current);
+            adminRefreshTimerRef.current = setInterval(refreshAdminSession, 45 * 60 * 1000);
         } else {
             setIsAuthenticated(false);
             setUserType(null);
@@ -138,6 +167,10 @@ export function AuthProvider({ children }) {
             setUser({ email, panchayatId, lgdCode, role, state, district, panchayatName, officialName, mobileNumber });
             if (panchayatRefreshTimerRef.current) clearInterval(panchayatRefreshTimerRef.current);
             panchayatRefreshTimerRef.current = setInterval(refreshPanchayatSession, 45 * 60 * 1000);
+        } else if (type === 'admin') {
+            setUser({ email });
+            if (adminRefreshTimerRef.current) clearInterval(adminRefreshTimerRef.current);
+            adminRefreshTimerRef.current = setInterval(refreshAdminSession, 45 * 60 * 1000);
         }
     };
 
@@ -150,6 +183,10 @@ export function AuthProvider({ children }) {
             clearInterval(panchayatRefreshTimerRef.current);
             panchayatRefreshTimerRef.current = null;
         }
+        if (adminRefreshTimerRef.current) {
+            clearInterval(adminRefreshTimerRef.current);
+            adminRefreshTimerRef.current = null;
+        }
         authService.signOut();
         localStorage.removeItem('userEmail');
         setIsAuthenticated(false);
@@ -159,9 +196,10 @@ export function AuthProvider({ children }) {
 
     const isCitizen = userType === 'citizen';
     const isPanchayat = userType === 'panchayat';
+    const isAdmin = userType === 'admin';
 
     return (
-        <AuthContext.Provider value={{ isAuthenticated, isLoading, user, userType, isCitizen, isPanchayat, login, logout, checkAuth }}>
+        <AuthContext.Provider value={{ isAuthenticated, isLoading, user, userType, isCitizen, isPanchayat, isAdmin, login, logout, checkAuth }}>
             {children}
         </AuthContext.Provider>
     );

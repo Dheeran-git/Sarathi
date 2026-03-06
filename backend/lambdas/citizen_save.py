@@ -28,7 +28,8 @@ def convert_to_dynamodb(obj):
 def cors_headers():
     return {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+        'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Amz-Date,X-Api-Key',
+        'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS',
         'Content-Type': 'application/json',
     }
 
@@ -115,6 +116,7 @@ def lambda_handler(event, context):
             'hasEnterprise': to_bool(body.get('hasEnterprise', False)),
             'seekingWork': to_bool(body.get('seekingWork', False)),
 
+            # Additional fields
             'educationLevel': body.get('educationLevel', ''),
 
             # Location fields

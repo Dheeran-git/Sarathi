@@ -18,7 +18,8 @@ sns = boto3.client('sns', region_name=REGION)
 def cors_headers():
     return {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+        'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Amz-Date,X-Api-Key',
+        'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS',
         'Content-Type': 'application/json',
     }
 

@@ -7,6 +7,7 @@ const CITIZEN_NAV_LINKS = [
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/schemes', label: 'Schemes' },
   { to: '/twin', label: 'Digital Twin' },
+  { to: '/smart-assistant', label: '🤖 Assistant' },
   { to: '/profile', label: 'My Profile' },
 ];
 
@@ -16,10 +17,12 @@ const PANCHAYAT_NAV_LINKS = [
   { to: '/panchayat/analytics', label: 'Analytics' },
 ];
 
+const ADMIN_NAV_LINKS = []; // Admins now use the sidebar
+
 function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { isAuthenticated, isCitizen, isPanchayat, user, logout } = useAuth();
+  const { isAuthenticated, isCitizen, isPanchayat, isAdmin, user, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -30,9 +33,11 @@ function Navbar() {
 
   const currentNavLinks = isPanchayat
     ? PANCHAYAT_NAV_LINKS
-    : isCitizen
-      ? CITIZEN_NAV_LINKS
-      : [];
+    : isAdmin
+      ? ADMIN_NAV_LINKS
+      : isCitizen
+        ? CITIZEN_NAV_LINKS
+        : [];
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
@@ -98,9 +103,10 @@ function Navbar() {
             <div className="hidden lg:flex items-center gap-4">
               <span className="font-body text-sm text-slate-300">
                 Welcome,{' '}
-                <span className={`font-semibold ${isPanchayat ? 'text-teal-400' : 'text-saffron'}`}>
+                <span className={`font-semibold ${isPanchayat ? 'text-teal-400' : isAdmin ? 'text-saffron underline decoration-saffron decoration-2' : 'text-saffron'}`}>
                   {user?.email?.split('@')[0] || 'User'}
                 </span>
+                {isAdmin && <span className="ml-2 text-[10px] text-white bg-saffron px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Admin</span>}
               </span>
               <button
                 onClick={handleLogout}
@@ -111,6 +117,12 @@ function Navbar() {
             </div>
           ) : (
             <>
+              <Link
+                to="/admin"
+                className="hidden lg:inline-flex items-center h-9 px-4 rounded-md bg-navy text-white font-body text-sm font-medium hover:bg-navy-mid transition-colors duration-200 border border-saffron/30"
+              >
+                Admin Panel 🏛️
+              </Link>
               <Link
                 to="/panchayat/login"
                 className="hidden lg:inline-flex items-center h-9 px-4 rounded-md border border-teal-500/50 text-teal-400 font-body text-sm font-medium hover:bg-teal-500/10 transition-colors duration-200"
@@ -209,6 +221,13 @@ function Navbar() {
             </>
           ) : (
             <>
+              <Link
+                to="/admin"
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center justify-center h-12 rounded-lg bg-navy border border-saffron/30 text-white font-body text-sm font-medium hover:bg-navy-mid transition-colors duration-200"
+              >
+                Admin Panel 🏛️
+              </Link>
               <Link
                 to="/panchayat/login"
                 onClick={() => setMobileOpen(false)}

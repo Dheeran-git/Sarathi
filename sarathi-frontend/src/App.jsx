@@ -13,6 +13,17 @@ import ProfilePage from './pages/ProfilePage';
 import LocationSetupPage from './pages/LocationSetupPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ApplicationsPage from './pages/ApplicationsPage';
+import AgentPage from './pages/AgentPage';
+
+// Admin Pages
+import AdminLayout from './AdminLayout';
+import AdminLoginPage from './pages/AdminLoginPage';
+import AdminSignupPage from './pages/AdminSignupPage';
+import AdminVerifyPage from './pages/AdminVerifyPage';
+import AdminDashboard from './pages/AdminDashboard';
+import AdminApplicantsPage from './pages/AdminApplicantsPage';
+import AdminAnalyticsPage from './pages/AdminAnalyticsPage';
+import SchemeEditor from './pages/SchemeEditor';
 
 // Auth & Dashboard Pages
 import LoginPage from './pages/LoginPage';
@@ -63,10 +74,12 @@ function PanchayatLayout({ children }) {
 function App() {
   const location = useLocation();
 
+  const isAdminRoute = location.pathname.startsWith('/admin');
+
   return (
     <>
-      <Navbar />
-      <main className="pt-16">
+      {!isAdminRoute && <Navbar />}
+      <main className={isAdminRoute ? "" : "pt-16"}>
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
             <Route path="/" element={<PageTransition><LandingPage /></PageTransition>} />
@@ -82,6 +95,7 @@ function App() {
             <Route path="/apply/:schemeId" element={<PrivateRoute requiredRole="citizen"><PageTransition><ApplyPage /></PageTransition></PrivateRoute>} />
             <Route path="/my-schemes" element={<PrivateRoute requiredRole="citizen"><PageTransition><EligibleSchemesPage /></PageTransition></PrivateRoute>} />
             <Route path="/applications" element={<PrivateRoute requiredRole="citizen"><PageTransition><ApplicationsPage /></PageTransition></PrivateRoute>} />
+            <Route path="/smart-assistant" element={<PrivateRoute requiredRole="citizen"><PageTransition><AgentPage /></PageTransition></PrivateRoute>} />
 
             {/* Panchayat-only routes — wrapped in sidebar layout */}
             <Route path="/panchayat" element={<PrivateRoute requiredRole="panchayat"><PanchayatLayout><PanchayatDashboard /></PanchayatLayout></PrivateRoute>} />
@@ -95,6 +109,15 @@ function App() {
             <Route path="/panchayat/report" element={<PrivateRoute requiredRole="panchayat"><PanchayatLayout><PerformanceReport /></PanchayatLayout></PrivateRoute>} />
             <Route path="/panchayat/settings" element={<PrivateRoute requiredRole="panchayat"><PanchayatLayout><PanchayatSettings /></PanchayatLayout></PrivateRoute>} />
 
+            {/* Admin routes (Authentication temporarily disabled for testing) */}
+            <Route element={<AdminLayout />}>
+              <Route path="/admin" element={<PageTransition><AdminDashboard /></PageTransition>} />
+              <Route path="/admin/applicants" element={<PageTransition><AdminApplicantsPage /></PageTransition>} />
+              <Route path="/admin/schemes/new" element={<PageTransition><SchemeEditor /></PageTransition>} />
+              <Route path="/admin/analytics" element={<PageTransition><AdminAnalyticsPage /></PageTransition>} />
+              <Route path="/admin/settings" element={<PageTransition><div className="p-8"><h1 className="text-3xl font-display text-navy text-center mt-20">Settings <span className="text-saffron">(Coming Soon)</span></h1></div></PageTransition>} />
+            </Route>
+
             {/* Citizen auth */}
             <Route path="/citizen/login" element={<PageTransition><LoginPage /></PageTransition>} />
             <Route path="/citizen/signup" element={<PageTransition><SignupPage /></PageTransition>} />
@@ -105,6 +128,11 @@ function App() {
             <Route path="/panchayat/signup" element={<PageTransition><PanchayatSignupPage /></PageTransition>} />
             <Route path="/panchayat/verify" element={<PageTransition><PanchayatVerifyPage /></PageTransition>} />
             <Route path="/panchayat/forgot-password" element={<PageTransition><PanchayatForgotPasswordPage /></PageTransition>} />
+
+            {/* Admin auth */}
+            <Route path="/admin/login" element={<PageTransition><AdminLoginPage /></PageTransition>} />
+            <Route path="/admin/signup" element={<PageTransition><AdminSignupPage /></PageTransition>} />
+            <Route path="/admin/verify" element={<PageTransition><AdminVerifyPage /></PageTransition>} />
 
             {/* Legacy redirects */}
             <Route path="/login" element={<PageTransition><LoginPage /></PageTransition>} />

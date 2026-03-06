@@ -244,6 +244,7 @@ export function CitizenProvider({ children }) {
 
     const hasLocation = !!(citizenProfile.village && citizenProfile.state && citizenProfile.district);
 
+
     return (
         <CitizenContext.Provider
             value={{

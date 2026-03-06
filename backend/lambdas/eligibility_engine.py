@@ -132,7 +132,8 @@ def lambda_handler(event, context):
             'statusCode': 200,
             'headers': {
                 'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+                'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Amz-Date,X-Api-Key',
+                'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS',
                 'Content-Type': 'application/json',
             },
             'body': json.dumps({
@@ -146,7 +147,8 @@ def lambda_handler(event, context):
             'statusCode': 500,
             'headers': {
                 'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+                'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Amz-Date,X-Api-Key',
+                'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS',
                 'Content-Type': 'application/json',
             },
             'body': json.dumps({'error': 'Internal server error', 'message': str(e)}),

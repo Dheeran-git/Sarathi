@@ -11,6 +11,7 @@ Also fetches panchayat metadata from SarathiPanchayats table.
 import json
 import os
 import boto3
+import time
 from decimal import Decimal
 from boto3.dynamodb.conditions import Key
 
@@ -18,7 +19,6 @@ REGION = os.environ.get('AWS_REGION', 'us-east-1')
 dynamodb = boto3.resource('dynamodb', region_name=REGION)
 citizens_table = dynamodb.Table('SarathiCitizens')
 panchayats_table = dynamodb.Table('SarathiPanchayats')
-
 
 class DecimalEncoder(json.JSONEncoder):
     def default(self, o):
@@ -31,6 +31,7 @@ def cors_headers():
     return {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+        'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
         'Content-Type': 'application/json',
     }
 
@@ -52,8 +53,19 @@ def get_panchayat_id(event):
     return None
 
 
-def get_panchayat_meta(panchayat_id):
-    """Fetch panchayat metadata from SarathiPanchayats table."""
+def _normalize_pid(pid):
+    """Ensure panchayatId has the LGD_ prefix if it's numeric."""
+    if not pid: return 'unassigned'
+    p = str(pid).strip()
+    if p.isdigit() and not p.startswith('LGD_'):
+        return f"LGD_{p}"
+    return p
+
+
+def get_panchayat_meta(panchayat_id, citizens=None):
+    """Fetch panchayat metadata with multiple fallbacks.
+    Priority: 1) DynamoDB table, 2) Derived from citizen records, 3) Slug fallback."""
+    # 1. Try DynamoDB lookups
     try:
         result = panchayats_table.get_item(Key={'panchayatId': panchayat_id})
         item = result.get('Item')
@@ -68,7 +80,19 @@ def get_panchayat_meta(panchayat_id):
     except Exception as e:
         print(f"[WARN] Failed to fetch panchayat meta: {e}")
 
-    # Fallback: derive from panchayat ID
+    # 2. Secondary fallback: derive from citizen location fields (if provided)
+    if citizens:
+        for c in citizens:
+            if c.get('panchayatName'):
+                return {
+                    'panchayatName': c['panchayatName'],
+                    'district': c.get('district', 'Unknown'),
+                    'state': c.get('state', 'Unknown'),
+                    'block': c.get('block', ''),
+                    'lgdCode': c.get('lgdCode', ''),
+                }
+
+    # 3. Third fallback: LGD format
     if panchayat_id.startswith('LGD_'):
         return {
             'panchayatName': f'Panchayat {panchayat_id[4:]}',
@@ -77,7 +101,8 @@ def get_panchayat_meta(panchayat_id):
             'block': '',
             'lgdCode': panchayat_id[4:],
         }
-    # Legacy slug format
+        
+    # 4. Final fallback: derive from slug-based ID
     parts = panchayat_id.replace('-', ' ').split()
     return {
         'panchayatName': ' '.join(p.capitalize() for p in parts[:-2]) + ' Panchayat' if len(parts) > 2 else panchayat_id.replace('-', ' ').title(),
@@ -133,7 +158,7 @@ def lambda_handler(event, context):
 
         # Build dynamic alerts
         alerts = []
-        widows_unserved = [c for c in eligible if c.get('isWidow') in (True, 'true', 'yes', '1')]
+        widows_unserved = [c for c in eligible if str(c.get('isWidow')).lower() in (True, 'true', 'yes', '1')]
         if widows_unserved:
             alerts.append({
                 'type': 'widow_pension', 'urgency': 'high',
@@ -151,7 +176,7 @@ def lambda_handler(event, context):
                 'description': f'{len(elderly_unserved)} elderly citizens missing old age pension',
             })
 
-        meta = get_panchayat_meta(panchayat_id)
+        meta = get_panchayat_meta(panchayat_id, citizens=citizens)
 
         return {
             'statusCode': 200,
@@ -176,6 +201,7 @@ def lambda_handler(event, context):
         }
 
     except Exception as e:
+        print(f"[ERROR] {e}")
         return {
             'statusCode': 500,
             'headers': cors_headers(),

@@ -17,7 +17,8 @@ table = dynamodb.Table('SarathiApplications')
 
 CORS_HEADERS = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+    'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token',
+    'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS',
     'Content-Type': 'application/json',
 }
 
@@ -52,11 +53,22 @@ def _body(event):
     return json.loads(raw) if isinstance(raw, str) else raw
 
 
+def _normalize_pid(pid):
+    """Ensure panchayatId has the LGD_ prefix if it's numeric."""
+    if not pid: return 'unassigned'
+    p = str(pid).strip()
+    if p.isdigit() and not p.startswith('LGD_'):
+        return f"LGD_{p}"
+    return p
+
+
 def handle_post_apply(event):
     """POST /apply — create a new application."""
     body = _body(event)
     citizen_id = body.get('citizenId', '').strip()
     scheme_id  = body.get('schemeId', '').strip()
+    panchayat_id = _normalize_pid(body.get('panchayatId', ''))
+    
     if not citizen_id or not scheme_id:
         return _err(400, 'citizenId and schemeId are required')
 
@@ -66,6 +78,7 @@ def handle_post_apply(event):
     item = {
         'applicationId': application_id,
         'citizenId': citizen_id,
+        'panchayatId': panchayat_id or 'unassigned',
         'schemeId': scheme_id,
         'schemeName': body.get('schemeName', ''),
         'status': 'submitted',
@@ -85,12 +98,65 @@ def handle_post_apply(event):
     return _ok({'applicationId': application_id, 'status': 'submitted', 'createdAt': now})
 
 
+def handle_get_panchayat_applications(event):
+    """GET /panchayat-applications/{panchayatId} — query applications in a panchayat."""
+    path_params = event.get('pathParameters') or {}
+    panchayat_id = _normalize_pid(path_params.get('panchayatId', '').strip())
+
+    if not panchayat_id or panchayat_id == 'unassigned':
+        return _err(400, 'panchayatId path parameter is required')
+
+    print(f"[DEBUG] Querying applications for panchayat: {panchayat_id}")
+    try:
+        resp = table.query(
+            IndexName='panchayatId-createdAt-index',
+            KeyConditionExpression=Key('panchayatId').eq(panchayat_id),
+            ScanIndexForward=False,
+            Limit=100
+        )
+        return _ok({'applications': resp.get('Items', []), 'count': resp.get('Count', 0)})
+    except Exception as e:
+        print(f"[ERROR] Panchayat query failed: {str(e)}")
+        return _err(500, f"Database query failed: {str(e)}")
+
+
+def handle_get_all_applications(event):
+    """GET /applications/all — admin view of all applications."""
+    print("[DEBUG] Scanning all applications...")
+    try:
+        # Scan all applications for admin view. 
+        # For very large tables we would use pagination, but for now scan is fine.
+        resp = table.scan() 
+        items = resp.get('Items', [])
+        
+        # Log count
+        print(f"[DEBUG] Found {len(items)} applications in first scan.")
+        
+        # Don't iterate overly many times in a single Lambda call to avoid 29s API GW timeout
+        return _ok({'applications': items, 'count': len(items)})
+    except Exception as e:
+        print(f"[ERROR] Scan failed: {str(e)}")
+        return _err(500, f"Database scan failed: {str(e)}")
+
+
 def handle_get_applications(event):
     """GET /applications/{userId} — query citizen's applications."""
+    print(f"[DEBUG] event: {json.dumps(event)}")
     path_params = event.get('pathParameters') or {}
+    path = event.get('path', '')
+    
     user_id = path_params.get('userId', '').strip()
+    
+    # Robust fallback: extract from path if parameter is missing
+    if not user_id and '/applications/' in path:
+        user_id = path.split('/applications/')[-1].split('/')[0].strip()
+        print(f"[DEBUG] Parsed user_id from path: {user_id}")
+
     if not user_id:
         return _err(400, 'userId path parameter is required')
+
+    if user_id.lower() == 'all':
+        return handle_get_all_applications(event)
 
     resp = table.query(
         IndexName='citizenId-createdAt-index',
@@ -104,7 +170,14 @@ def handle_get_applications(event):
 def handle_patch_apply(event):
     """PATCH /apply/{applicationId} — update status."""
     path_params = event.get('pathParameters') or {}
+    path = event.get('path', '')
     application_id = path_params.get('applicationId', '').strip()
+    
+    # Robust fallback: extract from path if parameter is missing (matches /apply/ID)
+    if not application_id and '/apply/' in path:
+        application_id = path.split('/apply/')[-1].split('/')[0].strip()
+        print(f"[DEBUG] Parsed application_id from path: {application_id}")
+
     if not application_id:
         return _err(400, 'applicationId path parameter is required')
 
@@ -134,15 +207,21 @@ def lambda_handler(event, context):
         if method == 'POST' and path == '/apply':
             return handle_post_apply(event)
 
+        if method == 'GET' and path.startswith('/panchayat-applications/'):
+            return handle_get_panchayat_applications(event)
+
         if method == 'GET' and path.startswith('/applications/'):
             return handle_get_applications(event)
 
-        if method == 'PATCH' and path.startswith('/apply/'):
+        if (method == 'PATCH' or method == 'POST') and path.startswith('/apply/') and path != '/apply':
             return handle_patch_apply(event)
 
         return _err(404, f'No handler for {method} {path}')
 
     except Exception as e:
+        print(f"[FATAL] Global error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return {
             'statusCode': 500,
             'headers': CORS_HEADERS,
