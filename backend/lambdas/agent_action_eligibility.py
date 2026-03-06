@@ -95,17 +95,23 @@ def lambda_handler(event, context):
         parameters = event.get('parameters', [])
 
         if function == 'check_eligibility':
-            # Extract citizen profile from parameters
+            # Extract citizen profile from parameters (max 5 params due to Bedrock quota)
+            # details is an optional JSON string: {"state":"..","occupation":"..","isWidow":true,"disability":false}
+            details_str = _extract_param(parameters, 'details', '{}')
+            try:
+                details = json.loads(details_str) if details_str else {}
+            except Exception:
+                details = {}
             profile = {
                 'age': _extract_param(parameters, 'age', '0'),
                 'income': _extract_param(parameters, 'monthlyIncome', '0'),
                 'gender': _extract_param(parameters, 'gender', 'any'),
                 'category': _extract_param(parameters, 'category', 'General'),
-                'state': _extract_param(parameters, 'state', ''),
-                'occupation': _extract_param(parameters, 'occupation', ''),
-                'persona': _extract_param(parameters, 'occupation', ''),
-                'isWidow': _extract_param(parameters, 'isWidow', 'false'),
-                'disability': _extract_param(parameters, 'disability', 'false'),
+                'state': details.get('state', ''),
+                'occupation': details.get('occupation', ''),
+                'persona': details.get('occupation', ''),
+                'isWidow': str(details.get('isWidow', 'false')),
+                'disability': str(details.get('disability', 'false')),
             }
 
             matched = [s for s in LOCAL_SCHEMES if is_eligible(profile, s)]

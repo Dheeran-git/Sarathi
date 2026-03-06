@@ -17,6 +17,8 @@ Run: python backend/setup_knowledge_base.py
 import json
 import time
 import boto3
+import requests
+from requests_aws4auth import AWS4Auth
 
 REGION = 'us-east-1'
 ACCOUNT_ID = boto3.client('sts').get_caller_identity()['Account']
@@ -184,6 +186,40 @@ def setup_opensearch():
     return collection_id, collection_endpoint
 
 
+def create_opensearch_index(collection_endpoint):
+    """Create the vector index in OpenSearch Serverless before KB creation."""
+    session = boto3.Session()
+    credentials = session.get_credentials().get_frozen_credentials()
+    auth = AWS4Auth(
+        credentials.access_key, credentials.secret_key,
+        REGION, 'aoss', session_token=credentials.token
+    )
+    index_url = f"{collection_endpoint}/sarathi-schemes-index"
+    mapping = {
+        "settings": {"index": {"knn": True, "knn.algo_param.ef_search": 512}},
+        "mappings": {
+            "properties": {
+                "embedding": {"type": "knn_vector", "dimension": 1024, "method": {"name": "hnsw", "space_type": "l2", "engine": "faiss"}},
+                "text": {"type": "text"},
+                "metadata": {"type": "text"},
+            }
+        }
+    }
+    # Check if index already exists
+    resp = requests.head(index_url, auth=auth)
+    if resp.status_code == 200:
+        print("  Index sarathi-schemes-index already exists — waiting 15s for readiness...")
+        time.sleep(15)
+        return
+    resp = requests.put(index_url, json=mapping, auth=auth,
+                        headers={"Content-Type": "application/json"})
+    if resp.status_code in (200, 201):
+        print("  Created index sarathi-schemes-index — waiting 30s for propagation...")
+        time.sleep(30)
+    else:
+        raise RuntimeError(f"Failed to create index: {resp.status_code} {resp.text}")
+
+
 def create_knowledge_base(kb_role_arn, collection_id):
     """Create the Bedrock Knowledge Base."""
     try:
@@ -275,6 +311,9 @@ def main():
 
     print("\n2. Setting up OpenSearch Serverless...")
     collection_id, collection_endpoint = setup_opensearch()
+
+    print("\n2b. Creating OpenSearch index...")
+    create_opensearch_index(collection_endpoint)
 
     print("\n3. Creating Bedrock Knowledge Base...")
     kb_id = create_knowledge_base(kb_role_arn, collection_id)

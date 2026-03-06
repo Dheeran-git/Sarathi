@@ -72,21 +72,34 @@ def create_agent(name, instruction, with_kb=True):
     if GUARDRAIL_ID:
         kwargs['guardrailConfiguration'] = _guardrail_config()
 
-    resp = bedrock_agent.create_agent(**kwargs)
-    agent_id = resp['agent']['agentId']
-    print(f"  Created agent {name}: {agent_id}")
+    try:
+        resp = bedrock_agent.create_agent(**kwargs)
+        agent_id = resp['agent']['agentId']
+        print(f"  Created agent {name}: {agent_id}")
+    except bedrock_agent.exceptions.ConflictException:
+        existing = bedrock_agent.list_agents(maxResults=20)
+        for a in existing.get('agentSummaries', []):
+            if a['agentName'] == name:
+                agent_id = a['agentId']
+                print(f"  Agent {name} already exists: {agent_id}")
+                break
+        else:
+            raise
 
     # Attach KB if requested
     if with_kb and KB_ID:
         _wait_for_agent(agent_id)
-        bedrock_agent.associate_agent_knowledge_base(
-            agentId=agent_id,
-            agentVersion='DRAFT',
-            knowledgeBaseId=KB_ID,
-            description="Sarathi scheme knowledge base",
-            knowledgeBaseState='ENABLED',
-        )
-        print(f"    Attached KB {KB_ID} to {name}")
+        try:
+            bedrock_agent.associate_agent_knowledge_base(
+                agentId=agent_id,
+                agentVersion='DRAFT',
+                knowledgeBaseId=KB_ID,
+                description="Sarathi scheme knowledge base",
+                knowledgeBaseState='ENABLED',
+            )
+            print(f"    Attached KB {KB_ID} to {name}")
+        except bedrock_agent.exceptions.ConflictException:
+            print(f"    KB {KB_ID} already attached to {name}")
 
     return agent_id
 
@@ -95,17 +108,20 @@ def add_action_group(agent_id, group_name, function_name, function_arn, func_sch
     """Add an action group (Lambda action) to an agent."""
     _wait_for_agent(agent_id)
 
-    bedrock_agent.create_agent_action_group(
-        agentId=agent_id,
-        agentVersion='DRAFT',
-        actionGroupName=group_name,
-        actionGroupExecutor={'lambda': function_arn},
-        functionSchema={
-            'functions': [func_schema]
-        },
-        description=f"Action group for {group_name}",
-    )
-    print(f"    Action group {group_name} added to {agent_id}")
+    try:
+        bedrock_agent.create_agent_action_group(
+            agentId=agent_id,
+            agentVersion='DRAFT',
+            actionGroupName=group_name,
+            actionGroupExecutor={'lambda': function_arn},
+            functionSchema={
+                'functions': [func_schema]
+            },
+            description=f"Action group for {group_name}",
+        )
+        print(f"    Action group {group_name} added to {agent_id}")
+    except bedrock_agent.exceptions.ConflictException:
+        print(f"    Action group {group_name} already exists on {agent_id}")
 
     # Add resource-based policy so Bedrock can invoke the Lambda
     try:
@@ -135,11 +151,20 @@ def prepare_and_alias(agent_id, alias_name):
             raise RuntimeError(f"Agent {agent_id} preparation failed")
         time.sleep(5)
 
-    resp = bedrock_agent.create_agent_alias(
-        agentId=agent_id,
-        agentAliasName=alias_name,
-    )
-    alias_id = resp['agentAlias']['agentAliasId']
+    try:
+        resp = bedrock_agent.create_agent_alias(
+            agentId=agent_id,
+            agentAliasName=alias_name,
+        )
+        alias_id = resp['agentAlias']['agentAliasId']
+    except bedrock_agent.exceptions.ConflictException:
+        existing = bedrock_agent.list_agent_aliases(agentId=agent_id, maxResults=20)
+        for a in existing.get('agentAliasSummaries', []):
+            if a['agentAliasName'] == alias_name:
+                alias_id = a['agentAliasId']
+                break
+        else:
+            raise
     print(f"    Alias {alias_name}: {alias_id}")
     return alias_id
 
@@ -177,16 +202,17 @@ def create_orchestrator(eligibility_id, eligibility_alias, application_id, appli
     _wait_for_agent(orch_id)
 
     # Associate sub-agents as collaborators
-    for sub_id, sub_alias, desc in [
-        (eligibility_id, eligibility_alias, "Eligibility specialist — check scheme matches for citizen profiles"),
-        (application_id, application_alias, "Application guide — document checklists and step-by-step guidance"),
-        (twin_id, twin_alias, "Digital twin — 36-month income projections and conflict detection"),
+    for sub_id, sub_alias, name, desc in [
+        (eligibility_id, eligibility_alias, 'eligibility-specialist', "Eligibility specialist — check scheme matches for citizen profiles"),
+        (application_id, application_alias, 'application-guide', "Application guide — document checklists and step-by-step guidance"),
+        (twin_id, twin_alias, 'digital-twin', "Digital twin — 36-month income projections and conflict detection"),
     ]:
         sub_arn = f"arn:aws:bedrock:{REGION}:{ACCOUNT_ID}:agent-alias/{sub_id}/{sub_alias}"
         bedrock_agent.associate_agent_collaborator(
             agentId=orch_id,
             agentVersion='DRAFT',
             agentDescriptor={'aliasArn': sub_arn},
+            collaboratorName=name,
             collaborationInstruction=desc,
             relayConversationHistory='TO_COLLABORATOR',
         )
@@ -224,10 +250,7 @@ def main():
                              'monthlyIncome': {'type': 'string', 'description': 'Monthly income in INR', 'required': True},
                              'gender': {'type': 'string', 'description': 'male/female/any', 'required': False},
                              'category': {'type': 'string', 'description': 'SC/ST/OBC/General', 'required': False},
-                             'state': {'type': 'string', 'description': 'Indian state name', 'required': False},
-                             'occupation': {'type': 'string', 'description': 'farmer/laborer/student etc', 'required': False},
-                             'isWidow': {'type': 'string', 'description': 'true/false', 'required': False},
-                             'disability': {'type': 'string', 'description': 'true/false', 'required': False},
+                             'details': {'type': 'string', 'description': 'JSON with optional fields: state, occupation, isWidow (true/false), disability (true/false)', 'required': False},
                          },
                      })
     elig_alias = prepare_and_alias(elig_id, 'sarathi-eligibility-prod')

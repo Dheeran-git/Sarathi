@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Upload, FileText, CheckCircle, AlertTriangle, Loader2, X } from 'lucide-react';
+import { ArrowLeft, Upload, FileText, CheckCircle, AlertTriangle, Loader2, X, Sparkles } from 'lucide-react';
 import { getUploadUrl, analyzeDocument } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { useCitizen } from '../context/CitizenContext';
