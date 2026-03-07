@@ -91,7 +91,10 @@ function AdminLoginPage() {
                             {loading ? 'Authenticating...' : 'Login to Admin Dashboard'}
                         </button>
 
-                        <div className="text-center mt-6">
+                        <div className="text-center mt-6 space-y-2">
+                            <p className="font-body text-sm text-gray-400">
+                                <Link to="/admin/forgot-password" className="text-gray-400 hover:text-saffron hover:underline font-medium">Forgot password?</Link>
+                            </p>
                             <p className="font-body text-sm text-gray-400">
                                 Need administrative access?{' '}
                                 <Link to="/admin/signup" className="text-saffron hover:underline font-bold">Request Access / Sign Up</Link>

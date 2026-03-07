@@ -9,7 +9,7 @@ import json
 import os
 import uuid
 import boto3
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 
 REGION = 'us-east-1'
@@ -92,7 +92,7 @@ def lambda_handler(event, context):
                         ExpressionAttributeValues={
                             ':status': decision,
                             ':reason': reason,
-                            ':dt': datetime.utcnow().isoformat(),
+                            ':dt': datetime.now(timezone.utc).isoformat(),
                         },
                     )
                 except Exception as e:
@@ -127,10 +127,10 @@ def lambda_handler(event, context):
             'citizenId': citizen_id,
             'schemeId': scheme_id,
             'documents': documents,
-            'submittedAt': datetime.utcnow().isoformat(),
+            'submittedAt': datetime.now(timezone.utc).isoformat(),
         })
 
-        execution_name = f"app-{application_id[:8]}-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+        execution_name = f"app-{application_id[:8]}-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
 
         sfn_response = sfn.start_execution(
             stateMachineArn=STATE_MACHINE_ARN,
@@ -147,7 +147,7 @@ def lambda_handler(event, context):
                 ExpressionAttributeValues={
                     ':arn': execution_arn,
                     ':status': 'workflow_started',
-                    ':dt': datetime.utcnow().isoformat(),
+                    ':dt': datetime.now(timezone.utc).isoformat(),
                 },
             )
         except Exception as e:

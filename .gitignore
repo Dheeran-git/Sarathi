@@ -6,6 +6,7 @@ dist/
 .venv/
 venv/
 *.zip
+*.tar.gz
 
 # Environment
 .env

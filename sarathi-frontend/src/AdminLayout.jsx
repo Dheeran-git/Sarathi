@@ -1,11 +1,11 @@
 import React from 'react';
 import AdminSidebar from './components/ui/AdminSidebar';
 import { useAuth } from './context/AuthContext';
-import { Outlet } from 'react-router-dom';
+import { Outlet, Navigate } from 'react-router-dom';
 
 function AdminLayout() {
-    // const { isAdmin } = useAuth();
-    // if (!isAdmin) return null; // Safety check disabled for testing
+    const { isAdmin } = useAuth();
+    if (!isAdmin) return <Navigate to="/admin/login" replace />;
 
     return (
         <div className="flex bg-off-white min-h-screen">

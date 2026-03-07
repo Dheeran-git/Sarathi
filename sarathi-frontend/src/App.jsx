@@ -36,6 +36,8 @@ import EligibleSchemesPage from './pages/EligibleSchemesPage';
 import AgentChatPage from './pages/AgentChatPage';
 import DocumentUploadPage from './pages/DocumentUploadPage';
 import PrivateRoute from './components/auth/PrivateRoute';
+import ErrorBoundary from './components/ErrorBoundary';
+import AdminForgotPasswordPage from './pages/AdminForgotPasswordPage';
 
 // Panchayat Portal Pages
 import PanchayatCitizenRegistry from './pages/panchayat/PanchayatCitizenRegistry';
@@ -80,6 +82,7 @@ function App() {
     <>
       {!isAdminRoute && <Navbar />}
       <main className={isAdminRoute ? "" : "pt-16"}>
+        <ErrorBoundary>
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
             <Route path="/" element={<PageTransition><LandingPage /></PageTransition>} />
@@ -123,6 +126,7 @@ function App() {
             <Route path="/citizen/login" element={<PageTransition><LoginPage /></PageTransition>} />
             <Route path="/citizen/signup" element={<PageTransition><SignupPage /></PageTransition>} />
             <Route path="/citizen/verify" element={<PageTransition><VerifyPage /></PageTransition>} />
+            <Route path="/citizen/forgot-password" element={<PageTransition><ForgotPasswordPage /></PageTransition>} />
 
             {/* Panchayat auth */}
             <Route path="/panchayat/login" element={<PageTransition><PanchayatLoginPage /></PageTransition>} />
@@ -134,6 +138,7 @@ function App() {
             <Route path="/admin/login" element={<PageTransition><AdminLoginPage /></PageTransition>} />
             <Route path="/admin/signup" element={<PageTransition><AdminSignupPage /></PageTransition>} />
             <Route path="/admin/verify" element={<PageTransition><AdminVerifyPage /></PageTransition>} />
+            <Route path="/admin/forgot-password" element={<PageTransition><AdminForgotPasswordPage /></PageTransition>} />
 
             {/* Redirects for removed/moved routes */}
             <Route path="/smart-assistant" element={<Navigate to="/agent" replace />} />
@@ -159,6 +164,7 @@ function App() {
             } />
           </Routes>
         </AnimatePresence>
+        </ErrorBoundary>
       </main>
     </>
   );

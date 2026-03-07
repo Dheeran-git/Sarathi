@@ -54,7 +54,6 @@ function SchemeEditor() {
         setLoading(true);
         try {
             const payload = { ...scheme, status };
-            console.log("Submitting scheme:", payload);
             await createScheme(payload);
 
             alert(`Scheme successfully ${status === 'Published' ? 'published to live portal' : 'saved as draft'}!`);

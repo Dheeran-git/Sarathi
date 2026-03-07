@@ -14,7 +14,7 @@ import json
 import os
 import boto3
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, timezone
 
 REGION = os.environ.get('AWS_REGION', 'us-east-1')
 AUTO_APPROVE = os.environ.get('AUTO_APPROVE', 'true').lower() == 'true'
@@ -133,7 +133,7 @@ def handle_claim(event):
         })
 
     # Claim the panchayat
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
     status = 'active' if AUTO_APPROVE else 'pending_verification'
 
     panchayats_table.update_item(

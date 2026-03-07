@@ -22,6 +22,7 @@ function AdminDashboard() {
     const [schemes, setSchemes] = useState([]);
     const [applications, setApplications] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     // Mock data for charts
     const categoryData = [
@@ -57,6 +58,7 @@ function AdminDashboard() {
             setApplications(appsData.applications || []);
         } catch (err) {
             console.error("Failed to fetch dashboard data", err);
+            setError('Failed to load dashboard data. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -72,6 +74,12 @@ function AdminDashboard() {
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
+            {error && (
+                <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl font-body text-sm flex items-center justify-between">
+                    <span>{error}</span>
+                    <button onClick={() => { setError(null); fetchData(); }} className="text-red-600 font-bold hover:underline text-xs">Retry</button>
+                </div>
+            )}
             <header className="flex items-end justify-between">
                 <div>
                     <h1 className="font-display text-3xl font-bold text-navy">System <span className="text-saffron">Overview</span></h1>

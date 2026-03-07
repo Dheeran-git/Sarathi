@@ -9,7 +9,7 @@ import json
 import os
 import hashlib
 import boto3
-from datetime import datetime
+from datetime import datetime, timezone
 
 REGION = 'us-east-1'
 CACHE_TABLE = os.environ.get('CACHE_TABLE', 'SarathiExplanationCache')
@@ -199,7 +199,7 @@ def lambda_handler(event, context):
                 'explanationHindi': explanation_hindi,
                 'applicationGuidance': application_guidance,
                 'audioUrl': audio_url,
-                'generatedAt': datetime.utcnow().isoformat(),
+                'generatedAt': datetime.now(timezone.utc).isoformat(),
             })
         except Exception:
             pass

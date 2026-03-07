@@ -4,7 +4,7 @@ import { Loader2 } from 'lucide-react';
 
 export default function PrivateRoute({ children, requiredRole }) {
     const location = useLocation();
-    const { isAuthenticated, isLoading, isCitizen, isPanchayat } = useAuth();
+    const { isAuthenticated, isLoading, isCitizen, isPanchayat, isAdmin } = useAuth();
 
     if (isLoading) {
         return (
@@ -20,6 +20,10 @@ export default function PrivateRoute({ children, requiredRole }) {
 
     if (requiredRole === 'panchayat' && !isPanchayat) {
         return <Navigate to="/panchayat/login" state={{ from: location }} replace />;
+    }
+
+    if (requiredRole === 'admin' && !isAdmin) {
+        return <Navigate to="/admin/login" state={{ from: location }} replace />;
     }
 
     if (!requiredRole && !isAuthenticated) {

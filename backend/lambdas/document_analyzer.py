@@ -9,7 +9,7 @@ import os
 import re
 import uuid
 import boto3
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 REGION = 'us-east-1'
 DOCUMENTS_BUCKET = os.environ.get('DOCUMENTS_BUCKET', 'sarathi-documents')
@@ -291,7 +291,7 @@ def lambda_handler(event, context):
 
         # Store extraction result in DynamoDB (TTL 7 days)
         doc_id = s3_key.split('/')[-2] if '/' in s3_key else str(uuid.uuid4())
-        expires_at = int((datetime.utcnow() + timedelta(days=7)).timestamp())
+        expires_at = int((datetime.now(timezone.utc) + timedelta(days=7)).timestamp())
 
         try:
             extractions_table.put_item(Item={
@@ -301,7 +301,7 @@ def lambda_handler(event, context):
                 's3Key': s3_key,
                 'extractedFields': extracted_fields,
                 'confidenceScores': confidence_scores,
-                'uploadedAt': datetime.utcnow().isoformat(),
+                'uploadedAt': datetime.now(timezone.utc).isoformat(),
                 'expiresAt': expires_at,
             })
         except Exception as db_err:

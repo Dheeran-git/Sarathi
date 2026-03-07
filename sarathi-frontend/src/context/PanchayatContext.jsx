@@ -5,7 +5,12 @@
  */
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
-import { getPanchayatStats, getPanchayatApplications } from '../utils/api';
+import {
+    getPanchayatStats, getPanchayatApplications,
+    getPanchayatCampaigns, getPanchayatGrievances,
+    getPanchayatCalendar, getPanchayatVillageProfile,
+    getPanchayatAnalytics,
+} from '../utils/api';
 import {
     households as mockHouseholds,
     alerts as mockAlerts,
@@ -56,9 +61,8 @@ export function PanchayatProvider({ children }) {
         if (!isAuthenticated || userType !== 'panchayat') return;
 
         setIsLoading(true);
+        const panchayatId = user?.panchayatId;
         try {
-            // Try live API for core stats
-            const panchayatId = user.panchayatId;
             if (!panchayatId) throw new Error("No panchayat ID found in user token");
 
             const stats = await getPanchayatStats(panchayatId);
@@ -89,12 +93,34 @@ export function PanchayatProvider({ children }) {
             setAlerts(mockAlerts);
         }
 
-        // Features without backend yet — always use mock data
-        setAnalyticsData(mockAnalytics);
-        setCampaigns(mockCampaigns);
-        setGrievances(mockGrievances);
-        setCalendarEvents(mockCalendarEvents);
-        setVillageProfile(mockVillageProfile);
+        // Fetch features from API, fallback to mock data
+        try {
+            const [campaignsRes, grievancesRes, calendarRes, villageRes, analyticsRes] = await Promise.allSettled([
+                getPanchayatCampaigns(panchayatId),
+                getPanchayatGrievances(panchayatId),
+                getPanchayatCalendar(panchayatId),
+                getPanchayatVillageProfile(panchayatId),
+                getPanchayatAnalytics(panchayatId),
+            ]);
+            const extract = (res, key, fallback) => {
+                if (res.status === 'fulfilled' && res.value?.[key]) {
+                    const val = res.value[key];
+                    return (Array.isArray(val) ? val.length > 0 : Object.keys(val).length > 0) ? val : fallback;
+                }
+                return fallback;
+            };
+            setCampaigns(extract(campaignsRes, 'campaigns', mockCampaigns));
+            setGrievances(extract(grievancesRes, 'grievances', mockGrievances));
+            setCalendarEvents(extract(calendarRes, 'calendar', mockCalendarEvents));
+            setVillageProfile(extract(villageRes, 'village-profile', mockVillageProfile));
+            setAnalyticsData(extract(analyticsRes, 'analytics', mockAnalytics));
+        } catch {
+            setCampaigns(mockCampaigns);
+            setGrievances(mockGrievances);
+            setCalendarEvents(mockCalendarEvents);
+            setVillageProfile(mockVillageProfile);
+            setAnalyticsData(mockAnalytics);
+        }
 
         // Fetch live applications
         try {
@@ -119,7 +145,7 @@ export function PanchayatProvider({ children }) {
 
         setLastFetched(new Date());
         setIsLoading(false);
-    }, [isAuthenticated, userType, panchayatProfile.panchayatId]);
+    }, [isAuthenticated, userType, user]);
 
     // Auto-fetch on login
     useEffect(() => {

@@ -239,4 +239,61 @@ export async function sendToLex(message, sessionId = 'default', locale = 'en_US'
   return unwrapBody(await api.post('/lex', { message, sessionId, locale }));
 }
 
+/* ── Panchayat Data CRUD ──────────────────────────────────────────── */
+
+/** GET /panchayat/{id}/campaigns */
+export async function getPanchayatCampaigns(panchayatId) {
+  if (!panchayatId) throw new Error('panchayatId is required');
+  return unwrapBody(await api.get(`/panchayat/${panchayatId}/campaigns`));
+}
+
+/** POST /panchayat/{id}/campaigns */
+export async function savePanchayatCampaigns(panchayatId, data) {
+  return unwrapBody(await api.post(`/panchayat/${panchayatId}/campaigns`, { data }));
+}
+
+/** GET /panchayat/{id}/grievances */
+export async function getPanchayatGrievances(panchayatId) {
+  if (!panchayatId) throw new Error('panchayatId is required');
+  return unwrapBody(await api.get(`/panchayat/${panchayatId}/grievances`));
+}
+
+/** POST /panchayat/{id}/grievances */
+export async function savePanchayatGrievances(panchayatId, data) {
+  return unwrapBody(await api.post(`/panchayat/${panchayatId}/grievances`, { data }));
+}
+
+/** GET /panchayat/{id}/calendar */
+export async function getPanchayatCalendar(panchayatId) {
+  if (!panchayatId) throw new Error('panchayatId is required');
+  return unwrapBody(await api.get(`/panchayat/${panchayatId}/calendar`));
+}
+
+/** POST /panchayat/{id}/calendar */
+export async function savePanchayatCalendar(panchayatId, data) {
+  return unwrapBody(await api.post(`/panchayat/${panchayatId}/calendar`, { data }));
+}
+
+/** GET /panchayat/{id}/village-profile */
+export async function getPanchayatVillageProfile(panchayatId) {
+  if (!panchayatId) throw new Error('panchayatId is required');
+  return unwrapBody(await api.get(`/panchayat/${panchayatId}/village-profile`));
+}
+
+/** POST /panchayat/{id}/village-profile */
+export async function savePanchayatVillageProfile(panchayatId, data) {
+  return unwrapBody(await api.post(`/panchayat/${panchayatId}/village-profile`, { data }));
+}
+
+/** GET /panchayat/{id}/analytics */
+export async function getPanchayatAnalytics(panchayatId) {
+  if (!panchayatId) throw new Error('panchayatId is required');
+  return unwrapBody(await api.get(`/panchayat/${panchayatId}/analytics`));
+}
+
+/** POST /panchayat/{id}/analytics */
+export async function savePanchayatAnalytics(panchayatId, data) {
+  return unwrapBody(await api.post(`/panchayat/${panchayatId}/analytics`, { data }));
+}
+
 export default api;

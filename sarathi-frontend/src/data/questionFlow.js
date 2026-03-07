@@ -253,7 +253,10 @@ export function parseAnswer(question, rawText) {
 
     if (question.type === 'number') {
         const num = parseInt(text.replace(/[₹,\s]/g, ''), 10);
-        return isNaN(num) ? text : num;
+        if (isNaN(num)) return text;
+        if (question.key === 'age' && (num < 0 || num > 120)) return text;
+        if (question.key === 'income' && num < 0) return text;
+        return num;
     }
 
     if (question.type === 'boolean') {

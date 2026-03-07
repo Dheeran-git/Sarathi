@@ -9,7 +9,7 @@ Stores results in SarathiPanchayatInsights with 90-day TTL.
 import json
 import os
 import boto3
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from boto3.dynamodb.conditions import Key
 
@@ -189,8 +189,8 @@ def _generate_for_panchayat(panchayat_id, panchayat_name='Unknown Panchayat'):
     raw_text = _generate_insights_bedrock(panchayat_name, stats)
     insights = _parse_insights(raw_text, stats)
 
-    generated_at = datetime.utcnow().isoformat()
-    expires_at = int((datetime.utcnow() + timedelta(days=90)).timestamp())
+    generated_at = datetime.now(timezone.utc).isoformat()
+    expires_at = int((datetime.now(timezone.utc) + timedelta(days=90)).timestamp())
 
     insights_table.put_item(Item={
         'panchayatId': panchayat_id,
@@ -227,7 +227,7 @@ def lambda_handler(event, context):
             if items:
                 generated_at = items[0].get('generatedAt', '')
                 if generated_at:
-                    age_minutes = (datetime.utcnow() - datetime.fromisoformat(generated_at)).total_seconds() / 60
+                    age_minutes = (datetime.now(timezone.utc) - datetime.fromisoformat(generated_at)).total_seconds() / 60
                     if age_minutes < 60:
                         return {
                             'statusCode': 200,
@@ -256,7 +256,7 @@ def lambda_handler(event, context):
                 'body': json.dumps({
                     'panchayatId': panchayat_id,
                     'insights': insights,
-                    'generatedAt': datetime.utcnow().isoformat(),
+                    'generatedAt': datetime.now(timezone.utc).isoformat(),
                     'cached': False,
                 }, cls=DecimalEncoder),
             }

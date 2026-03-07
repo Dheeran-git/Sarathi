@@ -133,7 +133,6 @@ export function CitizenProvider({ children }) {
                     payload.totalAnnualBenefit = schemes.reduce((sum, s) => sum + (s.annualBenefit || 0), 0);
                 }
                 await saveCitizen(payload, currentUserId);
-                console.log('[CitizenContext] Profile auto-saved to DB');
             } catch (err) {
                 console.warn('[CitizenContext] Auto-save failed (will retry):', err);
             }
@@ -176,14 +175,12 @@ export function CitizenProvider({ children }) {
                 if (data.matchedSchemes && data.matchedSchemes.length > 0) {
                     setEligibleSchemes(data.matchedSchemes);
                 }
-                console.log('[CitizenContext] Profile loaded from DB');
             } else {
                 // No profile in DB — keep whatever is in localStorage
-                console.log('[CitizenContext] No profile in DB, keeping local data');
             }
         } catch (error) {
             // DB fetch failed — keep localStorage data, don't wipe it
-            console.log('[CitizenContext] DB fetch failed, keeping local data:', error.message);
+            console.warn('[CitizenContext] DB fetch failed, keeping local data:', error.message);
         } finally {
             setIsLoadingProfile(false);
         }
