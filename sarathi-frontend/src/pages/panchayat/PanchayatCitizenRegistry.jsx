@@ -31,7 +31,7 @@ function PanchayatCitizenRegistry() {
 
         if (search) {
             const q = search.toLowerCase();
-            data = data.filter((c) => c.name?.toLowerCase().includes(q) || c.id?.toLowerCase().includes(q));
+            data = data.filter((c) => c.name?.toLowerCase().includes(q) || c.citizenId?.toLowerCase().includes(q));
         }
         if (genderFilter !== 'All') data = data.filter((c) => c.gender === genderFilter.toLowerCase());
         if (categoryFilter !== 'All') data = data.filter((c) => c.category === categoryFilter);
@@ -66,7 +66,7 @@ function PanchayatCitizenRegistry() {
 
     const toggleSelectAll = () => {
         if (selectedRows.size === filteredCitizens.length) setSelectedRows(new Set());
-        else setSelectedRows(new Set(filteredCitizens.map((c) => c.id)));
+        else setSelectedRows(new Set(filteredCitizens.map((c) => c.citizenId)));
     };
 
     const handleExportCSV = () => {
@@ -183,20 +183,20 @@ function PanchayatCitizenRegistry() {
                         <tbody className="divide-y divide-slate-100">
                             {filteredCitizens.slice(0, 100).map((c) => {
                                 const st = STATUS_COLORS[c.status] || STATUS_COLORS.unknown;
-                                const isExpanded = expandedRow === c.id;
+                                const isExpanded = expandedRow === c.citizenId;
                                 return (
-                                    <motion.tr key={c.id} layout className={`hover:bg-slate-50/50 transition-colors ${isExpanded ? 'bg-teal-50/30' : ''}`}>
+                                    <motion.tr key={c.citizenId} layout className={`hover:bg-slate-50/50 transition-colors ${isExpanded ? 'bg-teal-50/30' : ''}`}>
                                         <td className="px-3 py-2.5">
                                             <input
                                                 type="checkbox"
-                                                checked={selectedRows.has(c.id)}
-                                                onChange={() => toggleSelect(c.id)}
+                                                checked={selectedRows.has(c.citizenId)}
+                                                onChange={() => toggleSelect(c.citizenId)}
                                                 className="rounded border-slate-300"
                                             />
                                         </td>
                                         <td className="px-3 py-2.5">
                                             <button
-                                                onClick={() => setExpandedRow(isExpanded ? null : c.id)}
+                                                onClick={() => setExpandedRow(isExpanded ? null : c.citizenId)}
                                                 className="text-left font-medium text-navy hover:text-teal-600 transition-colors flex items-center gap-1"
                                             >
                                                 {c.name}
@@ -208,7 +208,7 @@ function PanchayatCitizenRegistry() {
                                                     animate={{ height: 'auto', opacity: 1 }}
                                                     className="mt-2 p-3 bg-slate-50 rounded-lg text-xs space-y-1"
                                                 >
-                                                    <p><span className="text-slate-500">ID:</span> {c.id}</p>
+                                                    <p><span className="text-slate-500">ID:</span> {c.citizenId}</p>
                                                     <p><span className="text-slate-500">Schemes Enrolled:</span> {c.schemesCount || 0}</p>
                                                     <p><span className="text-slate-500">Income:</span> ₹{((c.income || c.age * 200) || 0).toLocaleString('en-IN')}/mo</p>
                                                 </motion.div>

@@ -122,33 +122,76 @@ def handle_claim(event):
     panchayat = result.get('Item')
 
     if not panchayat:
-        return response(404, {'error': f'Panchayat with LGD code {lgd_code} not found in registry'})
+        # If not in registry, we initialize it from metadata provided by the frontend
+        print(f"[INFO] Initializing new panchayat record for {panchayat_id}")
+        panchayat = {
+            'panchayatId': panchayat_id,
+            'lgdCode': lgd_code,
+            'panchayatName': body.get('panchayatName', 'Unknown'),
+            'state': body.get('state', 'Unknown'),
+            'district': body.get('district', 'Unknown'),
+            'block': body.get('block', 'Unknown'),
+            'status': 'unclaimed',
+            'officials': {}
+        }
+        # In this case, we don't return 404. We continue and Let the update_item initialize it.
 
-    # Check if already claimed
-    if panchayat.get('status') == 'active' and panchayat.get('officialCognitoSub'):
+    officials = panchayat.get('officials', {})
+
+    # Check if this specific role is already claimed
+    if panchayat.get('status') == 'active' and panchayat.get('role') == role and not officials:
         return response(409, {
-            'error': 'This panchayat is already claimed by another official',
+            'error': f'The {role.replace("_", " ").title()} role is already claimed',
             'officialName': panchayat.get('officialName', 'Unknown'),
-            'message': 'Contact the Block Development Officer (BDO) to resolve this.',
+            'message': 'Only one official per role is allowed per Gram Panchayat.',
         })
 
-    # Claim the panchayat
+    if role in officials and officials[role].get('status') in ['active', 'pending_verification']:
+        return response(409, {
+            'error': f'The {role.replace("_", " ").title()} role is already claimed',
+            'officialName': officials[role].get('name', 'Unknown'),
+            'message': 'Only one official per role is allowed per Gram Panchayat.',
+        })
+
+    # Claim the panchayat role
     now = datetime.now(timezone.utc).isoformat()
     status = 'active' if AUTO_APPROVE else 'pending_verification'
 
-    panchayats_table.update_item(
-        Key={'panchayatId': panchayat_id},
-        UpdateExpression='SET #s = :status, officialName = :name, officialCognitoSub = :sub, #r = :role, registeredAt = :now, verified = :verified',
-        ExpressionAttributeNames={'#s': 'status', '#r': 'role'},
-        ExpressionAttributeValues={
-            ':status': status,
-            ':name': official_name,
-            ':sub': cognito_sub,
-            ':role': role,
-            ':now': now,
-            ':verified': AUTO_APPROVE,
-        },
-    )
+    # Add to officials map
+    officials[role] = {
+        'name': official_name,
+        'cognitoSub': cognito_sub,
+        'email': email,
+        'status': status,
+        'registeredAt': now,
+        'verified': AUTO_APPROVE
+    }
+
+    # If this is the FIRST official, we can also set the top-level fields for backwards compatibility
+    update_expr = 'SET officials = :officials'
+    expr_vals = {':officials': officials}
+    expr_names = {}
+
+    if not panchayat.get('status') or panchayat.get('status') == 'unclaimed':
+        update_expr += ', #s = :status, officialName = :name, officialCognitoSub = :sub, #r = :role, registeredAt = :now, verified = :verified'
+        expr_names['#s'] = 'status'
+        expr_names['#r'] = 'role'
+        expr_vals[':status'] = status
+        expr_vals[':name'] = official_name
+        expr_vals[':sub'] = cognito_sub
+        expr_vals[':role'] = role
+        expr_vals[':now'] = now
+        expr_vals[':verified'] = AUTO_APPROVE
+
+    kwargs = {
+        'Key': {'panchayatId': panchayat_id},
+        'UpdateExpression': update_expr,
+        'ExpressionAttributeValues': expr_vals
+    }
+    if expr_names:
+        kwargs['ExpressionAttributeNames'] = expr_names
+
+    panchayats_table.update_item(**kwargs)
 
     # Set Cognito custom attributes
     if cognito_sub and email:
@@ -201,6 +244,50 @@ def handle_profile(event):
     return response(200, panchayat)
 
 
+def handle_check_role(event):
+    """Check if a panchayatId + role combination is already taken."""
+    params = event.get('queryStringParameters') or {}
+    pid = params.get('panchayatId', '').strip()
+    role_to_check = params.get('role', '').strip()
+
+    if not pid or not role_to_check:
+        return response(400, {'error': 'panchayatId and role are required'})
+
+    try:
+        result = panchayats_table.get_item(Key={'panchayatId': pid})
+        panchayat = result.get('Item')
+        
+        if panchayat:
+            officials = panchayat.get('officials', {})
+            
+            # Legacy check for old single-official structure
+            if panchayat.get('status') == 'active' and panchayat.get('role') == role_to_check and not officials:
+                taken_by = panchayat.get('officialName', 'another official')
+                return response(200, {
+                    'available': False,
+                    'message': f'This role is already taken by {taken_by}.',
+                    'takenBy': taken_by,
+                })
+
+            # Modern map check
+            if role_to_check in officials:
+                status = officials[role_to_check].get('status', '')
+                if status in ['active', 'pending_verification']:
+                    taken_by = officials[role_to_check].get('name', 'another official')
+                    return response(200, {
+                        'available': False,
+                        'message': f'This role is already taken by {taken_by}.',
+                        'takenBy': taken_by,
+                    })
+
+        return response(200, {'available': True, 'message': 'This role is available.'})
+
+    except Exception as e:
+        print(f"[ERR] check-role: {e}")
+        # If check fails, allow signup to proceed
+        return response(200, {'available': True, 'message': 'Could not verify — proceeding.'})
+
+
 def lambda_handler(event, context):
     try:
         method = event.get('httpMethod', 'GET')
@@ -215,6 +302,8 @@ def lambda_handler(event, context):
             return handle_search(event)
         elif '/panchayat/claim' in path and method == 'POST':
             return handle_claim(event)
+        elif '/panchayat/check-role' in path and method == 'GET':
+            return handle_check_role(event)
         elif '/profile' in path and method == 'GET':
             return handle_profile(event)
         else:
@@ -223,3 +312,4 @@ def lambda_handler(event, context):
     except Exception as e:
         print(f"[ERR] {e}")
         return response(500, {'error': 'Internal server error', 'message': str(e)})
+

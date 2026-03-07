@@ -1,5 +1,5 @@
 """
-agent_invoke — POST /agent
+agent_invoke – POST /agent
 Invokes the Sarathi Bedrock Orchestrator Agent (multi-agent supervisor).
 Maintains session memory per citizen via memoryId.
 """
@@ -21,6 +21,11 @@ def cors_headers():
         'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS',
         'Content-Type': 'application/json',
     }
+
+
+def sanitize_id(raw_id):
+    """Sanitize an ID for Bedrock Agent (only [0-9a-zA-Z._:-] allowed)."""
+    return ''.join(c if c.isalnum() or c in '._:-' else '-' for c in raw_id)[:100]
 
 
 def lambda_handler(event, context):
@@ -47,9 +52,7 @@ def lambda_handler(event, context):
             }
 
         # Use citizenId as both sessionId and memoryId for persistent context
-        effective_session = citizen_id or session_id or 'default-session'
-        # Session IDs must be alphanumeric + hyphens/underscores, max 100 chars
-        effective_session = ''.join(c if c.isalnum() or c in '-_' else '-' for c in effective_session)[:100]
+        effective_session = sanitize_id(citizen_id or session_id or 'default-session')
 
         invoke_kwargs = dict(
             agentId=ORCHESTRATOR_AGENT_ID,
@@ -59,8 +62,9 @@ def lambda_handler(event, context):
             enableTrace=False,
         )
         if citizen_id:
-            invoke_kwargs['memoryId'] = citizen_id[:100]
+            invoke_kwargs['memoryId'] = sanitize_id(citizen_id)
 
+        print(f"Invoking agent {ORCHESTRATOR_AGENT_ID} session={effective_session} citizenId={citizen_id}")
         response = bedrock_agent_runtime.invoke_agent(**invoke_kwargs)
 
         # Collect streamed completion chunks
@@ -82,6 +86,7 @@ def lambda_handler(event, context):
         }
 
     except Exception as e:
+        print(f"Error in agent_invoke: {str(e)}")
         return {
             'statusCode': 500,
             'headers': cors_headers(),

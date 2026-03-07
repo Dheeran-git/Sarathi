@@ -5,7 +5,7 @@ import SchemeCard from '../components/ui/SchemeCard';
 import EmptyState from '../components/ui/EmptyState';
 import { fetchAllSchemes } from '../utils/api';
 import { useCitizen } from '../context/CitizenContext';
-import { CATEGORY_CHIPS } from '../constants/categories';
+
 
 const PAGE_SIZE = 20;
 
@@ -35,7 +35,8 @@ function SchemesPage() {
       .then((data) => {
         if (!cancelled) setAllSchemes(Array.isArray(data) ? data : []);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("fetchAllSchemes failed:", err);
         if (!cancelled) setError('Failed to load schemes. Please try again.');
       })
       .finally(() => {
@@ -49,28 +50,61 @@ function SchemesPage() {
     setCurrentPage(1);
   }, [category, search, sortBy]);
 
-  // Category counts
+  const [level, setLevel] = useState('all'); // 'all', 'state', 'central'
+
+  // Dynamic tags/categories extraction
+  const dynamicCategories = useMemo(() => {
+    const cats = new Set();
+    for (const s of allSchemes) {
+       let source = s.categories || s.tags || [];
+       if (typeof source === 'string') source = source.split(',');
+       for (const c of source) {
+           const cleanly = String(c).trim();
+           if (cleanly && cleanly.length > 2) cats.add(cleanly);
+       }
+    }
+    const arr = Array.from(cats).sort();
+    return arr;
+  }, [allSchemes]);
+
+  // Category counts mapping
   const categoryCounts = useMemo(() => {
     const counts = { all: allSchemes.length };
     for (const s of allSchemes) {
-      if (s.category) counts[s.category] = (counts[s.category] || 0) + 1;
+      let source = s.categories || s.tags || [];
+      if (typeof source === 'string') source = source.split(',');
+      for (const c of source) {
+          const cleanly = String(c).trim();
+          if (cleanly) counts[cleanly] = (counts[cleanly] || 0) + 1;
+      }
     }
     return counts;
   }, [allSchemes]);
 
   const filtered = useMemo(() => {
     let results = allSchemes;
-    if (category !== 'all') results = results.filter((s) => s.category === category);
+    if (level !== 'all') {
+        const tgt = level.toLowerCase();
+        results = results.filter(s => (s.level || '').toLowerCase().includes(tgt));
+    }
+    if (category !== 'all') {
+        results = results.filter(s => {
+            let source = s.categories || s.tags || [];
+            if (typeof source === 'string') source = source.split(',');
+            return source.some(c => String(c).trim() === category);
+        });
+    }
     if (search.trim()) {
       const q = search.toLowerCase();
       results = results.filter(
         (s) =>
           (s.nameEnglish || s.name || '').toLowerCase().includes(q) ||
-          (s.ministry || '').toLowerCase().includes(q)
+          (s.ministry || '').toLowerCase().includes(q) || 
+          (s.state || '').toLowerCase().includes(q)
       );
     }
     return results;
-  }, [allSchemes, category, search]);
+  }, [allSchemes, category, search, level]);
 
   // D3: Sort
   const sortedFiltered = useMemo(() => {
@@ -131,30 +165,65 @@ function SchemesPage() {
           </select>
         </div>
 
-        {/* D3: Category Chips with counts */}
-        <div className="flex flex-wrap gap-2 mb-6">
-          {CATEGORY_CHIPS.map((cat) => {
-            const count = categoryCounts[cat.key] || 0;
-            return (
+        {/* Filters Row: Level + Categories */}
+        <div className="flex flex-col gap-4 mb-6">
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+              <span className="text-sm font-medium text-gray-500 uppercase tracking-widest shrink-0 mr-2">Level</span>
+              {['all', 'central', 'state'].map((lvl) => (
+                <button
+                  key={lvl}
+                  onClick={() => setLevel(lvl)}
+                  className={`capitalize shrink-0 px-4 py-1.5 rounded-full font-body text-sm font-medium transition-all duration-200 ${
+                    level === lvl
+                      ? 'bg-saffron text-white shadow-sm'
+                      : 'bg-white text-gray-700 border border-gray-200 hover:border-gray-400'
+                  }`}
+                >
+                  {lvl}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+              <span className="text-sm font-medium text-gray-500 uppercase tracking-widest shrink-0 mr-2">Category</span>
               <button
-                key={cat.key}
-                onClick={() => setCategory(cat.key)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-full font-body text-sm font-medium transition-all duration-200 ${
-                  category === cat.key
-                    ? 'text-white shadow-sm'
+                key="all"
+                onClick={() => setCategory('all')}
+                className={`shrink-0 flex items-center gap-1.5 px-4 py-1.5 rounded-full font-body text-sm font-medium transition-all duration-200 ${
+                  category === 'all'
+                    ? 'bg-navy text-white shadow-sm'
                     : 'bg-white text-gray-700 border border-gray-200 hover:border-gray-400'
                 }`}
-                style={category === cat.key ? { backgroundColor: cat.color } : {}}
               >
-                {cat.label}
-                {!loading && count > 0 && (
-                  <span className={`text-[10px] font-mono ${category === cat.key ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'} px-1.5 py-0.5 rounded-full`}>
-                    {count}
+                All
+                {!loading && categoryCounts['all'] > 0 && (
+                  <span className={`text-[10px] font-mono ${category === 'all' ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'} px-1.5 py-0.5 rounded-full`}>
+                    {categoryCounts['all']}
                   </span>
                 )}
               </button>
-            );
-          })}
+              {dynamicCategories.map((cat) => {
+                const count = categoryCounts[cat] || 0;
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => setCategory(cat)}
+                    className={`shrink-0 flex items-center gap-1.5 px-4 py-1.5 rounded-full font-body text-sm font-medium transition-all duration-200 ${
+                      category === cat
+                        ? 'bg-navy text-white shadow-sm'
+                        : 'bg-white text-gray-700 border border-gray-200 hover:border-gray-400'
+                    }`}
+                  >
+                    {cat}
+                    {!loading && count > 0 && (
+                      <span className={`text-[10px] font-mono ${category === cat ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'} px-1.5 py-0.5 rounded-full`}>
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
         </div>
 
         {/* States */}

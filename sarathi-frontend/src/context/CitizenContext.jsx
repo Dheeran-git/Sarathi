@@ -33,6 +33,7 @@ const clearStorage = () => {
 };
 
 const emptyProfile = {
+    // Core
     name: '',
     age: null,
     state: '',
@@ -45,51 +46,64 @@ const emptyProfile = {
     panchayatId: '',
     income: null,
     category: '',
+    minority: null,
     gender: '',
     maritalStatus: '',
     urban: null,
     disability: false,
     bplCard: '',
+    
+    // Occupation
     occupation: '',
     persona: '',
-    // widow / female
-    isWidow: false,
-    shgMember: false,
-    // farmer branch
+    
+    // Female / Widowed
+    isWidow: null,
+    shgMember: null,
+    pregnant: null,
+    lactating: null,
+    
+    // Farmer branch
     landOwned: null,
     landSize: null,
     tenantFarmer: null,
     livestock: null,
     irrigatedLand: null,
-    // student branch
+    
+    // Student branch
     classLevel: '',
     govtSchool: null,
-    minority: null,
-    // unemployed branch
+    
+    // Unemployed branch
     skillTrained: null,
     interestedInTraining: null,
     educationLevel: '',
-    // business branch
+    seekingWork: null,
+    
+    // Business branch
     msmeRegistered: null,
     businessTurnover: null,
     loanNeeded: null,
-    // senior branch
+    
+    // Labourer / Artisan
+    mgnregaCard: null,
+    streetVendor: null,
+    
+    // Senior branch
     pensionReceiving: null,
-    // disability branch
-    disabilityPercent: '',
+    
+    // Disability branch
+    disabilityPercent: null,
     disabilityType: '',
     disabilityCertificate: null,
-    // pregnant branch
-    pregnant: null,
-    lactating: null,
-    // urban/rural branch
+    
+    // Urban/Rural Asset branch
     ownHouse: null,
-    streetVendor: null,
     kutchaHouse: null,
-    mgnregaCard: null,
-    // legacy compat
+    
+    // Default system flags
     hasDisability: false,
-    familySize: null,
+    familySize: 3,
     isFarmer: false,
     hasLand: false,
     hasDaughters: false,

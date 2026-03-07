@@ -39,21 +39,7 @@ export default function PanchayatVerifyPage() {
             // 1. Confirm Cognito Signup
             await authService.panchayatConfirmSignUp(email, code);
 
-            // 2. Claim Panchayat in DynamoDB if we came from the signup flow
-            if (claimData && claimData.lgdCode) {
-                try {
-                    await claimPanchayat({
-                        lgdCode: claimData.lgdCode,
-                        officialName: claimData.officialName,
-                        role: claimData.role,
-                        email: email,
-                        cognitoSub: 'pending_login' // The backend will sync it if needed, or we rely on email
-                    });
-                } catch (claimErr) {
-                    console.error("Failed to claim panchayat:", claimErr);
-                    // We don't block login if claim failed, but it might need admin resolution
-                }
-            }
+            // 2. Claim Panchayat was already done in PanchayatSignupPage.jsx!
 
             navigate('/panchayat/login', { state: { message: 'Verification successful! You can now log in.' } });
         } catch (err) {

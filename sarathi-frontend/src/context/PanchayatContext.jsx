@@ -6,14 +6,12 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import {
-    getPanchayatStats, getPanchayatApplications,
+    getPanchayatStats,
     getPanchayatCampaigns, getPanchayatGrievances,
     getPanchayatCalendar, getPanchayatVillageProfile,
     getPanchayatAnalytics,
 } from '../utils/api';
 import {
-    households as mockHouseholds,
-    alerts as mockAlerts,
     mockAnalytics,
     mockCampaigns,
     mockGrievances,
@@ -80,17 +78,19 @@ export function PanchayatProvider({ children }) {
                 totalHouseholds: stats.totalHouseholds || 0,
             }));
 
-            // Use API citizens data if available, else mock
+            // Use API citizens data or empty array
             const apiCitizens = stats.households || [];
-            setCitizens(apiCitizens.length > 0 ? apiCitizens : mockHouseholds);
+            setCitizens(apiCitizens);
+            setApplications(stats.applications || []);
 
-            // Use API alerts if present, else mock
+            // Use API alerts or empty array
             const apiAlerts = stats.alerts || [];
-            setAlerts(apiAlerts.length > 0 ? apiAlerts : mockAlerts);
+            setAlerts(apiAlerts);
         } catch (err) {
-            console.warn('[PanchayatContext] API fetch failed, using mock data:', err.message);
-            setCitizens(mockHouseholds);
-            setAlerts(mockAlerts);
+            console.warn('[PanchayatContext] API fetch failed:', err.message);
+            setCitizens([]);
+            setApplications([]);
+            setAlerts([]);
         }
 
         // Fetch features from API, fallback to mock data
@@ -120,27 +120,6 @@ export function PanchayatProvider({ children }) {
             setCalendarEvents(mockCalendarEvents);
             setVillageProfile(mockVillageProfile);
             setAnalyticsData(mockAnalytics);
-        }
-
-        // Fetch live applications
-        try {
-            const appsData = await getPanchayatApplications(panchayatId);
-            setApplications(appsData?.applications || []);
-        } catch (appErr) {
-            console.warn('[PanchayatContext] Failed to fetch live applications:', appErr.message);
-            // Fallback to mock applications if needed
-            const mockApps = citizens.slice(0, 15).map((c, i) => ({
-                applicationId: `APP-${String(i + 1).padStart(3, '0')}`,
-                citizenId: c.citizenId || c.name?.toLowerCase().replace(/\s/g, '-') || `citizen-${i}`,
-                citizenName: c.name || 'Unknown',
-                schemeId: ['pm-kisan', 'pmay-g', 'ayushman-bharat', 'mgnregs', 'pm-ujjwala'][i % 5],
-                schemeName: ['PM-KISAN', 'PMAY-G', 'Ayushman Bharat', 'MGNREGS', 'PM Ujjwala'][i % 5],
-                status: ['submitted', 'pending', 'approved', 'rejected', 'submitted'][i % 5],
-                documentsChecked: i % 3 === 0 ? ['Aadhaar', 'Bank Passbook'] : ['Aadhaar'],
-                createdAt: new Date(Date.now() - i * 86400000 * 3).toISOString(),
-                updatedAt: new Date(Date.now() - i * 86400000).toISOString(),
-            }));
-            setApplications(mockApps);
         }
 
         setLastFetched(new Date());

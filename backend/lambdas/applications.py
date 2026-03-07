@@ -100,21 +100,81 @@ def handle_post_apply(event):
 
 def handle_get_panchayat_applications(event):
     """GET /panchayat-applications/{panchayatId} — query applications in a panchayat."""
-    path_params = event.get('pathParameters') or {}
-    panchayat_id = _normalize_pid(path_params.get('panchayatId', '').strip())
+    # Priority 1: JWT claims (most reliable if authenticated)
+    claims = (event.get('requestContext', {}).get('authorizer', {}).get('claims') or {})
+    lgd = claims.get('custom:lgdCode', '').strip()
+    jwt_pid = claims.get('custom:panchayatId', '').strip()
+    
+    panchayat_id = None
+    if lgd == '614744' or jwt_pid == '219293':
+        panchayat_id = 'LGD_614744'
+    elif lgd:
+        panchayat_id = f"LGD_{lgd}"
+    elif jwt_pid:
+        panchayat_id = _normalize_pid(jwt_pid)
+    
+    # Priority 2: Path parameter fallback
+    if not panchayat_id:
+        path_params = event.get('pathParameters') or {}
+        path_pid = path_params.get('panchayatId', '').strip()
+        if path_pid == '219293':
+            panchayat_id = 'LGD_614744'
+        else:
+            panchayat_id = _normalize_pid(path_pid)
 
     if not panchayat_id or panchayat_id == 'unassigned':
-        return _err(400, 'panchayatId path parameter is required')
+        return _err(400, 'panchayatId path parameter or JWT claim is required')
 
     print(f"[DEBUG] Querying applications for panchayat: {panchayat_id}")
     try:
-        resp = table.query(
-            IndexName='panchayatId-createdAt-index',
-            KeyConditionExpression=Key('panchayatId').eq(panchayat_id),
-            ScanIndexForward=False,
-            Limit=100
-        )
-        return _ok({'applications': resp.get('Items', []), 'count': resp.get('Count', 0)})
+        def fetch_applications_for_pid(pid):
+            resp = table.query(
+                IndexName='panchayatId-createdAt-index',
+                KeyConditionExpression=Key('panchayatId').eq(pid),
+                ScanIndexForward=False,
+                Limit=100
+            )
+            return resp.get('Items', [])
+
+        applications = fetch_applications_for_pid(panchayat_id)
+        
+        legacy_pid = panchayat_id.replace('LGD_', '') if panchayat_id.startswith('LGD_') else None
+        if legacy_pid and legacy_pid != panchayat_id and legacy_pid.isdigit():
+            legacy_apps = fetch_applications_for_pid(legacy_pid)
+            
+            seen_ids = {a.get('applicationId') for a in applications if a.get('applicationId')}
+            for la in legacy_apps:
+                aid = la.get('applicationId')
+                if aid and aid not in seen_ids:
+                    applications.append(la)
+                    seen_ids.add(aid)
+                    
+        # Inject citizenName for frontend if missing
+        citizens_table = dynamodb.Table('SarathiCitizens')
+        citizen_cache = {}
+        
+        for app in applications:
+            # 1. Try personalDetails
+            if 'personalDetails' in app and app['personalDetails'].get('name'):
+                app['citizenName'] = app['personalDetails']['name']
+            else:
+                # 2. Try fetching from SarathiCitizens
+                cid = app.get('citizenId')
+                if cid:
+                    if cid not in citizen_cache:
+                        try:
+                            c_resp = citizens_table.get_item(Key={'citizenId': cid})
+                            citizen_cache[cid] = c_resp.get('Item', {}).get('name', 'Unknown Citizen')
+                        except Exception:
+                            citizen_cache[cid] = 'Unknown Citizen'
+                    app['citizenName'] = citizen_cache[cid]
+                else:
+                    app['citizenName'] = 'Unknown Citizen'
+                    
+        # Sort combined applications by createdAt (descending)
+        applications.sort(key=lambda x: x.get('createdAt', ''), reverse=True)
+
+        return _ok({'applications': applications[:100], 'count': len(applications[:100])})
     except Exception as e:
         print(f"[ERROR] Panchayat query failed: {str(e)}")
         return _err(500, f"Database query failed: {str(e)}")
@@ -157,6 +217,16 @@ def handle_get_applications(event):
 
     if user_id.lower() == 'all':
         return handle_get_all_applications(event)
+
+    if user_id.startswith('panchayat-'):
+        # CORS Workaround: Route panchayat queries through the existing /applications/ resource
+        actual_pid = user_id.replace('panchayat-', '')
+        print(f"[DEBUG] Sub-routing to panchayat applications for: {actual_pid}")
+        # Inject into pathParameters so handle_get_panchayat_applications can read it
+        if 'pathParameters' not in event or event['pathParameters'] is None:
+            event['pathParameters'] = {}
+        event['pathParameters']['panchayatId'] = actual_pid
+        return handle_get_panchayat_applications(event)
 
     resp = table.query(
         IndexName='citizenId-createdAt-index',
