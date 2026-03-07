@@ -92,9 +92,12 @@ function AdminLoginPage() {
                         </button>
 
                         <div className="text-center mt-6">
-                            <p className="font-body text-sm text-gray-400">
+                            <p className="font-body text-sm text-gray-400 mb-2">
                                 Need administrative access?{' '}
                                 <Link to="/admin/signup" className="text-saffron hover:underline font-bold">Request Access / Sign Up</Link>
+                            </p>
+                            <p className="font-body text-sm text-gray-400">
+                                <Link to="/" className="text-saffron hover:underline font-bold">← Back to Home Page</Link>
                             </p>
                         </div>
                     </form>

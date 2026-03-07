@@ -4,7 +4,7 @@ import { Loader2 } from 'lucide-react';
 
 export default function PrivateRoute({ children, requiredRole }) {
     const location = useLocation();
-    const { isAuthenticated, isLoading, isCitizen, isPanchayat } = useAuth();
+    const { isAuthenticated, isLoading, isCitizen, isPanchayat, isAdmin } = useAuth();
 
     if (isLoading) {
         return (
@@ -12,6 +12,10 @@ export default function PrivateRoute({ children, requiredRole }) {
                 <Loader2 className="animate-spin text-saffron" size={32} />
             </div>
         );
+    }
+
+    if (requiredRole === 'admin' && !isAdmin) {
+        return <Navigate to="/admin/login" replace />;
     }
 
     if (requiredRole === 'citizen' && !isCitizen) {

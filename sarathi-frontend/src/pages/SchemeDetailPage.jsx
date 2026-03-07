@@ -9,6 +9,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { localizeNum } from '../utils/formatters';
 import { useToast } from '../components/ui/Toast';
 import { CATEGORY_STYLE, FALLBACK_STYLE, CATEGORY_LABELS_EN } from '../constants/categories';
+import { useCitizen } from '../context/CitizenContext';
 
 const tabsData = {
   hi: [
@@ -37,6 +38,7 @@ function SchemeDetailPage() {
   const isHi = language === 'hi';
   const tabs = tabsData[language] || tabsData.en;
   const catLabels = isHi ? categoryLabelsHi : CATEGORY_LABELS_EN;
+  const { applications } = useCitizen();
 
   const [scheme, setScheme] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -163,8 +165,9 @@ function SchemeDetailPage() {
       .catch(() => addToast('Could not copy link', 'error'));
   };
   const annualBenefit = parseInt(scheme.annualBenefit || 0);
-    const tagsSource = scheme.tags || scheme.categories || "SC,ST,OBC,General";
-  const eligTags = (Array.isArray(tagsSource) ? tagsSource : (tagsSource||'').toString().split(',')).map(c => (typeof c === 'string' ? c.trim() : ''));
+  const tagsSource = scheme.tags || scheme.categories || "SC,ST,OBC,General";
+  const eligTags = (Array.isArray(tagsSource) ? tagsSource : (tagsSource || '').toString().split(',')).map(c => (typeof c === 'string' ? c.trim() : ''));
+  const hasApplied = applications?.some(app => app.schemeId === schemeId);
 
   return (
     <div className="min-h-screen bg-off-white">
@@ -305,9 +308,9 @@ function SchemeDetailPage() {
                     <h3 className="font-body text-lg font-bold text-gray-900">{isHi ? 'आवेदन कैसे करें' : 'How to Apply'}</h3>
                     <div className="prose max-w-none font-body text-sm text-gray-700 bg-off-white p-4 rounded-lg leading-relaxed [&_ul]:list-disc [&_ul]:ml-4 [&_ol]:list-decimal [&_ol]:ml-4 [&_li]:mb-1">
                       {scheme.howToApply ? (
-                         <ReactMarkdown>{typeof scheme.howToApply === 'string' ? scheme.howToApply : (Array.isArray(scheme.howToApply) ? scheme.howToApply.join('\\n') : JSON.stringify(scheme.howToApply))}</ReactMarkdown>
+                        <ReactMarkdown>{typeof scheme.howToApply === 'string' ? scheme.howToApply : (Array.isArray(scheme.howToApply) ? scheme.howToApply.join('\\n') : JSON.stringify(scheme.howToApply))}</ReactMarkdown>
                       ) : (
-                         <p>{isHi ? 'आधिकारिक पोर्टल पर जाकर ऑनलाइन आवेदन करें।' : 'Visit the official portal to apply online.'}</p>
+                        <p>{isHi ? 'आधिकारिक पोर्टल पर जाकर ऑनलाइन आवेदन करें।' : 'Visit the official portal to apply online.'}</p>
                       )}
                     </div>
                     {scheme.applyUrl && (
@@ -324,7 +327,7 @@ function SchemeDetailPage() {
                     <h3 className="font-body text-lg font-bold text-gray-900">{isHi ? 'आवश्यक दस्तावेज़' : 'Required Documents'}</h3>
                     <div className="prose max-w-none font-body text-sm text-gray-700 bg-off-white p-4 rounded-lg [&_ul]:list-disc [&_ul]:ml-4 [&_ol]:list-decimal [&_ol]:ml-4 [&_li]:mb-1">
                       {scheme.documentsRequired && typeof scheme.documentsRequired === 'string' ? (
-                         <ReactMarkdown>{scheme.documentsRequired}</ReactMarkdown>
+                        <ReactMarkdown>{scheme.documentsRequired}</ReactMarkdown>
                       ) : (
                         <div className="space-y-2">
                           {(isHi
@@ -352,8 +355,18 @@ function SchemeDetailPage() {
             {/* Quick Apply */}
             <div className="bg-white rounded-xl shadow-card p-5">
               <h4 className="font-body text-sm font-bold text-gray-900 mb-3">{isHi ? 'तुरंत आवेदन करें' : 'Quick Apply'}</h4>
+
+              {hasApplied && (
+                <div className="mb-3 p-3 bg-orange-50 border border-orange-200 rounded-lg flex items-start gap-2">
+                  <ClipboardList size={16} className="text-orange-500 mt-0.5 shrink-0" />
+                  <p className="font-body text-xs text-orange-800">
+                    {isHi ? 'आपने इस योजना के लिए पहले ही आवेदन कर दिया है।' : 'You have already applied for this scheme.'}
+                  </p>
+                </div>
+              )}
+
               <Link to={`/apply/${schemeId}`} className="flex items-center justify-center gap-2 h-11 w-full rounded-lg bg-saffron text-white font-body text-sm font-semibold hover:bg-saffron-light transition-colors">
-                {isHi ? 'आवेदन पोर्टल' : 'Application Portal'} <ExternalLink size={14} />
+                {isHi ? (hasApplied ? 'फिर से आवेदन करें' : 'आवेदन पोर्टल') : (hasApplied ? 'Apply Again' : 'Application Portal')} <ExternalLink size={14} />
               </Link>
               <Link to="/chat" className="flex items-center justify-center h-10 w-full mt-2 rounded-lg border border-gray-200 text-gray-600 font-body text-sm hover:bg-gray-50 transition-colors">
                 {isHi ? '💬 सारथी से पूछें' : '💬 Ask Sarathi'}

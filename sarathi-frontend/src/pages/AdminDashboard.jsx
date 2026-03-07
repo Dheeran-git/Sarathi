@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     AreaChart, Area, PieChart, Pie, Cell
@@ -15,6 +16,8 @@ import {
     ArrowDownRight
 } from 'lucide-react';
 import { fetchAllSchemes, getApplications } from '../utils/api';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const COLORS = ['#E8740C', '#0F2240', '#1A7F4B', '#C87B00', '#C0392B'];
 
@@ -62,6 +65,70 @@ function AdminDashboard() {
         }
     };
 
+    const handleGenerateReport = () => {
+        const doc = new jsPDF();
+
+        // Header
+        doc.setFontSize(22);
+        doc.setTextColor(15, 34, 64); // Navy
+        doc.text('Sarathi Platform Statistics Report', 14, 22);
+
+        doc.setFontSize(11);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 30);
+
+        // Summary Cards Section
+        doc.setFontSize(16);
+        doc.setTextColor(232, 116, 12); // Saffron
+        doc.text('System Overview', 14, 45);
+
+        const activeSchemes = schemes.filter(s => ['Active', 'Published'].includes(s.status)).length;
+        const draftSchemes = schemes.filter(s => !['Active', 'Published'].includes(s.status)).length;
+        const totalApps = applications.length;
+
+        autoTable(doc, {
+            startY: 50,
+            head: [['Metric', 'Value']],
+            body: [
+                ['Total Active Schemes', activeSchemes.toString()],
+                ['Total Draft/Inactive Schemes', draftSchemes.toString()],
+                ['Total Applications Submitted', totalApps.toString()],
+                ['Total Schemes in Database', schemes.length.toString()]
+            ],
+            theme: 'grid',
+            headStyles: { fillColor: [15, 34, 64] },
+            styles: { fontSize: 11 }
+        });
+
+        // Top Schemes Section
+        const finalY = doc.lastAutoTable.finalY || 50;
+        doc.setFontSize(16);
+        doc.setTextColor(232, 116, 12); // Saffron
+        doc.text('Scheme Inventory Snapshot', 14, finalY + 15);
+
+        const schemeRows = schemes.slice(0, 15).map(s => [
+            s.nameEnglish || s.name || 'Unnamed Scheme',
+            s.ministry || 'N/A',
+            s.status || 'N/A',
+            s.annualBenefit ? `Rs. ${s.annualBenefit}` : 'N/A'
+        ]);
+
+        autoTable(doc, {
+            startY: finalY + 20,
+            head: [['Scheme Name', 'Ministry', 'Status', 'Annual Benefit']],
+            body: schemeRows,
+            theme: 'striped',
+            headStyles: { fillColor: [15, 34, 64] },
+            styles: { fontSize: 9 }
+        });
+
+        doc.setFontSize(10);
+        doc.setTextColor(150, 150, 150);
+        doc.text('Sarathi - AI Welfare Intelligence Platform', 14, doc.internal.pageSize.height - 10);
+
+        doc.save('Sarathi_Admin_Report.pdf');
+    };
+
     // D1: 4 stat cards
     const stats = [
         { label: 'Active Schemes', value: schemes.filter(s => ['Active', 'Published'].includes(s.status)).length, icon: CheckCircle, color: 'text-success', bg: 'bg-success/10', trend: '+4%', isUp: true },
@@ -78,8 +145,8 @@ function AdminDashboard() {
                     <p className="font-body text-sm text-gray-500 mt-1">Real-time engagement and operational metrics</p>
                 </div>
                 <div className="flex gap-2">
-                    <button className="h-10 px-4 rounded-lg bg-white border border-gray-200 text-gray-600 text-xs font-bold hover:bg-gray-50 transition-all uppercase tracking-widest">Generate Report</button>
-                    <button className="h-10 px-4 rounded-lg bg-navy text-white text-xs font-bold hover:shadow-lg transition-all uppercase tracking-widest">Refresh Data</button>
+                    <button onClick={handleGenerateReport} className="h-10 px-4 rounded-lg bg-white border border-gray-200 text-gray-600 text-xs font-bold hover:bg-gray-50 transition-all uppercase tracking-widest active:scale-95">Generate Report</button>
+                    <button onClick={fetchData} className="h-10 px-4 rounded-lg bg-navy text-white text-xs font-bold hover:shadow-lg transition-all uppercase tracking-widest active:scale-95">Refresh Data</button>
                 </div>
             </header>
 
@@ -176,7 +243,7 @@ function AdminDashboard() {
             <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden">
                 <div className="p-6 border-b border-gray-50 flex items-center justify-between">
                     <h2 className="font-display text-xl text-navy">Recently Modified Schemes</h2>
-                    <button className="text-saffron font-body text-xs font-bold uppercase tracking-widest hover:underline">Manage All</button>
+                    <Link to="/admin/schemes/new" className="text-saffron font-body text-xs font-bold uppercase tracking-widest hover:underline">Manage All</Link>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left font-body">

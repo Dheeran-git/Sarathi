@@ -8,18 +8,20 @@ import { useCitizen } from '../context/CitizenContext';
 import { useToast } from '../components/ui/Toast';
 import { useLanguage } from '../context/LanguageContext';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 function ApplyPage() {
     const { schemeId } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
-    const { citizenProfile, refreshApplications } = useCitizen();
+    const { citizenProfile, refreshApplications, applications } = useCitizen();
     const { addToast } = useToast();
     const [scheme, setScheme] = useState(null);
     const [loading, setLoading] = useState(true);
     const { language } = useLanguage();
     const isHi = language === 'hi';
+
+    const hasApplied = applications?.some(app => app.schemeId === schemeId);
 
     // F1: Form state
     const [checkedDocs, setCheckedDocs] = useState({});
@@ -138,7 +140,7 @@ function ApplyPage() {
                 ['Benefit Amount', scheme.annualBenefit ? `Rs. ${scheme.annualBenefit}` : 'N/A']
             ];
 
-            doc.autoTable({
+            autoTable(doc, {
                 startY: 55,
                 body: schemeData,
                 theme: 'grid',
@@ -166,7 +168,7 @@ function ApplyPage() {
                 ['Bank Account (Last 4)', personalDetails.bankAccountLast4 || 'N/A'],
             ];
 
-            doc.autoTable({
+            autoTable(doc, {
                 startY: finalY + 15,
                 body: profileMap.filter(r => r[1] && r[1] !== 'N/A'),
                 theme: 'grid',
@@ -236,6 +238,21 @@ function ApplyPage() {
             </div>
 
             <div className="max-w-3xl mx-auto px-4 py-8">
+                {hasApplied && !submittedAppId && (
+                    <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-xl flex items-start gap-3">
+                        <CheckCircle className="text-orange-500 shrink-0 mt-0.5" size={20} />
+                        <div>
+                            <h3 className="font-body text-sm font-bold text-orange-800">
+                                {isHi ? 'पहले से आवेदित' : 'Already Applied'}
+                            </h3>
+                            <p className="font-body text-sm text-orange-700 mt-1 leading-relaxed">
+                                {isHi
+                                    ? 'आपने इस योजना के लिए पहले ही आवेदन कर दिया है। यदि आप फिर से आवेदन करते हैं, तो यह एक नई प्रविष्टि बनाएगा।'
+                                    : 'You have already submitted an application for this scheme. Submitting again will create a new duplicate record.'}
+                            </p>
+                        </div>
+                    </div>
+                )}
                 <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-card p-6 space-y-6">
                     {/* Step 1: Documents */}
                     <div>

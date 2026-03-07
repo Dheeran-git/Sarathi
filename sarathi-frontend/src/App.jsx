@@ -109,8 +109,8 @@ function App() {
             <Route path="/panchayat/report" element={<PrivateRoute requiredRole="panchayat"><PanchayatLayout><PerformanceReport /></PanchayatLayout></PrivateRoute>} />
             <Route path="/panchayat/settings" element={<PrivateRoute requiredRole="panchayat"><PanchayatLayout><PanchayatSettings /></PanchayatLayout></PrivateRoute>} />
 
-            {/* Admin routes (Authentication temporarily disabled for testing) */}
-            <Route element={<AdminLayout />}>
+            {/* Admin routes */}
+            <Route element={<PrivateRoute requiredRole="admin"><AdminLayout /></PrivateRoute>}>
               <Route path="/admin" element={<PageTransition><AdminDashboard /></PageTransition>} />
               <Route path="/admin/applicants" element={<PageTransition><AdminApplicantsPage /></PageTransition>} />
               <Route path="/admin/schemes/new" element={<PageTransition><SchemeEditor /></PageTransition>} />

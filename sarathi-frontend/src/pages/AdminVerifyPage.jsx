@@ -1,27 +1,100 @@
-import React from 'react';
-import { useLocation, Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { authService } from '../services/authService';
 
 function AdminVerifyPage() {
     const location = useLocation();
-    const email = location.state?.email || 'your email';
+    const navigate = useNavigate();
+    const email = location.state?.email || '';
+
+    const [code, setCode] = useState('');
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        setLoading(true);
+
+        try {
+            await authService.adminConfirmSignUp(email, code);
+            navigate('/admin/login', { state: { message: 'Verification successful. Please login.' } });
+        } catch (err) {
+            console.error('Admin verification error:', err);
+            setError(err.message || 'Verification failed. Please check your code.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (!email) {
+        return (
+            <div className="min-h-screen bg-navy flex flex-col items-center justify-center p-4">
+                <p className="text-white font-body mb-4">No email provided for verification.</p>
+                <Link to="/admin/signup" className="text-saffron hover:underline font-body">Go to Signup</Link>
+            </div>
+        );
+    }
 
     return (
-        <div style={{ minHeight: '100vh', backgroundColor: '#0F2240', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', textAlign: 'center' }}>
-            <h1 style={{ fontSize: '2rem', marginBottom: '20px' }}>Verify your account</h1>
-            <p style={{ marginBottom: '30px', color: '#8A8578' }}>
-                We've sent a code to: <strong style={{ color: '#E8740C' }}>{email}</strong>
-            </p>
-            <div style={{ background: '#1A3A5C', padding: '40px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)', maxWidth: '400px', width: '100%' }}>
-                <input
-                    type="text"
-                    placeholder="000000"
-                    style={{ width: '100%', padding: '15px', borderRadius: '10px', background: '#0F2240', border: '1px solid #E8740C', color: 'white', fontSize: '1.5rem', textAlign: 'center', marginBottom: '20px' }}
-                />
-                <button style={{ width: '100%', padding: '15px', borderRadius: '10px', background: '#E8740C', color: 'white', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>
-                    Confirm OTP
-                </button>
+        <div className="min-h-[calc(100vh-4rem)] bg-navy flex items-center justify-center px-4 relative overflow-hidden">
+            {/* Background elements */}
+            <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-20">
+                <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-saffron rounded-full filter blur-[100px] animate-pulse" />
+                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-teal-600 rounded-full filter blur-[120px] animate-pulse" />
             </div>
-            <Link to="/admin/login" style={{ marginTop: '20px', color: '#E8740C', textDecoration: 'none' }}>Back to Login</Link>
+
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="w-full max-w-md z-10"
+            >
+                <div className="bg-navy-mid/50 backdrop-blur-xl border border-navy-light/30 rounded-2xl p-8 shadow-2xl">
+                    <div className="text-center mb-8">
+                        <h1 className="font-display text-3xl text-white mb-2 underline decoration-saffron decoration-4 underline-offset-8">
+                            Verify <span className="text-saffron">Email</span>
+                        </h1>
+                        <p className="font-body text-gray-400 mt-4 leading-relaxed">
+                            We've sent a 6-digit confirmation code to: <br />
+                            <strong className="text-white text-base">{email}</strong>
+                        </p>
+                    </div>
+
+                    {error && (
+                        <div className="mb-6 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-500 text-sm font-body text-center">
+                            {error}
+                        </div>
+                    )}
+
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <div>
+                            <input
+                                type="text"
+                                value={code}
+                                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                className="w-full h-14 px-4 rounded-xl bg-navy border border-navy-light/50 text-white font-mono text-center text-2xl tracking-widest focus:outline-none focus:border-saffron transition-colors"
+                                placeholder="000000"
+                                required
+                            />
+                        </div>
+
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full h-12 bg-saffron hover:bg-saffron-light text-white font-body font-bold rounded-xl shadow-lg shadow-saffron/20 transform active:scale-[0.98] transition-all disabled:opacity-50"
+                        >
+                            {loading ? 'Verifying...' : 'Confirm OTP'}
+                        </button>
+
+                        <div className="text-center mt-6">
+                            <Link to="/admin/login" className="font-body text-sm text-gray-400 hover:text-white transition-colors">
+                                Back to Login
+                            </Link>
+                        </div>
+                    </form>
+                </div>
+            </motion.div>
         </div>
     );
 }
