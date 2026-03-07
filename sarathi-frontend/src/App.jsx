@@ -1,4 +1,4 @@
-import { Routes, Route, Link, useLocation } from 'react-router-dom';
+import { Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import Navbar from './components/ui/Navbar';
 import LandingPage from './pages/LandingPage';
@@ -13,8 +13,6 @@ import ProfilePage from './pages/ProfilePage';
 import LocationSetupPage from './pages/LocationSetupPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ApplicationsPage from './pages/ApplicationsPage';
-import AgentPage from './pages/AgentPage';
-
 // Admin Pages
 import AdminLayout from './AdminLayout';
 import AdminLoginPage from './pages/AdminLoginPage';
@@ -97,8 +95,7 @@ function App() {
             <Route path="/apply/:schemeId" element={<PrivateRoute requiredRole="citizen"><PageTransition><ApplyPage /></PageTransition></PrivateRoute>} />
             <Route path="/my-schemes" element={<PrivateRoute requiredRole="citizen"><PageTransition><EligibleSchemesPage /></PageTransition></PrivateRoute>} />
             <Route path="/applications" element={<PrivateRoute requiredRole="citizen"><PageTransition><ApplicationsPage /></PageTransition></PrivateRoute>} />
-            <Route path="/smart-assistant" element={<PrivateRoute requiredRole="citizen"><PageTransition><AgentPage /></PageTransition></PrivateRoute>} />
-            <Route path="/agent" element={<PrivateRoute requiredRole="citizen"><AgentChatPage /></PrivateRoute>} />
+            <Route path="/agent" element={<PrivateRoute requiredRole="citizen"><PageTransition><AgentChatPage /></PageTransition></PrivateRoute>} />
             <Route path="/documents" element={<PrivateRoute requiredRole="citizen"><PageTransition><DocumentUploadPage /></PageTransition></PrivateRoute>} />
 
             {/* Panchayat-only routes — wrapped in sidebar layout */}
@@ -137,6 +134,9 @@ function App() {
             <Route path="/admin/login" element={<PageTransition><AdminLoginPage /></PageTransition>} />
             <Route path="/admin/signup" element={<PageTransition><AdminSignupPage /></PageTransition>} />
             <Route path="/admin/verify" element={<PageTransition><AdminVerifyPage /></PageTransition>} />
+
+            {/* Redirects for removed/moved routes */}
+            <Route path="/smart-assistant" element={<Navigate to="/agent" replace />} />
 
             {/* Legacy redirects */}
             <Route path="/login" element={<PageTransition><LoginPage /></PageTransition>} />

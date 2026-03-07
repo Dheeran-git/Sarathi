@@ -237,7 +237,7 @@ function ChatPage() {
     // All citizens go to the single panchayat in the system
     const panchayatId = localProfile.panchayatId
       || citizenProfile?.panchayatId
-      || 'rampur-barabanki-up';
+      || 'unassigned';
 
     try {
       // E1: Timeout wrapper — fall through to local fallback after 15s

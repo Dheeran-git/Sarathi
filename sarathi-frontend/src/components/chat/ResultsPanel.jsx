@@ -33,34 +33,46 @@ function ResultsPanel({ schemes = [], visible = false }) {
             </div>
 
             <div className="p-3 space-y-2">
-                {schemes.map((scheme) => (
-                    <Link
-                        key={scheme.schemeId || scheme.id}
-                        to={`/schemes/${scheme.schemeId || scheme.id}`}
-                        className="block p-3 bg-off-white rounded-lg hover:bg-saffron-pale/50 transition-colors border border-gray-200 hover:border-saffron/30"
-                    >
-                        <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                                <p className="font-body text-sm font-medium text-gray-900 truncate">
-                                    {scheme.nameEnglish || scheme.name}
-                                </p>
-                                <p className="font-body text-xs text-gray-500 mt-0.5">{scheme.ministry}</p>
-                            </div>
-                            <span className="font-mono text-sm font-bold text-navy shrink-0">
-                                ₹{(scheme.annualBenefit || 0) >= 100000
-                                    ? `${((scheme.annualBenefit || 0) / 100000).toFixed((scheme.annualBenefit || 0) % 100000 === 0 ? 0 : 1)}L`
-                                    : (scheme.annualBenefit || 0).toLocaleString('en-IN')}
-                            </span>
-                        </div>
-                        <div className="flex flex-wrap gap-1 mt-2">
-                            {(scheme.eligibilityTagsEn || scheme.eligibilityTags || []).slice(0, 2).map((tag, i) => (
-                                <span key={i} className="px-1.5 py-0.5 bg-success/10 text-success border border-success/20 text-[10px] font-body rounded">
-                                    {tag}
+                {schemes.map((scheme, i) => {
+                    const schemeId = scheme.schemeId || scheme.id;
+                    const cardContent = (
+                        <>
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-body text-sm font-medium text-gray-900 truncate">
+                                        {scheme.nameEnglish || scheme.name}
+                                    </p>
+                                    <p className="font-body text-xs text-gray-500 mt-0.5">{scheme.ministry}</p>
+                                </div>
+                                <span className="font-mono text-sm font-bold text-navy shrink-0">
+                                    ₹{(scheme.annualBenefit || 0) >= 100000
+                                        ? `${((scheme.annualBenefit || 0) / 100000).toFixed((scheme.annualBenefit || 0) % 100000 === 0 ? 0 : 1)}L`
+                                        : (scheme.annualBenefit || 0).toLocaleString('en-IN')}
                                 </span>
-                            ))}
+                            </div>
+                            <div className="flex flex-wrap gap-1 mt-2">
+                                {(scheme.eligibilityTagsEn || scheme.eligibilityTags || []).slice(0, 2).map((tag, j) => (
+                                    <span key={j} className="px-1.5 py-0.5 bg-success/10 text-success border border-success/20 text-[10px] font-body rounded">
+                                        {tag}
+                                    </span>
+                                ))}
+                            </div>
+                        </>
+                    );
+                    return schemeId ? (
+                        <Link
+                            key={schemeId}
+                            to={`/schemes/${schemeId}`}
+                            className="block p-3 bg-off-white rounded-lg hover:bg-saffron-pale/50 transition-colors border border-gray-200 hover:border-saffron/30"
+                        >
+                            {cardContent}
+                        </Link>
+                    ) : (
+                        <div key={i} className="block p-3 bg-off-white rounded-lg border border-gray-200">
+                            {cardContent}
                         </div>
-                    </Link>
-                ))}
+                    );
+                })}
             </div>
 
             {/* Action buttons */}

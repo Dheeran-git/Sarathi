@@ -1,7 +1,7 @@
 import json
 import boto3
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, timezone
 
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
 table = dynamodb.Table('SarathiCitizens')
@@ -84,7 +84,7 @@ def lambda_handler(event, context):
         name = body.get('name', '').strip()
         citizen_id = cognito_user_id if cognito_user_id else f"anon-{name.lower().replace(' ', '-')}" if name else 'anon-unknown'
 
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
 
         # Accept income as either 'income' (frontend) or 'monthlyIncome' (legacy)
         income = int(body.get('income', 0) or body.get('monthlyIncome', 0) or 0)

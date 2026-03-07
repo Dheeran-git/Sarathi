@@ -43,8 +43,8 @@ export const CORE_QUESTIONS = [
     {
         key: 'income',
         type: 'number',
-        prompt: 'What is your approximate annual household income (in ₹)?',
-        promptHi: 'आपकी वार्षिक घरेलू आय लगभग कितनी है (₹ में)?',
+        prompt: 'What is your approximate monthly household income (in ₹)?',
+        promptHi: 'आपकी मासिक घरेलू आय लगभग कितनी है (₹ में)?',
     },
     {
         key: 'category',

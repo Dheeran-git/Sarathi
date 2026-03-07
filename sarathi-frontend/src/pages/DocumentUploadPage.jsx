@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Upload, FileText, CheckCircle, AlertTriangle, Loader2, X, Sparkles } from 'lucide-react';
 import { getUploadUrl, analyzeDocument } from '../utils/api';
@@ -43,6 +43,8 @@ function ConfidenceBadge({ score }) {
 
 function DocumentUploadPage() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const returnTo = searchParams.get('returnTo') || null;
   const { user } = useAuth();
   const { updateProfile, saveCurrentProfile, eligibleSchemes } = useCitizen();
   const { addToast } = useToast();
@@ -59,7 +61,7 @@ function DocumentUploadPage() {
   const [confidenceScores, setConfidenceScores] = useState({});
   const [applied, setApplied] = useState(false);
 
-  const citizenId = user?.sub || user?.userId || '';
+  const citizenId = user?.email || localStorage.getItem('userEmail') || '';
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -79,6 +81,12 @@ function DocumentUploadPage() {
     setUploadStep('idle');
   };
 
+  const getContentType = (fileName) => {
+    const ext = fileName.split('.').pop().toLowerCase();
+    const map = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', pdf: 'application/pdf' };
+    return map[ext] || 'application/octet-stream';
+  };
+
   const handleUploadAndAnalyze = async () => {
     if (!selectedFile || !citizenId) return;
 
@@ -87,11 +95,11 @@ function DocumentUploadPage() {
       // Step 1: Get pre-signed URL
       const { uploadUrl, s3Key } = await getUploadUrl(documentType, selectedFile.name, citizenId);
 
-      // Step 2: PUT file directly to S3
+      // Step 2: PUT file directly to S3 — content type must match pre-signed URL signature
       const putResp = await fetch(uploadUrl, {
         method: 'PUT',
         body: selectedFile,
-        headers: { 'Content-Type': selectedFile.type || 'application/octet-stream' },
+        headers: { 'Content-Type': getContentType(selectedFile.name) },
       });
       if (!putResp.ok) throw new Error('S3 upload failed');
 
@@ -120,8 +128,6 @@ function DocumentUploadPage() {
       setApplied(true);
     }
   };
-
-  const selectedDocType = DOCUMENT_TYPES.find(d => d.value === documentType);
 
   return (
     <div className="min-h-screen bg-off-white">
@@ -293,11 +299,21 @@ function DocumentUploadPage() {
                     {isHi ? 'प्रोफ़ाइल में जोड़ें' : 'Apply to Profile'}
                   </button>
                 ) : (
-                  <div className="flex items-center justify-center gap-2 py-3 bg-success-light rounded-xl">
-                    <CheckCircle size={16} className="text-success" />
-                    <span className="font-body text-sm font-medium text-success">
-                      {isHi ? 'प्रोफ़ाइल अपडेट हो गई!' : 'Profile updated!'}
-                    </span>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-center gap-2 py-3 bg-success-light rounded-xl">
+                      <CheckCircle size={16} className="text-success" />
+                      <span className="font-body text-sm font-medium text-success">
+                        {isHi ? 'प्रोफ़ाइल अपडेट हो गई!' : 'Profile updated!'}
+                      </span>
+                    </div>
+                    {returnTo && (
+                      <button
+                        onClick={() => navigate(returnTo)}
+                        className="w-full h-11 rounded-xl border border-saffron text-saffron font-body text-sm font-semibold hover:bg-saffron-pale transition-colors"
+                      >
+                        {isHi ? 'आवेदन पर वापस जाएं' : 'Back to Application'}
+                      </button>
+                    )}
                   </div>
                 )}
               </>

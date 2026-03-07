@@ -60,7 +60,7 @@ function AgentChatPage() {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
-  const citizenId = user?.sub || user?.userId || '';
+  const citizenId = user?.email || localStorage.getItem('userEmail') || '';
   const suggestedPrompts = isHi ? SUGGESTED_PROMPTS_HI : SUGGESTED_PROMPTS_EN;
 
   useEffect(() => {

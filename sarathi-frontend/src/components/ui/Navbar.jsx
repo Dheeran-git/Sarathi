@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import LanguageToggle from './LanguageToggle';
 
 const CITIZEN_NAV_LINKS = [
   { to: '/chat', label: 'Citizens' },
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/schemes', label: 'Schemes' },
   { to: '/twin', label: 'Digital Twin' },
-  { to: '/smart-assistant', label: '🤖 Assistant' },
+  { to: '/agent', label: 'AI Agent' },
   { to: '/profile', label: 'My Profile' },
 ];
 
@@ -89,11 +88,6 @@ function Navbar() {
 
         {/* Right — Actions */}
         <div className="flex items-center gap-3">
-          {/* Language Toggle — visible on desktop when authenticated */}
-          {isAuthenticated && isCitizen && (
-            <LanguageToggle className="hidden lg:flex" />
-          )}
-
           {/* About — subtle secondary link, always visible on desktop */}
           <NavLink
             to="/about"
@@ -209,12 +203,6 @@ function Navbar() {
           >
             About
           </NavLink>
-
-          {isAuthenticated && isCitizen && (
-            <div className="pt-2">
-              <LanguageToggle />
-            </div>
-          )}
 
           <hr className="border-navy-light/30 my-3" />
 

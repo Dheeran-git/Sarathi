@@ -83,22 +83,22 @@ export function useVoiceInput({ onTranscript, language = 'en-IN' } = {}) {
       };
 
       recognition.onend = () => {
-        if (state === 'listening' || state === 'processing') {
-          setState('idle');
+        setState('idle');
 
-          const lingeringInterim = recognitionRef.current?.latestInterim || '';
-          const finalOutput = (fullTranscriptRef.current + ' ' + lingeringInterim).trim();
+        const lingeringInterim = recognitionRef.current?.latestInterim || '';
+        const finalOutput = (fullTranscriptRef.current + ' ' + lingeringInterim).trim();
 
-          if (finalOutput) {
-            onTranscript?.(finalOutput, 1.0);
-          }
+        // Only submit if stopListening hasn't already handled the transcript
+        // (stopListening clears fullTranscriptRef before calling stop())
+        if (finalOutput) {
+          onTranscript?.(finalOutput, 1.0);
+        }
 
-          // Clear it out for next time
-          setTranscript('');
-          fullTranscriptRef.current = '';
-          if (recognitionRef.current) {
-            recognitionRef.current.latestInterim = '';
-          }
+        // Clear it out for next time
+        setTranscript('');
+        fullTranscriptRef.current = '';
+        if (recognitionRef.current) {
+          recognitionRef.current.latestInterim = '';
         }
       };
 
@@ -107,7 +107,7 @@ export function useVoiceInput({ onTranscript, language = 'en-IN' } = {}) {
       console.error('[VoiceInput] Failed to start recognition:', err);
       _simulateVoiceInput();
     }
-  }, [SpeechRecognition, isSupported, language, onTranscript, state]);
+  }, [SpeechRecognition, isSupported, language, onTranscript]);
 
   const stopListening = useCallback(() => {
     if (state === 'listening' || state === 'processing') {

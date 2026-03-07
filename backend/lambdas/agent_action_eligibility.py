@@ -109,7 +109,7 @@ def lambda_handler(event, context):
                 'category': _extract_param(parameters, 'category', 'General'),
                 'state': details.get('state', ''),
                 'occupation': details.get('occupation', ''),
-                'persona': details.get('occupation', ''),
+                'persona': details.get('persona', details.get('occupation', '')),
                 'isWidow': str(details.get('isWidow', 'false')),
                 'disability': str(details.get('disability', 'false')),
             }

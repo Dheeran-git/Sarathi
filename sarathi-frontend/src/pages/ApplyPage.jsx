@@ -1,4 +1,4 @@
-import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, ExternalLink, FileText, CheckCircle, Loader2, ClipboardList, Download, Upload } from 'lucide-react';
@@ -149,7 +149,7 @@ function ApplyPage() {
                 ['Age', citizenProfile.age || 'N/A'],
                 ['Gender', citizenProfile.gender || 'N/A'],
                 ['Location', `${citizenProfile.village || ''} ${citizenProfile.district || ''} ${citizenProfile.state || ''}`.trim() || 'N/A'],
-                ['Income (Annual)', citizenProfile.income ? `Rs. ${citizenProfile.income}` : 'N/A'],
+                ['Income (Monthly)', citizenProfile.income ? `Rs. ${citizenProfile.income}` : 'N/A'],
                 ['Category', citizenProfile.category || 'N/A'],
                 ['Area Type', citizenProfile.urban === true ? 'Urban' : citizenProfile.urban === false ? 'Rural' : 'N/A'],
                 ['Occupation', citizenProfile.persona || citizenProfile.occupation || 'N/A'],
@@ -316,9 +316,11 @@ function ApplyPage() {
                                 </label>
                                 <input
                                     type="tel"
+                                    inputMode="numeric"
+                                    maxLength={10}
                                     value={personalDetails.mobile}
-                                    onChange={(e) => setPersonalDetails((p) => ({ ...p, mobile: e.target.value }))}
-                                    placeholder="+91"
+                                    onChange={(e) => setPersonalDetails((p) => ({ ...p, mobile: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
+                                    placeholder="10-digit number"
                                     className="w-full h-11 px-4 rounded-lg border border-gray-200 font-body text-sm focus:outline-none focus:border-saffron focus:ring-1 focus:ring-saffron/30 transition-colors"
                                 />
                             </div>
@@ -352,9 +354,11 @@ function ApplyPage() {
                                 : <><CheckCircle size={18} /> {isHi ? 'आवेदन जमा करें' : 'Submit Application'}</>
                             }
                         </button>
-                        <a href={scheme.applyUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 font-body text-sm text-saffron hover:underline">
-                            {isHi ? 'आधिकारिक पोर्टल' : 'Official Portal'} <ExternalLink size={12} />
-                        </a>
+                        {scheme.applyUrl && (
+                            <a href={scheme.applyUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 font-body text-sm text-saffron hover:underline">
+                                {isHi ? 'आधिकारिक पोर्टल' : 'Official Portal'} <ExternalLink size={12} />
+                            </a>
+                        )}
                     </div>
                 </form>
             </div>

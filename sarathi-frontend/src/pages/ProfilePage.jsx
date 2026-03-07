@@ -38,7 +38,7 @@ const PLACEHOLDER_MAP = {
     age: 'Add your age',
     gender: 'Select your gender',
     state: 'Select your state',
-    income: 'Enter annual income',
+    income: 'Enter monthly income',
     category: 'Select category',
     urban: 'Select area type',
     persona: 'Add your occupation',
@@ -191,7 +191,7 @@ function ProfilePage() {
     ];
 
     const financialFields = [
-        { key: 'income', label: 'Annual Income (₹)', icon: IndianRupee, type: 'number' },
+        { key: 'income', label: 'Monthly Income (₹)', icon: IndianRupee, type: 'number' },
     ];
 
     const locationFields = [
