@@ -4,7 +4,7 @@ import ProgressSteps from '../components/chat/ProgressSteps';
 import ChatPanel from '../components/chat/ChatPanel';
 import InputBar from '../components/chat/InputBar';
 import ResultsPanel from '../components/chat/ResultsPanel';
-import { checkEligibility, notifyPanchayat } from '../utils/api';
+import { checkEligibility, notifyPanchayat, sendToLex } from '../utils/api';
 import { useCitizen } from '../context/CitizenContext';
 import { useLanguage } from '../context/LanguageContext';
 import useVoiceInput from '../hooks/useVoiceInput';
@@ -24,14 +24,14 @@ import {
 let realOfflineSchemesCache = [];
 
 async function getFallbackSchemes() {
-    if (realOfflineSchemesCache.length > 0) return realOfflineSchemesCache;
-    try {
-        const res = await fetch('/schemes.json');
-        realOfflineSchemesCache = await res.json();
-    } catch {
-        // Fallback gracefully empty if file gets deleted
-    }
-    return realOfflineSchemesCache;
+  if (realOfflineSchemesCache.length > 0) return realOfflineSchemesCache;
+  try {
+    const res = await fetch('/schemes.json');
+    realOfflineSchemesCache = await res.json();
+  } catch {
+    // Fallback gracefully empty if file gets deleted
+  }
+  return realOfflineSchemesCache;
 }
 
 function getProfileTags(profile) {
@@ -160,7 +160,7 @@ function scoreScheme(profileTags, scheme, profile) {
 async function localFallbackMatch(profile) {
   const profileTags = getProfileTags(profile);
   const scored = [];
-  
+
   const allSchemes = await getFallbackSchemes();
 
   allSchemes.forEach(scheme => {
@@ -178,6 +178,19 @@ async function localFallbackMatch(profile) {
 
   return scored.slice(0, 15).map(x => x.scheme);
 }
+
+/* ── Lex V2 slot → profile key mapping ────────────────────────────── */
+const LEX_SLOT_MAP = {
+  Age: 'age',
+  Income: 'income',
+  Gender: 'gender',
+  State: 'state',
+  Category: 'category',
+  Occupation: 'persona',
+  IsWidow: 'isWidow',
+  Disability: 'disability',
+  Name: 'name',
+};
 
 /* ── Phase labels for progress bar ──────────────────────────────────── */
 const PHASE_LABELS_EN = ['Core Profile', 'Persona', 'Details', 'Results'];
@@ -200,6 +213,11 @@ function ChatPage() {
   const [answeredCount, setAnsweredCount] = useState(0);
   const [totalQuestions, setTotalQuestions] = useState(CORE_QUESTIONS.length + 1); // core + persona
   const [currentPhase, setCurrentPhase] = useState(0); // 0=core, 1=persona, 2=branches, 3=results
+
+  // Lex V2 integration state
+  const [useLex, setUseLex] = useState(false); // Lex bot is not deployed properly, default to robust manual flow
+  const [lexSessionId, setLexSessionId] = useState(() => `web-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+  const [lexFailed, setLexFailed] = useState(false);
 
   // Sync state and ref so callbacks don't go stale
   const [conversationDone, setConversationDoneState] = useState(false);
@@ -344,10 +362,7 @@ function ChatPage() {
         .catch((err) => console.warn('[ChatPage] Profile save failed:', err));
     };
 
-    // ═══════════════════════════════════════════════════════════════════
     // LOCAL-FIRST APPROACH: Always run local matching first (guaranteed)
-    // Then try API as an enhancement. This ensures 0-schemes never happens.
-    // ═══════════════════════════════════════════════════════════════════
     let localMatched = [];
     try {
       localMatched = await localFallbackMatch(profile);
@@ -356,7 +371,6 @@ function ChatPage() {
     }
 
     // Now try the API as an enhancement
-
     try {
       const withTimeout = (promise, ms) => Promise.race([
         promise,
@@ -383,15 +397,92 @@ function ChatPage() {
       }).catch(() => { });
 
     } catch (err) {
-      // API failed (401, timeout, network error) — use guaranteed local results
       console.warn('[ChatPage] API failed, using local results:', err?.message);
       const totalBenefit = localMatched.reduce((s, sc) => s + (sc.annualBenefit || 0), 0);
       flushResults(localMatched, totalBenefit);
     }
   }, [setEligibleSchemes, speakAndResume, isHi, saveCurrentProfile]);
 
-  /* ── Handle user answer ────────────────────────────────────────────── */
-  const handleAnswer = useCallback((rawText) => {
+  /* ── Lex V2 handler: sends message to Lex bot for guided slot-filling ── */
+  const handleLexMessage = useCallback(async (rawText) => {
+    if (conversationDoneRef.current) return;
+
+    addMessage({ type: 'user', text: rawText, timestamp: 'JUST_NOW' });
+    setIsThinking(true);
+
+    try {
+      const locale = isHi ? 'hi_IN' : 'en_US';
+      const lexResp = await sendToLex(rawText, lexSessionId, locale);
+
+      const botMessage = lexResp.message || lexResp.allMessages?.[0] || '';
+      const dialogState = lexResp.dialogState || '';
+      const slots = lexResp.slots || {};
+      const intentState = lexResp.intentState || '';
+
+      // Map filled slots to citizen profile
+      const profileUpdates = {};
+      for (const [lexSlot, value] of Object.entries(slots)) {
+        const profileKey = LEX_SLOT_MAP[lexSlot];
+        if (profileKey && value) {
+          // Type conversions
+          if (profileKey === 'age' || profileKey === 'income') {
+            profileUpdates[profileKey] = parseInt(value) || value;
+          } else if (profileKey === 'isWidow' || profileKey === 'disability') {
+            profileUpdates[profileKey] = value.toLowerCase() === 'yes' || value.toLowerCase() === 'true';
+          } else {
+            profileUpdates[profileKey] = value;
+          }
+        }
+      }
+
+      if (Object.keys(profileUpdates).length > 0) {
+        const newProfile = { ...localProfile, ...profileUpdates };
+        setLocalProfile(newProfile);
+        updateProfile(profileUpdates);
+        setAnsweredCount(prev => prev + Object.keys(profileUpdates).length);
+
+        // Update phase based on what we know
+        const phase = computePhase(newProfile);
+        setCurrentPhase(phase);
+      }
+
+      setIsThinking(false);
+
+      // Show bot response
+      if (botMessage) {
+        addMessage({ type: 'sarathi', text: botMessage, timestamp: 'JUST_NOW' });
+        if (isLiveModeRef.current) speakAndResume(botMessage, true);
+      }
+
+      // Check if Lex has completed intent fulfillment
+      if (dialogState === 'Close' || intentState === 'Fulfilled' || intentState === 'ReadyForFulfillment') {
+        // Lex completed slot-filling — trigger eligibility check with collected profile
+        const mergedProfile = { ...localProfile, ...profileUpdates };
+        const findingMsg = isHi
+          ? 'बढ़िया! सभी जानकारी मिल गई। अब आपकी योजनाएं खोज रहे हैं... 🔍'
+          : 'Great! All information collected via AI assistant. Finding your schemes now... 🔍';
+        addMessage({ type: 'sarathi', text: findingMsg, timestamp: 'JUST_NOW' });
+        if (isLiveModeRef.current) speakAndResume(findingMsg, false);
+        runEligibilityCheck(mergedProfile);
+      }
+
+    } catch (err) {
+      console.warn('[ChatPage] Lex failed, falling back to local flow:', err?.message);
+      setIsThinking(false);
+      setLexFailed(true);
+      setUseLex(false);
+
+      // Fallback: start local question flow
+      const fallbackMsg = isHi
+        ? 'AI सहायक से कनेक्ट नहीं हो पाया। मैं सीधे पूछूंगा।'
+        : "Couldn't connect to AI assistant. I'll ask you directly.";
+      addMessage({ type: 'sarathi', text: fallbackMsg, timestamp: 'JUST_NOW' });
+      setTimeout(() => askNextQuestion(localProfile), 600);
+    }
+  }, [lexSessionId, isHi, localProfile, updateProfile, computePhase, speakAndResume, askNextQuestion, runEligibilityCheck]);
+
+  /* ── Handle user answer (local question flow fallback) ──────────── */
+  const handleLocalAnswer = useCallback((rawText) => {
     if (conversationDoneRef.current || !currentQuestion) return;
 
     // Show user message
@@ -404,7 +495,7 @@ function ChatPage() {
     // Validate answer
     const isInvalidChoice = currentQuestion.type === 'choice' && currentQuestion.options &&
       !currentQuestion.options.some(o => o.value === value) &&
-      !(currentQuestion.key === 'urban' && typeof value === 'boolean'); // urban maps to boolean below
+      !(currentQuestion.key === 'urban' && typeof value === 'boolean');
 
     if (isInvalidChoice) {
       setTimeout(() => {
@@ -452,12 +543,21 @@ function ChatPage() {
     }, 400);
   }, [currentQuestion, localProfile, updateProfile, askNextQuestion, runEligibilityCheck, isHi, speakAndResume]);
 
+  /* ── Unified message handler ──────────────────────────────────────── */
+  const handleAnswer = useCallback((rawText) => {
+    if (useLex && !lexFailed) {
+      handleLexMessage(rawText);
+    } else {
+      handleLocalAnswer(rawText);
+    }
+  }, [useLex, lexFailed, handleLexMessage, handleLocalAnswer]);
+
   // Keep ref in sync
   useEffect(() => {
     sendMessageRef.current = handleAnswer;
   }, [handleAnswer]);
 
-  /* ── Boot: ask the first question ──────────────────────────────────── */
+  /* ── Boot: greet and start flow ─────────────────────────────────── */
   const hasGreetedRef = useRef(false);
 
   useEffect(() => {
@@ -467,14 +567,27 @@ function ChatPage() {
         ? 'नमस्ते! 🙏 मैं सारथी हूँ, आपका AI सहायक। मैं आपको सरकारी योजनाओं से जोड़ने में मदद करूँगा। चलिए शुरू करते हैं!'
         : "Namaste! 🙏 I'm Sarathi, your AI welfare assistant. I'll help connect you with government schemes you're eligible for. Let's get started!";
       addMessage({ type: 'sarathi', text: greeting, timestamp: 'JUST_NOW' });
-      setTimeout(() => askNextQuestion({}), 600);
+
+      if (useLex) {
+        // Send initial "hi" to Lex to trigger the guided flow
+        setTimeout(() => {
+          handleLexMessage(isHi ? 'नमस्ते' : 'Hi, I want to check my eligibility');
+        }, 600);
+      } else {
+        setTimeout(() => askNextQuestion({}), 600);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* ── Compute quick-reply chips for current question ────────────────── */
   const quickReplies = (() => {
-    if (!currentQuestion || conversationDone) return null;
+    if (conversationDone) return null;
+
+    // When using Lex, no local question-based chips — let Lex guide
+    if (useLex && !lexFailed) return null;
+
+    if (!currentQuestion) return null;
     if (currentQuestion.type === 'boolean') {
       return [
         { value: 'Yes', label: 'Yes', labelHi: 'हाँ' },
@@ -509,8 +622,25 @@ function ChatPage() {
           <span className="font-body text-xs text-saffron font-medium">
             {isHi ? '✨ सारथी AI एजेंट (Beta) — मुफ़्त-प्रश्न AI' : '✨ Try Sarathi AI Agent (Beta) — Free-text AI'}
           </span>
-          <span className="font-body text-xs text-saffron/70 group-hover:text-saffron transition-colors">→</span>
+          <span className="font-body text-xs text-saffron/70 group-hover:text-saffron transition-colors">&rarr;</span>
         </Link>
+
+        {/* Lex indicator */}
+        {useLex && !lexFailed && (
+          <div className="flex items-center justify-between px-4 py-1.5 bg-blue-50 border-b border-blue-100">
+            <span className="font-body text-[11px] text-blue-600 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+              {isHi ? 'AI-गाइडेड फ़्लो (Lex V2)' : 'AI-Guided Flow (Lex V2)'}
+            </span>
+            <button
+              onClick={() => { setUseLex(false); setLexFailed(true); askNextQuestion(localProfile); }}
+              className="font-body text-[10px] text-blue-400 hover:text-blue-600 underline"
+            >
+              {isHi ? 'मैनुअल मोड' : 'Switch to manual'}
+            </button>
+          </div>
+        )}
+
         <ProgressSteps currentStep={progressStep} labels={stepLabels} totalSteps={totalSteps} />
 
         {/* Profile Saved toast */}

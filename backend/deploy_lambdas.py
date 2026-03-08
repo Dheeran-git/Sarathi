@@ -16,7 +16,6 @@ LAMBDAS = {
     'sarathi-panchayat-notifier': 'panchayat_notifier.py',
     'sarathi-applications': 'applications.py',
     'sarathi-agent-executor': 'bedrock_agent_executor.py',
-    'sarathi-invoke-agent': 'invoke_bedrock_agent.py',
     'sarathi-admin-schemes': 'admin_schemes.py',
     'sarathi-panchayat-onboarding': 'panchayat_onboarding.py',
     # Agentic AI Phase 2
@@ -31,6 +30,15 @@ LAMBDAS = {
     'sarathi-event-processor': 'event_processor.py',
     'sarathi-insights-generator': 'insights_generator.py',
     'sarathi-workflow-trigger': 'workflow_trigger.py',
+    # Panchayat Data CRUD
+    'sarathi-panchayat-data': 'panchayat_data.py',
+    # Lex Proxy
+    'sarathi-lex-proxy': 'lex_proxy.py',
+    # Phase 6-7: Advanced AI Systems
+    'sarathi-fraud-detector': 'fraud_detector.py',
+    'sarathi-zkp-verifier': 'zkp_verifier.py',
+    'sarathi-benefit-portability': 'benefit_portability.py',
+    'sarathi-community-validation': 'community_validation.py',
 }
 
 # Extra files to bundle alongside specific lambdas
@@ -41,6 +49,13 @@ EXTRA_FILES = {
     'sarathi-agent-action-twin': ['schemes.json'],
     'sarathi-event-processor': ['schemes.json'],
     'sarathi-workflow-trigger': ['schemes.json'],
+    # Rate limiter bundled with AI Lambdas
+    'sarathi-bedrock-explainer': ['rate_limiter.py'],
+    'sarathi-agent-invoke': ['rate_limiter.py'],
+    'sarathi-insights-generator': ['rate_limiter.py'],
+    'sarathi-conflict-detector': ['rate_limiter.py'],
+    'sarathi-digital-twin': ['rate_limiter.py'],
+    'sarathi-scheme-fetch': ['rate_limiter.py'],
 }
 
 base = os.path.join(os.path.dirname(__file__), 'lambdas')

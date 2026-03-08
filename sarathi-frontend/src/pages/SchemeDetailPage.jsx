@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, ExternalLink, FileText, Users, Coins, ClipboardList, Loader2, Volume2, VolumeX, Sparkles, Share2, Info } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import { fetchScheme, explainScheme } from '../utils/api';
+import { fetchScheme, explainScheme, compareSchemes } from '../utils/api';
 import { schemeMap, allSchemes } from '../data/schemesDB';
 import { useLanguage } from '../context/LanguageContext';
 import { useCitizen } from '../context/CitizenContext';
@@ -50,6 +50,10 @@ function SchemeDetailPage() {
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
   const audioRef = useRef(null);
+
+  // AI Comparison state
+  const [comparison, setComparison] = useState(null);
+  const [isComparing, setIsComparing] = useState(false);
 
   // Fetch live scheme data from API
   useEffect(() => {
@@ -460,6 +464,48 @@ function SchemeDetailPage() {
                     );
                   })}
                 </div>
+              </div>
+            )}
+
+            {/* AI Scheme Comparison */}
+            {relatedSchemes.length > 0 && (
+              <div className="bg-white rounded-xl shadow-card p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles size={14} className="text-saffron" />
+                  <h4 className="font-body text-sm font-bold text-gray-900">
+                    {isHi ? 'AI तुलना' : 'AI Compare'}
+                  </h4>
+                </div>
+                {!comparison && !isComparing && (
+                  <button
+                    onClick={async () => {
+                      setIsComparing(true);
+                      try {
+                        const compareIds = [schemeId, ...(relatedSchemes.slice(0, 2).map(s => s.schemeId || s.id))];
+                        const result = await compareSchemes(compareIds, citizenProfile);
+                        setComparison(result.comparison || '');
+                      } catch {
+                        setComparison(isHi ? 'तुलना उपलब्ध नहीं है।' : 'Comparison unavailable at this time.');
+                      } finally {
+                        setIsComparing(false);
+                      }
+                    }}
+                    className="w-full h-9 rounded-lg bg-saffron/10 text-saffron border border-saffron/20 font-body text-xs font-medium hover:bg-saffron/20 transition-colors"
+                  >
+                    {isHi ? 'समान योजनाओं से तुलना करें' : 'Compare with Similar Schemes'}
+                  </button>
+                )}
+                {isComparing && (
+                  <div className="flex items-center justify-center gap-2 py-3">
+                    <Loader2 size={14} className="animate-spin text-saffron" />
+                    <span className="font-body text-xs text-gray-500">{isHi ? 'AI तुलना कर रहा है...' : 'AI comparing...'}</span>
+                  </div>
+                )}
+                {comparison && (
+                  <div className="bg-off-white rounded-lg p-3 mt-2">
+                    <p className="font-body text-xs text-gray-800 leading-relaxed whitespace-pre-wrap">{comparison}</p>
+                  </div>
+                )}
               </div>
             )}
 

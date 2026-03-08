@@ -53,12 +53,14 @@ export function PanchayatProvider({ children }) {
 
     const [isLoading, setIsLoading] = useState(false);
     const [lastFetched, setLastFetched] = useState(null);
+    const [usingMockData, setUsingMockData] = useState(false);
 
     // Refresh all panchayat data from API + mock fallbacks
     const refreshData = useCallback(async () => {
         if (!isAuthenticated || userType !== 'panchayat') return;
 
         setIsLoading(true);
+        setUsingMockData(false);
         const panchayatId = user?.panchayatId;
         try {
             if (!panchayatId) throw new Error("No panchayat ID found in user token");
@@ -102,11 +104,13 @@ export function PanchayatProvider({ children }) {
                 getPanchayatVillageProfile(panchayatId),
                 getPanchayatAnalytics(panchayatId),
             ]);
+            let anyMock = false;
             const extract = (res, key, fallback) => {
                 if (res.status === 'fulfilled' && res.value?.[key]) {
                     const val = res.value[key];
-                    return (Array.isArray(val) ? val.length > 0 : Object.keys(val).length > 0) ? val : fallback;
+                    if (Array.isArray(val) ? val.length > 0 : Object.keys(val).length > 0) return val;
                 }
+                anyMock = true;
                 return fallback;
             };
             setCampaigns(extract(campaignsRes, 'campaigns', mockCampaigns));
@@ -114,12 +118,14 @@ export function PanchayatProvider({ children }) {
             setCalendarEvents(extract(calendarRes, 'calendar', mockCalendarEvents));
             setVillageProfile(extract(villageRes, 'village-profile', mockVillageProfile));
             setAnalyticsData(extract(analyticsRes, 'analytics', mockAnalytics));
+            if (anyMock) setUsingMockData(true);
         } catch {
             setCampaigns(mockCampaigns);
             setGrievances(mockGrievances);
             setCalendarEvents(mockCalendarEvents);
             setVillageProfile(mockVillageProfile);
             setAnalyticsData(mockAnalytics);
+            setUsingMockData(true);
         }
 
         setLastFetched(new Date());
@@ -184,6 +190,7 @@ export function PanchayatProvider({ children }) {
         applications,
         stats,
         isLoading,
+        usingMockData,
         lastFetched,
         refreshData,
         getCitizenById,

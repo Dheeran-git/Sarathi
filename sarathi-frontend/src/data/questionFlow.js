@@ -55,7 +55,10 @@ export const CORE_QUESTIONS = [
             { value: 'AAY', label: 'AAY (Antyodaya Anna Yojana)', labelHi: 'एएवाई (अंत्योदय अन्न योजना)' },
             { value: 'APL', label: 'APL (Above Poverty Line) / None', labelHi: 'एपीएल / कोई नहीं' },
         ],
-    }
+    },
+    { key: 'mobile', type: 'text', prompt: 'What is your 10-digit mobile number?', promptHi: 'आपका 10 अंकों का मोबाइल नंबर क्या है?' },
+    { key: 'aadhaarLast4', type: 'text', prompt: 'What are the last 4 digits of your Aadhaar number?', promptHi: 'आपके आधार नंबर के अंतिम 4 अंक क्या हैं?' },
+    { key: 'bankAccountLast4', type: 'text', prompt: 'What are the last 4 digits of your bank account number?', promptHi: 'आपके बैंक खाता नंबर के अंतिम 4 अंक क्या हैं?' },
 ];
 
 /* ── Persona / Occupation question ────────────────────────────────────── */
@@ -196,6 +199,16 @@ export function parseAnswer(question, rawText) {
         const noWords = ['no', 'n', 'nahi', 'naa', 'nahin', 'नहीं', 'ना', 'नही', 'false'];
         if (yesWords.includes(lower)) return true;
         if (noWords.includes(lower)) return false;
+        return text;
+    }
+    if (question.key === 'mobile') {
+        const digits = text.replace(/\D/g, '');
+        if (digits.length === 10) return digits;
+        return text; // return raw so ChatPage can show validation error
+    }
+    if (question.key === 'aadhaarLast4' || question.key === 'bankAccountLast4') {
+        const digits = text.replace(/\D/g, '');
+        if (digits.length === 4) return digits;
         return text;
     }
     if (question.type === 'choice' && question.options) {

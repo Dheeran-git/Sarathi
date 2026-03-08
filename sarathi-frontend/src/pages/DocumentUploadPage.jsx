@@ -60,6 +60,8 @@ function DocumentUploadPage() {
   const [extractedFields, setExtractedFields] = useState(null);
   const [confidenceScores, setConfidenceScores] = useState({});
   const [applied, setApplied] = useState(false);
+  const [aiVerification, setAiVerification] = useState('');
+  const [profileAutoUpdated, setProfileAutoUpdated] = useState(false);
 
   const citizenId = user?.email || localStorage.getItem('userEmail') || '';
 
@@ -108,6 +110,8 @@ function DocumentUploadPage() {
       const result = await analyzeDocument(s3Key, documentType, citizenId);
       setExtractedFields(result.extractedFields || {});
       setConfidenceScores(result.confidenceScores || {});
+      if (result.aiVerification) setAiVerification(result.aiVerification);
+      if (result.profileUpdated) setProfileAutoUpdated(true);
       setUploadStep('done');
     } catch (err) {
       console.error('[DocumentUpload] Error:', err);
@@ -289,6 +293,29 @@ function DocumentUploadPage() {
                     );
                   })}
                 </div>
+
+                {/* AI Verification Feedback */}
+                {aiVerification && (
+                  <div className="mb-4 p-4 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Sparkles size={14} className="text-blue-600" />
+                      <span className="font-body text-xs font-bold text-blue-700 uppercase tracking-wider">
+                        {isHi ? 'AI सत्यापन' : 'AI Verification'}
+                      </span>
+                    </div>
+                    <p className="font-body text-sm text-blue-900 leading-relaxed whitespace-pre-wrap">{aiVerification}</p>
+                  </div>
+                )}
+
+                {/* Auto-update notification */}
+                {profileAutoUpdated && (
+                  <div className="mb-4 flex items-center gap-2 p-3 rounded-xl bg-success-light border border-success/20">
+                    <CheckCircle size={14} className="text-success shrink-0" />
+                    <p className="font-body text-xs text-success font-medium">
+                      {isHi ? 'आपकी प्रोफ़ाइल स्वचालित रूप से अपडेट हो गई है' : 'Your profile was automatically updated with extracted data'}
+                    </p>
+                  </div>
+                )}
 
                 {!applied ? (
                   <button

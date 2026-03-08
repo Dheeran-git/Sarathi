@@ -127,6 +127,9 @@ def lambda_handler(event, context):
 
             # Additional fields
             'educationLevel': body.get('educationLevel', ''),
+            'mobile': body.get('mobile', '').strip() if body.get('mobile') else '',
+            'aadhaarLast4': body.get('aadhaarLast4', '').strip() if body.get('aadhaarLast4') else '',
+            'bankAccountLast4': body.get('bankAccountLast4', '').strip() if body.get('bankAccountLast4') else '',
 
             # Location fields
             'district': body.get('district', '').strip() if body.get('district') else '',

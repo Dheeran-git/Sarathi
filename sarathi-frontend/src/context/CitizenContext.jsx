@@ -52,7 +52,10 @@ const emptyProfile = {
     urban: null,
     disability: false,
     bplCard: '',
-    
+    mobile: '',
+    aadhaarLast4: '',
+    bankAccountLast4: '',
+
     // Occupation
     occupation: '',
     persona: '',

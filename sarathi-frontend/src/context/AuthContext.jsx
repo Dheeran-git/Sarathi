@@ -116,11 +116,9 @@ export function AuthProvider({ children }) {
             // Extract all real claims
             const lgdCode = payload['custom:lgdCode'] || '';
             let panchayatId = payload['custom:panchayatId'] || '';
-            
-            // Normalization patch: if mismatched due to legacy village code vs lgd code, force LGD_ format
-            if (panchayatId === '219293' || lgdCode === '614744') {
-                panchayatId = 'LGD_614744';
-            } else if (lgdCode && !panchayatId.includes(lgdCode)) {
+
+            // Normalization: ensure LGD_ prefix for numeric IDs
+            if (lgdCode && !panchayatId.includes(lgdCode)) {
                 panchayatId = `LGD_${lgdCode}`;
             } else if (panchayatId && !isNaN(panchayatId) && !panchayatId.startsWith('LGD_')) {
                 panchayatId = `LGD_${panchayatId}`;
@@ -167,16 +165,14 @@ export function AuthProvider({ children }) {
             const payload = idToken ? decodeJwt(idToken) : {};
             const lgdCode = payload['custom:lgdCode'] || '';
             let panchayatId = payload['custom:panchayatId'] || '';
-            
-            // Normalization patch: if mismatched due to legacy village code vs lgd code, force LGD_ format
-            if (panchayatId === '219293' || lgdCode === '614744') {
-                panchayatId = 'LGD_614744';
-            } else if (lgdCode && !panchayatId.includes(lgdCode)) {
+
+            // Normalization: ensure LGD_ prefix for numeric IDs
+            if (lgdCode && !panchayatId.includes(lgdCode)) {
                 panchayatId = `LGD_${lgdCode}`;
             } else if (panchayatId && !isNaN(panchayatId) && !panchayatId.startsWith('LGD_')) {
                 panchayatId = `LGD_${panchayatId}`;
             }
-            
+
             const role = payload['custom:panchayatRole'] || 'sarpanch';
             const state = payload['custom:panchayatState'] || '';
             const district = payload['custom:district'] || '';

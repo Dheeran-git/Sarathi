@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronRight, RefreshCw, Download, Loader2, Users, BarChart3, FileText, Megaphone, MapPin, CalendarDays, AlertTriangle, ClipboardList, Settings, TrendingUp } from 'lucide-react';
+import { ChevronRight, RefreshCw, Download, Loader2, Users, BarChart3, FileText, Megaphone, MapPin, CalendarDays, AlertTriangle, ClipboardList, Settings, TrendingUp, EyeOff, Shield } from 'lucide-react';
 import StatCard from '../components/ui/StatCard';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { usePanchayat } from '../context/PanchayatContext';
 import { t } from '../utils/translations';
 import { localizeNum } from '../utils/formatters';
 import VillageMap from '../components/panchayat/VillageMap';
@@ -35,6 +36,7 @@ function PanchayatDashboard() {
   const isHi = language === 'hi';
   const { user } = useAuth();
   const { addToast } = useToast();
+  const { usingMockData } = usePanchayat();
 
   // B1: Dynamic panchayat ID from auth context
   const panchayatId = user?.panchayatId;
@@ -51,6 +53,9 @@ function PanchayatDashboard() {
   const [households, setHouseholds] = useState([]);
 
   const [activeAlertFilter, setActiveAlertFilter] = useState(null);
+  const [invisibleCitizens, setInvisibleCitizens] = useState([]);
+  const [showInvisibleTab, setShowInvisibleTab] = useState(false);
+  const [totalLostBenefit, setTotalLostBenefit] = useState(0);
 
   const fetchData = () => {
     setLoading(true);
@@ -105,6 +110,12 @@ function PanchayatDashboard() {
           // Load insights from API response or empty
           if (data.insights && data.insights.length > 0) {
             setInsights(data.insights);
+          }
+
+          // Load invisible citizens from API response
+          if (data.invisibleCitizens && data.invisibleCitizens.length > 0) {
+            setInvisibleCitizens(data.invisibleCitizens);
+            setTotalLostBenefit(data.totalLostBenefit || 0);
           }
 
           // Process live alerts
@@ -320,6 +331,14 @@ function PanchayatDashboard() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {usingMockData && (
+          <div className="mb-4 px-4 py-3 rounded-lg bg-amber-50 border border-amber-200 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+            <p className="font-body text-sm text-amber-700">
+              {isHi ? 'कुछ डेटा सर्वर से लोड नहीं हो सका — नमूना डेटा दिखाया जा रहा है।' : 'Some data could not be loaded from the server — showing sample data.'}
+            </p>
+          </div>
+        )}
         {/* Stats Row */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
           <StatCard icon="🏠" value={stats.totalHouseholds} label={T('panchTotalHouseholds')} variant="primary" />
@@ -400,6 +419,116 @@ function PanchayatDashboard() {
               {activeAlertFilter ? (isHi ? 'फ़िल्टर की गई सूची' : 'Filtered Action List') : (isHi ? 'पात्र नागरिक' : 'Eligible Citizens')}
             </h2>
             <CitizenTable citizens={eligibleCitizens} />
+          </div>
+        )}
+
+        {/* Invisible Citizens Section */}
+        {invisibleCitizens.length > 0 && (
+          <div className="mb-8">
+            <div
+              className="bg-gradient-to-r from-rose-50 to-pink-50 rounded-xl border border-rose-200 p-5 cursor-pointer hover:shadow-md transition-all"
+              onClick={() => setShowInvisibleTab(v => !v)}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center">
+                    <EyeOff size={20} className="text-rose-600" />
+                  </div>
+                  <div>
+                    <h2 className="font-body text-base font-bold text-rose-900 flex items-center gap-2">
+                      {isHi ? 'अदृश्य नागरिक' : 'Invisible Citizens'}
+                      <span className="px-2 py-0.5 rounded-full bg-rose-200 text-rose-800 font-body text-xs font-bold">
+                        {invisibleCitizens.length}
+                      </span>
+                    </h2>
+                    <p className="font-body text-xs text-rose-600">
+                      {isHi
+                        ? `${invisibleCitizens.length} परिवार पात्र होने के बावजूद शून्य लाभ प्राप्त कर रहे हैं — ₹${totalLostBenefit.toLocaleString('en-IN')} वार्षिक लाभ छूट रहा है`
+                        : `${invisibleCitizens.length} households receiving zero benefits despite eligibility — ₹${totalLostBenefit.toLocaleString('en-IN')}/year in lost benefits`}
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight size={20} className={`text-rose-400 transition-transform ${showInvisibleTab ? 'rotate-90' : ''}`} />
+              </div>
+            </div>
+
+            {showInvisibleTab && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="mt-3 bg-white rounded-xl border border-gray-200 shadow-card overflow-hidden"
+              >
+                <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+                  <span className="font-body text-sm font-medium text-gray-700">
+                    {isHi ? 'प्राथमिकता क्रम (भेद्यता स्कोर अनुसार)' : 'Priority Order (by Vulnerability Score)'}
+                  </span>
+                  <span className="font-body text-xs text-gray-500">
+                    {isHi ? 'उच्च स्कोर = अधिक जरूरतमंद' : 'Higher score = more vulnerable'}
+                  </span>
+                </div>
+                <div className="divide-y divide-gray-50 max-h-[500px] overflow-y-auto">
+                  {invisibleCitizens.map((ic, idx) => (
+                    <div key={ic.citizenId || idx} className="px-4 py-3 flex items-center gap-4 hover:bg-gray-50 transition-colors">
+                      {/* Rank */}
+                      <span className="font-mono text-xs text-gray-400 w-6 text-right">#{idx + 1}</span>
+
+                      {/* Vulnerability score badge */}
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 font-mono text-sm font-bold text-white
+                        ${ic.vulnerabilityScore >= 60 ? 'bg-red-500' : ic.vulnerabilityScore >= 40 ? 'bg-amber-500' : 'bg-blue-500'}`}>
+                        {ic.vulnerabilityScore}
+                      </div>
+
+                      {/* Citizen info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-body text-sm font-medium text-gray-900 truncate">
+                          {ic.name}
+                          {ic.isWidow && <span className="ml-1.5 text-rose-500 text-xs">(Widow)</span>}
+                          {ic.disability && <span className="ml-1.5 text-purple-500 text-xs">(PwD)</span>}
+                        </p>
+                        <p className="font-body text-[11px] text-gray-500">
+                          {isHi ? `${ic.age} वर्ष` : `Age ${ic.age}`} · {ic.category} · {ic.ward || 'Unknown ward'}
+                          {ic.income > 0 && ` · ₹${ic.income.toLocaleString('en-IN')}/mo`}
+                        </p>
+                      </div>
+
+                      {/* Missed schemes */}
+                      <div className="hidden md:flex flex-col items-end shrink-0">
+                        <span className="font-body text-xs text-gray-600">
+                          {ic.matchedSchemesCount} {isHi ? 'योजनाएं छूटीं' : 'schemes missed'}
+                        </span>
+                        <span className="font-mono text-xs text-rose-600 font-medium">
+                          -₹{(ic.lostAnnualBenefit || 0).toLocaleString('en-IN')}/yr
+                        </span>
+                      </div>
+
+                      {/* Scheme tags */}
+                      <div className="hidden lg:flex flex-wrap gap-1 max-w-[200px]">
+                        {(ic.matchedSchemeNames || []).slice(0, 3).map((name, i) => (
+                          <span key={i} className="px-1.5 py-0.5 rounded bg-gray-100 font-body text-[9px] text-gray-600 truncate max-w-[120px]">
+                            {name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Summary footer */}
+                <div className="p-4 bg-rose-50 border-t border-rose-100 flex items-center justify-between">
+                  <p className="font-body text-xs text-rose-700">
+                    {isHi
+                      ? `कुल वार्षिक लाभ हानि: ₹${totalLostBenefit.toLocaleString('en-IN')}`
+                      : `Total annual benefit loss: ₹${totalLostBenefit.toLocaleString('en-IN')}`}
+                  </p>
+                  <Link
+                    to="/panchayat/outreach"
+                    className="px-3 py-1.5 rounded-lg bg-rose-600 text-white font-body text-xs font-medium hover:bg-rose-700 transition-colors"
+                  >
+                    {isHi ? 'अभियान शुरू करें' : 'Start Outreach Campaign'}
+                  </Link>
+                </div>
+              </motion.div>
+            )}
           </div>
         )}
 

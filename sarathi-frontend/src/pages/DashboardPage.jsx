@@ -4,7 +4,7 @@ import { useCitizen } from '../context/CitizenContext';
 import { motion } from 'framer-motion';
 import {
     Bell, CheckCircle2, ChevronRight, Sparkles, TrendingUp,
-    AlertTriangle, ArrowRight, MessageSquare, FileText, Loader2, ClipboardList, Bot, Upload
+    AlertTriangle, ArrowRight, MessageSquare, FileText, Loader2, ClipboardList, Bot, Upload, Zap
 } from 'lucide-react';
 import StatCard from '../components/ui/StatCard';
 import { CATEGORY_STYLE, FALLBACK_STYLE } from '../constants/categories';
@@ -44,6 +44,9 @@ function DashboardPage() {
     const hasProfile = citizenProfile?.name && citizenProfile.name !== '';
     const totalBenefits = eligibleSchemes.reduce((sum, s) => sum + (Number(s.annualBenefit) || 0), 0);
     const topSchemes = eligibleSchemes;
+    const highestValueScheme = eligibleSchemes.length > 0
+        ? [...eligibleSchemes].sort((a, b) => (Number(b.annualBenefit) || 0) - (Number(a.annualBenefit) || 0))[0]
+        : null;
 
     // D1: Compute profile completion %
     const completionPct = Math.round(
@@ -327,6 +330,46 @@ function DashboardPage() {
                                         <button onClick={() => navigate('/my-schemes')} className="mt-3 text-sm font-body text-success font-medium hover:underline">
                                             Apply Now →
                                         </button>
+                                    </MotionWrapper>
+                                )}
+
+                                {/* Proactive AI Suggestions */}
+                                {eligibleSchemes.length > 0 && (
+                                    <MotionWrapper delay={0.5} className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl border border-orange-100 p-5">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <Zap size={16} className="text-saffron" />
+                                            <h2 className="font-body text-sm font-bold text-gray-900">AI Suggestions</h2>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {completionPct < 80 && (
+                                                <div className="p-3 rounded-lg bg-white/70 border border-orange-100">
+                                                    <p className="font-body text-xs text-gray-700">
+                                                        <span className="font-semibold text-saffron">Complete your profile</span> — Upload documents to unlock more schemes. Your profile is {completionPct}% complete.
+                                                    </p>
+                                                    <button onClick={() => navigate('/documents')} className="mt-1 font-body text-xs text-saffron font-medium hover:underline">
+                                                        Upload Documents →
+                                                    </button>
+                                                </div>
+                                            )}
+                                            {eligibleSchemes.length > 0 && applications.length === 0 && (
+                                                <div className="p-3 rounded-lg bg-white/70 border border-orange-100">
+                                                    <p className="font-body text-xs text-gray-700">
+                                                        <span className="font-semibold text-saffron">Start applying!</span> — You haven't submitted any applications yet. Start with the highest-value scheme.
+                                                    </p>
+                                                    <button onClick={() => navigate(`/apply/${highestValueScheme?.schemeId || highestValueScheme?.id}`)} className="mt-1 font-body text-xs text-saffron font-medium hover:underline">
+                                                        Apply for {highestValueScheme?.name || highestValueScheme?.nameEnglish} →
+                                                    </button>
+                                                </div>
+                                            )}
+                                            <div className="p-3 rounded-lg bg-white/70 border border-orange-100">
+                                                <p className="font-body text-xs text-gray-700">
+                                                    <span className="font-semibold text-saffron">Ask AI Agent</span> — Get personalized guidance on which schemes to apply for first and how to maximize your benefits.
+                                                </p>
+                                                <button onClick={() => navigate('/agent')} className="mt-1 font-body text-xs text-saffron font-medium hover:underline">
+                                                    Chat with AI Agent →
+                                                </button>
+                                            </div>
+                                        </div>
                                     </MotionWrapper>
                                 )}
                             </div>

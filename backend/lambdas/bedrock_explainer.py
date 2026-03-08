@@ -4,10 +4,13 @@ Explains a government scheme using Amazon Nova Pro with personalization,
 Hindi translation via Amazon Translate, and multilingual TTS via Polly.
 Applies Bedrock Guardrail for content safety + PII redaction.
 Caches results in SarathiExplanationCache DynamoDB table.
+Includes retry/backoff, input sanitization, and AI invocation logging.
 """
 import json
 import os
+import re
 import hashlib
+import time
 import boto3
 from datetime import datetime, timezone
 
@@ -16,7 +19,7 @@ CACHE_TABLE = os.environ.get('CACHE_TABLE', 'SarathiExplanationCache')
 AUDIO_BUCKET = os.environ.get('AUDIO_BUCKET', 'sarathi-audio-output')
 BEDROCK_MODEL_ID = os.environ.get('BEDROCK_MODEL_ID', 'amazon.nova-pro-v1:0')
 BEDROCK_GUARDRAIL_ID = os.environ.get('BEDROCK_GUARDRAIL_ID', '')
-BEDROCK_GUARDRAIL_VERSION = os.environ.get('BEDROCK_GUARDRAIL_VERSION', 'DRAFT')
+BEDROCK_GUARDRAIL_VERSION = os.environ.get('BEDROCK_GUARDRAIL_VERSION', '1')
 
 dynamodb = boto3.resource('dynamodb', region_name=REGION)
 cache_table = dynamodb.Table(CACHE_TABLE)
@@ -24,6 +27,17 @@ bedrock = boto3.client('bedrock-runtime', region_name=REGION)
 polly = boto3.client('polly', region_name=REGION)
 s3 = boto3.client('s3', region_name=REGION)
 translate = boto3.client('translate', region_name=REGION)
+
+# Prompt injection patterns to strip
+_INJECTION_PATTERNS = [
+    r'ignore\s+(all\s+)?previous\s+instructions',
+    r'you\s+are\s+now\s+a',
+    r'system\s*:\s*',
+    r'<\s*/?script',
+    r'OVERRIDE\s+SYSTEM',
+    r'forget\s+(all\s+)?instructions',
+]
+_INJECTION_RE = re.compile('|'.join(_INJECTION_PATTERNS), re.IGNORECASE)
 
 
 def cors_headers():
@@ -42,8 +56,16 @@ def _citizen_hash(citizen_id):
     return hashlib.md5(citizen_id.encode()).hexdigest()[:8]
 
 
-def _invoke_bedrock(prompt):
-    """Invoke Nova Pro with optional guardrail."""
+def _sanitize_input(text):
+    """Strip prompt injection patterns from user-supplied text."""
+    if not text:
+        return text
+    return _INJECTION_RE.sub('[FILTERED]', text)
+
+
+def _invoke_bedrock(prompt, caller='explainer'):
+    """Invoke Nova Pro with optional guardrail, retry/backoff, and logging."""
+    prompt = _sanitize_input(prompt)
     payload = {
         "messages": [
             {"role": "user", "content": [{"text": prompt}]}
@@ -63,10 +85,34 @@ def _invoke_bedrock(prompt):
         kwargs['guardrailIdentifier'] = BEDROCK_GUARDRAIL_ID
         kwargs['guardrailVersion'] = BEDROCK_GUARDRAIL_VERSION
 
-    resp = bedrock.invoke_model(**kwargs)
-    result = json.loads(resp['body'].read())
-    content = result.get('output', {}).get('message', {}).get('content', [])
-    return content[0].get('text', '') if content else ''
+    last_err = None
+    for attempt in range(3):
+        try:
+            start_ts = time.time()
+            resp = bedrock.invoke_model(**kwargs)
+            latency_ms = int((time.time() - start_ts) * 1000)
+            result = json.loads(resp['body'].read())
+            content = result.get('output', {}).get('message', {}).get('content', [])
+            text = content[0].get('text', '') if content else ''
+
+            # Structured AI invocation log
+            usage = result.get('usage', {})
+            print(json.dumps({
+                'ai_invocation': True,
+                'caller': caller,
+                'model': BEDROCK_MODEL_ID,
+                'inputTokens': usage.get('inputTokens', 0),
+                'outputTokens': usage.get('outputTokens', 0),
+                'latencyMs': latency_ms,
+                'attempt': attempt + 1,
+            }))
+            return text
+        except Exception as e:
+            last_err = e
+            if attempt < 2:
+                time.sleep(2 ** attempt)  # 1s, 2s backoff
+                print(f"[WARN] Bedrock retry {attempt + 1}/3: {e}")
+    raise last_err
 
 
 def lambda_handler(event, context):
@@ -80,6 +126,15 @@ def lambda_handler(event, context):
         language = body.get('language', 'en')
         citizen_profile = body.get('citizenProfile') or {}
         citizen_id = citizen_profile.get('citizenId', '') or body.get('citizenId', '')
+
+        # Rate limiting
+        try:
+            from rate_limiter import check_rate_limit, rate_limit_response
+            allowed, remaining = check_rate_limit(citizen_id)
+            if not allowed:
+                return rate_limit_response()
+        except ImportError:
+            pass  # Rate limiter not bundled — skip
 
         if not scheme_id:
             return {

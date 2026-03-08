@@ -1,8 +1,8 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, ExternalLink, FileText, CheckCircle, Loader2, ClipboardList, Download, Upload } from 'lucide-react';
-import { fetchScheme, submitApplication } from '../utils/api';
+import { ArrowLeft, ExternalLink, FileText, CheckCircle, Loader2, ClipboardList, Download, Upload, Sparkles } from 'lucide-react';
+import { fetchScheme, submitApplication, preFillApplication } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { useCitizen } from '../context/CitizenContext';
 import { useToast } from '../components/ui/Toast';
@@ -31,6 +31,8 @@ function ApplyPage() {
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submittedAppId, setSubmittedAppId] = useState(null);
+    const [isAutoFilling, setIsAutoFilling] = useState(false);
+    const [autoFillDone, setAutoFillDone] = useState(false);
 
     useEffect(() => {
         setLoading(true);
@@ -41,6 +43,40 @@ function ApplyPage() {
             .catch(() => { })
             .finally(() => setLoading(false));
     }, [schemeId]);
+
+    const handleAutoFill = async () => {
+        setIsAutoFilling(true);
+        try {
+            const result = await preFillApplication(schemeId, citizenProfile);
+            if (result.preFilled) {
+                const pf = result.preFilled;
+                setPersonalDetails(prev => ({
+                    ...prev,
+                    name: pf.name || prev.name,
+                    mobile: pf.mobile || prev.mobile,
+                    aadhaarLast4: pf.aadhaarLast4 || prev.aadhaarLast4,
+                    bankAccountLast4: pf.bankAccountLast4 || prev.bankAccountLast4,
+                }));
+            }
+            // Auto-check documents that citizen already has uploaded
+            if (result.availableDocuments && docList.length > 0) {
+                const newChecked = { ...checkedDocs };
+                docList.forEach((doc, i) => {
+                    const docLower = doc.toLowerCase();
+                    result.availableDocuments.forEach(avail => {
+                        if (docLower.includes(avail.toLowerCase())) newChecked[i] = true;
+                    });
+                });
+                setCheckedDocs(newChecked);
+            }
+            setAutoFillDone(true);
+            addToast(isHi ? 'AI ने फॉर्म भर दिया है। कृपया जाँच करें।' : 'AI auto-filled your form. Please review.', 'success');
+        } catch {
+            addToast(isHi ? 'ऑटो-फ़िल विफल। कृपया मैन्युअल रूप से भरें।' : 'Auto-fill failed. Please fill manually.', 'error');
+        } finally {
+            setIsAutoFilling(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -237,6 +273,47 @@ function ApplyPage() {
 
             <div className="max-w-3xl mx-auto px-4 py-8">
                 <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-card p-6 space-y-6">
+                    {/* AI Auto-Fill */}
+                    {citizenProfile && !autoFillDone && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="p-4 rounded-xl bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-100 flex items-center justify-between gap-4"
+                        >
+                            <div className="flex items-center gap-3 min-w-0">
+                                <div className="p-2 rounded-lg bg-saffron/10 shrink-0">
+                                    <Sparkles size={18} className="text-saffron" />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="font-body text-sm font-semibold text-gray-900">
+                                        {isHi ? 'AI ऑटो-फ़िल' : 'AI Auto-Fill'}
+                                    </p>
+                                    <p className="font-body text-xs text-gray-500 truncate">
+                                        {isHi ? 'अपनी प्रोफ़ाइल से फ़ॉर्म स्वचालित भरें' : 'Auto-populate from your profile & documents'}
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleAutoFill}
+                                disabled={isAutoFilling}
+                                className="shrink-0 flex items-center gap-2 h-9 px-4 rounded-lg bg-saffron text-white font-body text-xs font-bold hover:bg-saffron-light transition-colors disabled:opacity-50"
+                            >
+                                {isAutoFilling ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                                {isAutoFilling ? (isHi ? 'भर रहा है...' : 'Filling...') : (isHi ? 'ऑटो-फ़िल' : 'Auto-Fill')}
+                            </button>
+                        </motion.div>
+                    )}
+
+                    {autoFillDone && (
+                        <div className="p-3 rounded-lg bg-green-50 border border-green-200 flex items-center gap-2">
+                            <CheckCircle size={16} className="text-green-600 shrink-0" />
+                            <p className="font-body text-xs text-green-700">
+                                {isHi ? 'AI ने फ़ॉर्म भर दिया है। कृपया जानकारी जांचें और सबमिट करें।' : 'AI auto-filled your form. Please review the details and submit.'}
+                            </p>
+                        </div>
+                    )}
+
                     {/* Step 1: Documents */}
                     <div>
                         <h2 className="font-body text-lg font-bold text-gray-900 flex items-center gap-2">

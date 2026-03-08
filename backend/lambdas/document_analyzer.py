@@ -1,24 +1,30 @@
 """
-document_analyzer — POST /document/analyze
+document_analyzer — POST /document/analyze, POST /document/verify-ai
 Extracts text from uploaded documents using Amazon Textract,
 maps entities via Amazon Comprehend, and stores results in DynamoDB.
 Supports: aadhaar, income_cert, ration_card, job_card, bank_statement.
+AI verification: Bedrock explains extraction results and suggests corrections.
+Profile auto-update: Extracted fields update citizen profile in DynamoDB.
 """
 import json
 import os
 import re
 import uuid
+import time
 import boto3
 from datetime import datetime, timedelta, timezone
 
 REGION = 'us-east-1'
-DOCUMENTS_BUCKET = os.environ.get('DOCUMENTS_BUCKET', 'sarathi-documents')
+DOCUMENTS_BUCKET = os.environ.get('DOCUMENTS_BUCKET', os.environ.get('DOCUMENT_BUCKET', 'sarathi-documents'))
 EXTRACTIONS_TABLE = os.environ.get('EXTRACTIONS_TABLE', 'SarathiDocumentExtractions')
+BEDROCK_MODEL_ID = os.environ.get('BEDROCK_MODEL_ID', 'amazon.nova-pro-v1:0')
 
 textract = boto3.client('textract', region_name=REGION)
 comprehend = boto3.client('comprehend', region_name=REGION)
+bedrock = boto3.client('bedrock-runtime', region_name=REGION)
 dynamodb = boto3.resource('dynamodb', region_name=REGION)
 extractions_table = dynamodb.Table(EXTRACTIONS_TABLE)
+citizens_table = dynamodb.Table('SarathiCitizens')
 
 
 def cors_headers():
@@ -258,10 +264,129 @@ DOCUMENT_PARSERS = {
 }
 
 
+def _ai_verify_extraction(extracted_fields, document_type, citizen_profile=None):
+    """Use Bedrock to explain extraction results and suggest corrections."""
+    profile_context = ''
+    if citizen_profile:
+        parts = []
+        if citizen_profile.get('name'):
+            parts.append(f"Name: {citizen_profile['name']}")
+        if citizen_profile.get('age'):
+            parts.append(f"Age: {citizen_profile['age']}")
+        if citizen_profile.get('income'):
+            parts.append(f"Income: ₹{citizen_profile['income']}/month")
+        if parts:
+            profile_context = f"\nExisting profile: {', '.join(parts)}"
+
+    fields_text = '\n'.join(f"- {k}: {v}" for k, v in extracted_fields.items())
+    prompt = (
+        f"You are a document verification assistant for Indian welfare services.\n"
+        f"Document type: {document_type}\n"
+        f"Extracted fields:\n{fields_text}\n"
+        f"{profile_context}\n\n"
+        f"In simple language that a rural citizen can understand:\n"
+        f"1. SUMMARY: Explain what was found in 2-3 sentences\n"
+        f"2. VERIFICATION: For each field, say if it looks correct or needs re-upload\n"
+        f"3. MISMATCHES: Flag any differences with the existing profile\n"
+        f"4. ACTION_NEEDED: What the citizen should do next (if anything)\n"
+        f"Keep it under 150 words. Use simple English."
+    )
+    try:
+        payload = {
+            "messages": [{"role": "user", "content": [{"text": prompt}]}],
+            "inferenceConfig": {"maxTokens": 300, "temperature": 0.3},
+        }
+        for attempt in range(3):
+            try:
+                start_ts = time.time()
+                resp = bedrock.invoke_model(
+                    modelId=BEDROCK_MODEL_ID,
+                    body=json.dumps(payload),
+                    contentType='application/json',
+                    accept='application/json',
+                )
+                latency_ms = int((time.time() - start_ts) * 1000)
+                result = json.loads(resp['body'].read())
+                content = result.get('output', {}).get('message', {}).get('content', [])
+                text = content[0].get('text', '') if content else ''
+                usage = result.get('usage', {})
+                print(json.dumps({
+                    'ai_invocation': True, 'caller': 'doc_verify',
+                    'model': BEDROCK_MODEL_ID,
+                    'inputTokens': usage.get('inputTokens', 0),
+                    'outputTokens': usage.get('outputTokens', 0),
+                    'latencyMs': latency_ms,
+                }))
+                return text
+            except Exception as e:
+                if attempt < 2:
+                    time.sleep(2 ** attempt)
+    except Exception as e:
+        print(f"[WARN] AI verification failed: {e}")
+    return ''
+
+
+def _auto_update_citizen_profile(citizen_id, extracted_fields, document_type):
+    """Auto-update citizen profile from extracted document fields."""
+    if not citizen_id or not extracted_fields:
+        return False
+    # Map extracted fields to citizen profile fields
+    update_expr_parts = []
+    expr_values = {}
+    field_mapping = {
+        'name': 'name',
+        'age': 'age',
+        'gender': 'gender',
+        'income': 'income',
+        'state': 'state',
+        'familySize': 'familySize',
+        'village': 'village',
+        'address': 'address',
+    }
+    for extract_key, profile_key in field_mapping.items():
+        if extract_key in extracted_fields and extracted_fields[extract_key]:
+            update_expr_parts.append(f"{profile_key} = :{profile_key}")
+            val = extracted_fields[extract_key]
+            expr_values[f':{profile_key}'] = int(val) if profile_key in ('age', 'income') else val
+
+    if not update_expr_parts:
+        return False
+
+    update_expr_parts.append('updatedAt = :now')
+    expr_values[':now'] = datetime.now(timezone.utc).isoformat()
+
+    try:
+        citizens_table.update_item(
+            Key={'citizenId': citizen_id},
+            UpdateExpression='SET ' + ', '.join(update_expr_parts),
+            ExpressionAttributeValues=expr_values,
+        )
+        print(f"[INFO] Auto-updated citizen {citizen_id} with {list(extracted_fields.keys())}")
+        return True
+    except Exception as e:
+        print(f"[WARN] Profile auto-update failed for {citizen_id}: {e}")
+        return False
+
+
 def lambda_handler(event, context):
     try:
+        method = event.get('httpMethod', 'POST')
+        path = event.get('path', '') or event.get('resource', '')
         body = json.loads(event.get('body', '{}')) if isinstance(event.get('body'), str) else event
 
+        # POST /document/verify-ai — AI verification feedback only
+        if 'verify-ai' in path:
+            extracted_fields = body.get('extractedFields', {})
+            document_type = body.get('documentType', '')
+            citizen_profile = body.get('citizenProfile')
+            verification = _ai_verify_extraction(extracted_fields, document_type, citizen_profile)
+            return {
+                'statusCode': 200,
+                'headers': cors_headers(),
+                'body': json.dumps({'verification': verification, 'documentType': document_type}),
+            }
+
+        # POST /document/analyze — main extraction flow
         s3_key = body.get('s3Key', '').strip()
         document_type = body.get('documentType', '').strip().lower()
         citizen_id = body.get('citizenId', '').strip()
@@ -307,6 +432,16 @@ def lambda_handler(event, context):
         except Exception as db_err:
             print(f"[WARN] DynamoDB write failed: {db_err}")
 
+        # AI verification feedback
+        ai_verification = ''
+        if extracted_fields:
+            ai_verification = _ai_verify_extraction(extracted_fields, document_type)
+
+        # Auto-update citizen profile from extracted fields
+        profile_updated = False
+        if citizen_id and extracted_fields:
+            profile_updated = _auto_update_citizen_profile(citizen_id, extracted_fields, document_type)
+
         return {
             'statusCode': 200,
             'headers': cors_headers(),
@@ -317,6 +452,8 @@ def lambda_handler(event, context):
                 'confidenceScores': confidence_scores,
                 'averageConfidence': avg_confidence,
                 'rawLineCount': len(lines),
+                'aiVerification': ai_verification,
+                'profileUpdated': profile_updated,
             }),
         }
 

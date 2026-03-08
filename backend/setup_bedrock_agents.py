@@ -184,6 +184,8 @@ def create_orchestrator(eligibility_id, eligibility_alias, application_id, appli
             "route to the eligibility specialist agent\n"
             "- For application/document questions ('how do I apply', 'what documents do I need'): "
             "route to the application guide specialist agent\n"
+            "- For applying to schemes ('apply for PM-KISAN', 'submit application'): "
+            "route to the application guide specialist agent\n"
             "- For income projection questions ('how much will I earn', 'financial projection'): "
             "route to the digital twin specialist agent\n\n"
             "Always respond in plain, simple language. If the citizen has shared their language preference, "
@@ -263,6 +265,9 @@ def main():
             "You are an application guide specialist for Indian government welfare schemes. "
             "Use the get_application_guide action to provide complete document checklists "
             "and step-by-step application guidance. "
+            "You can use ApplyForScheme to submit applications on behalf of citizens. "
+            "The citizen's personal details are automatically pulled from their stored profile. "
+            "Before applying, confirm the scheme name with the citizen. "
             "Always end with the official portal URL for each scheme. "
             "Explain each document requirement simply so a rural citizen can understand."
         ),
@@ -274,6 +279,17 @@ def main():
                          'description': 'Get complete application guide for a welfare scheme',
                          'parameters': {
                              'schemeId': {'type': 'string', 'description': 'The scheme ID', 'required': True},
+                         },
+                     })
+    add_action_group(app_id, 'apply_scheme_group', 'sarathi-agent-action-application',
+                     APPLICATION_LAMBDA, {
+                         'name': 'ApplyForScheme',
+                         'description': 'Submit a scheme application using citizen profile data. Auto-pulls name, aadhaar, mobile, bank from stored profile.',
+                         'parameters': {
+                             'schemeId': {'type': 'string', 'description': 'Scheme ID to apply for', 'required': True},
+                             'aadhaarLast4': {'type': 'string', 'description': 'Last 4 digits of Aadhaar (if not in profile)', 'required': False},
+                             'mobile': {'type': 'string', 'description': '10-digit mobile number (if not in profile)', 'required': False},
+                             'bankAccountLast4': {'type': 'string', 'description': 'Last 4 digits of bank account (if not in profile)', 'required': False},
                          },
                      })
     app_alias = prepare_and_alias(app_id, 'sarathi-application-prod')

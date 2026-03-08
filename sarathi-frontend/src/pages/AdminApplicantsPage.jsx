@@ -15,7 +15,6 @@ function AdminApplicantsPage() {
     const [selectedSchemeId, setSelectedSchemeId] = useState('all');
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
-    const [error, setError] = useState(null);
 
     useEffect(() => {
         fetchData();
@@ -23,7 +22,6 @@ function AdminApplicantsPage() {
 
     const fetchData = async () => {
         setLoading(true);
-        setError(null);
         let currentSchemes = [];
 
         try {
@@ -32,7 +30,6 @@ function AdminApplicantsPage() {
             setSchemes(currentSchemes);
         } catch (err) {
             console.error("Failed to fetch schemes", err);
-            setError('Failed to load data. Showing cached results.');
         }
 
         try {
@@ -100,12 +97,6 @@ function AdminApplicantsPage() {
 
     return (
         <div className="space-y-8 animate-in fade-in duration-700">
-            {error && (
-                <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl font-body text-sm flex items-center justify-between">
-                    <span>{error}</span>
-                    <button onClick={() => { setError(null); fetchData(); }} className="text-red-600 font-bold hover:underline text-xs">Retry</button>
-                </div>
-            )}
             {/* Header Area */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div>

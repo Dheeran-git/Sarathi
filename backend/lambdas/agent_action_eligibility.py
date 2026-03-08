@@ -1,158 +1,97 @@
-"""
-agent_action_eligibility — Bedrock Agent Action Group
-Receives citizen profile fields from the eligibility agent,
-runs is_eligible() logic, returns matched schemes JSON.
-Internal only — invoked by Bedrock Agent, not API Gateway.
-"""
 import json
 import os
-import boto3
-from decimal import Decimal
 
-REGION = 'us-east-1'
-
-# Load schemes.json bundled with this Lambda
-_SCHEMES_PATH = os.path.join(os.path.dirname(__file__), 'schemes.json')
-try:
-    with open(_SCHEMES_PATH, 'r', encoding='utf-8') as _f:
-        LOCAL_SCHEMES = json.load(_f)
-except FileNotFoundError:
-    LOCAL_SCHEMES = []
-
-
-class DecimalEncoder(json.JSONEncoder):
-    def default(self, o):
-        if isinstance(o, Decimal):
-            return int(o) if o % 1 == 0 else float(o)
-        return super().default(o)
-
-
-def _to_bool(value):
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, str):
-        return value.lower() in ('true', '1', 'yes')
-    return bool(value)
-
-
-def is_eligible(profile, scheme):
-    """Check if a citizen profile matches a scheme (replicated from eligibility_engine)."""
-    age = int(profile.get('age', 0) or 0)
-    monthly_income = int(profile.get('income', 0) or profile.get('monthlyIncome', 0) or 0)
-
-    min_age = int(scheme.get('minAge', 0) or 0)
-    max_age = int(scheme.get('maxAge', 99) or 99)
-    if age < min_age or age > max_age:
-        return False
-
-    max_monthly = int(scheme.get('maxMonthlyIncome', 999999) or 999999)
-    if monthly_income > max_monthly:
-        return False
-
-    scheme_gender = (scheme.get('gender') or 'any').lower().strip()
-    if scheme_gender != 'any':
-        profile_gender = (profile.get('gender') or 'any').lower().strip()
-        if profile_gender != 'any' and profile_gender != scheme_gender:
-            return False
-
-    scheme_occ = (scheme.get('occupation') or 'any').lower().strip()
-    if scheme_occ != 'any':
-        profile_occ = (profile.get('occupation') or '').lower().strip()
-        profile_persona = (profile.get('persona') or '').lower().strip()
-        if profile_occ != scheme_occ and profile_persona != scheme_occ:
-            return False
-
-    raw_cats = scheme.get('categories', 'SC,ST,OBC,General') or 'SC,ST,OBC,General'
-    scheme_cats = [c.strip() for c in raw_cats.split(',')]
-    profile_cat = (profile.get('category') or 'General').strip()
-    if profile_cat not in scheme_cats:
-        return False
-
-    scheme_widow = (scheme.get('isWidow') or 'any').lower().strip()
-    if scheme_widow == 'true':
-        if not _to_bool(profile.get('isWidow', False)):
-            return False
-
-    return True
-
-
-def _extract_param(parameters, name, default=''):
-    """Extract a named parameter from Bedrock action group parameters list."""
-    for p in (parameters or []):
-        if p.get('name') == name:
-            return p.get('value', default)
-    return default
-
+# Bedrock Agent Action Group: Eligibility & Search
+# Merged from origin/main with fast local schemes.json loading.
 
 def lambda_handler(event, context):
-    """
-    Bedrock Agent Action Group handler.
-    Event format: { actionGroup, function, parameters: [{name, type, value}] }
-    """
+    print("Received event:", json.dumps(event))
+    actionGroup = event.get('actionGroup', '')
+    function = event.get('function', '')
+    parameters = event.get('parameters', [])
+    params = {p['name']: p['value'] for p in parameters}
+    
+    # Load schemes from bundled JSON
+    schemes = []
     try:
-        action_group = event.get('actionGroup', '')
-        function = event.get('function', 'check_eligibility')
-        parameters = event.get('parameters', [])
-
-        if function == 'check_eligibility':
-            # Extract citizen profile from parameters (max 5 params due to Bedrock quota)
-            # details is an optional JSON string: {"state":"..","occupation":"..","isWidow":true,"disability":false}
-            details_str = _extract_param(parameters, 'details', '{}')
-            try:
-                details = json.loads(details_str) if details_str else {}
-            except Exception:
-                details = {}
-            profile = {
-                'age': _extract_param(parameters, 'age', '0'),
-                'income': _extract_param(parameters, 'monthlyIncome', '0'),
-                'gender': _extract_param(parameters, 'gender', 'any'),
-                'category': _extract_param(parameters, 'category', 'General'),
-                'state': details.get('state', ''),
-                'occupation': details.get('occupation', ''),
-                'persona': details.get('persona', details.get('occupation', '')),
-                'isWidow': str(details.get('isWidow', 'false')),
-                'disability': str(details.get('disability', 'false')),
-            }
-
-            matched = [s for s in LOCAL_SCHEMES if is_eligible(profile, s)]
-            total_benefit = sum(int(s.get('annualBenefit', 0) or 0) for s in matched)
-
-            result_text = json.dumps({
-                'matchedSchemes': matched[:10],  # Top 10
-                'totalMatchedCount': len(matched),
-                'totalAnnualBenefit': total_benefit,
-            }, cls=DecimalEncoder)
-
-        else:
-            result_text = json.dumps({'error': f'Unknown function: {function}'})
-
-        return {
-            'messageVersion': '1.0',
-            'response': {
-                'actionGroup': action_group,
-                'function': function,
-                'functionResponse': {
-                    'responseBody': {
-                        'TEXT': {
-                            'body': result_text
-                        }
-                    }
-                }
-            }
-        }
-
+        # Check if we are in the lambda root
+        path = 'schemes.json'
+        if not os.path.exists(path):
+            path = '/var/task/schemes.json'
+            
+        with open(path, 'r', encoding='utf-8') as f:
+            schemes = json.load(f)
     except Exception as e:
-        return {
-            'messageVersion': '1.0',
-            'response': {
-                'actionGroup': event.get('actionGroup', ''),
-                'function': event.get('function', ''),
-                'functionResponse': {
-                    'responseBody': {
-                        'TEXT': {
-                            'body': json.dumps({'error': str(e)})
-                        }
-                    }
+        print(f"Error loading schemes.json: {e}")
+
+    response_body_text = ""
+    
+    if function == 'SearchSchemes' or function == 'get_eligible_schemes':
+        query = params.get('query', '').lower()
+        
+        if not query or query == 'all':
+            matched = schemes[:5]
+        else:
+            q = query.replace("-", " ")
+            matched = []
+            for s in schemes:
+                search_text = (
+                    str(s.get('schemeId', '')).lower().replace("-", " ") + " " +
+                    str(s.get('nameEnglish', '')).lower() + " " +
+                    str(s.get('ministry', '')).lower() + " " +
+                    str(s.get('briefDescription', '')).lower() + " " +
+                    str(s.get('tags', [])).lower()
+                )
+                if q in search_text:
+                    matched.append(s)
+            matched = matched[:5] # Limit to 5 for token efficiency
+            
+        results = []
+        for s in matched:
+            results.append({
+                'schemeId': s.get('schemeId'),
+                'name': s.get('nameEnglish'),
+                'benefit': s.get('annualBenefit'),
+                'ministry': s.get('ministry'),
+                'description': s.get('briefDescription', '')[:200]
+            })
+        
+        response_body_text = json.dumps({'found': len(results), 'schemes': results})
+
+    elif function == 'GetSchemeDetails' or function == 'check_scheme_eligibility':
+        scheme_id = params.get('schemeId')
+        match = next((s for s in schemes if s.get('schemeId') == scheme_id), None)
+        
+        if not match:
+            # Fuzzy match by name if ID fails
+            q = str(scheme_id).lower()
+            match = next((s for s in schemes if q in s.get('nameEnglish', '').lower()), None)
+
+        if match:
+            response_data = {
+                'schemeId': match.get('schemeId'),
+                'name': match.get('nameEnglish'),
+                'eligibility': match.get('eligibilityCriteriaEnglish', 'Standard criteria.'),
+                'documents': match.get('documentsRequiredEnglish', 'Aadhaar, Income Proof.'),
+                'benefit': match.get('annualBenefit'),
+                'howToApply': match.get('applyUrl', 'Apply via Sarathi portal.')
+            }
+            response_body_text = json.dumps(response_data)
+        else:
+            response_body_text = json.dumps({'error': 'Scheme not found.'})
+
+    else:
+        response_body_text = f"Function {function} not recognized."
+
+    return {
+        'response': {
+            'actionGroup': actionGroup,
+            'function': function,
+            'functionResponse': {
+                'responseBody': {
+                    'TEXT': {'body': response_body_text}
                 }
             }
-        }
+        },
+        'messageVersion': '1.0'
+    }

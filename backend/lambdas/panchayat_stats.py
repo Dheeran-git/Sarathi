@@ -43,21 +43,18 @@ def get_panchayat_id(event):
     # 1. Try JWT claims
     claims = (event.get('requestContext', {}).get('authorizer', {}).get('claims') or {})
     
-    # Priority A: Check for lgdCode (most reliable for legacy mapping)
+    # Priority A: Check for lgdCode
     lgd = claims.get('custom:lgdCode', '').strip()
-    if lgd == '614744': return 'LGD_614744'
     if lgd: return f"LGD_{lgd}"
 
     # Priority B: Check for panchayatId
     jwt_pid = claims.get('custom:panchayatId', '').strip()
-    if jwt_pid == '219293': return 'LGD_614744'
     if jwt_pid:
         return _normalize_pid(jwt_pid)
 
     # 2. Try path parameter
     path_params = event.get('pathParameters') or {}
     path_pid = path_params.get('panchayatId', '').strip()
-    if path_pid == '219293': return 'LGD_614744'
     if path_pid:
         return _normalize_pid(path_pid)
 
@@ -276,6 +273,57 @@ def lambda_handler(event, context):
 
         meta = get_panchayat_meta(panchayat_id, citizens=citizens)
 
+        # Invisible Citizen Detection: households with zero benefits despite eligibility
+        invisible_citizens = []
+        for c in citizens:
+            matched = c.get('matchedSchemes', []) or []
+            enrolled_schemes = c.get('enrolledSchemes', []) or []
+            status = c.get('status', '')
+            # A citizen is "invisible" if they have matched schemes but zero enrolled + not actively enrolled
+            if len(matched) > 0 and len(enrolled_schemes) == 0 and status != 'enrolled':
+                vulnerability_score = 0
+                # Higher score = more vulnerable = higher priority
+                c_age = int(c.get('age', 0) or 0)
+                c_income = int(c.get('income', 0) or c.get('monthlyIncome', 0) or 0)
+                if c_age >= 60:
+                    vulnerability_score += 30
+                if c_age < 6:
+                    vulnerability_score += 25
+                if str(c.get('isWidow', '')).lower() in ('true', '1', 'yes'):
+                    vulnerability_score += 25
+                if str(c.get('disability', '')).lower() in ('true', '1', 'yes'):
+                    vulnerability_score += 20
+                if c_income > 0 and c_income < 3000:
+                    vulnerability_score += 15
+                elif c_income == 0:
+                    vulnerability_score += 10
+                cat = str(c.get('category', '')).upper()
+                if cat in ('SC', 'ST'):
+                    vulnerability_score += 10
+                # More matched schemes = more missed opportunity
+                vulnerability_score += min(20, len(matched) * 4)
+                # Estimated lost benefit
+                lost_benefit = sum(int(s.get('annualBenefit', 0) or 0) for s in matched)
+
+                invisible_citizens.append({
+                    'citizenId': c.get('citizenId', ''),
+                    'name': c.get('name', 'Unknown'),
+                    'age': c_age,
+                    'gender': c.get('gender', ''),
+                    'category': c.get('category', ''),
+                    'ward': c.get('ward', ''),
+                    'isWidow': str(c.get('isWidow', '')).lower() in ('true', '1', 'yes'),
+                    'disability': str(c.get('disability', '')).lower() in ('true', '1', 'yes'),
+                    'income': c_income,
+                    'matchedSchemesCount': len(matched),
+                    'matchedSchemeNames': [s.get('nameEnglish', s.get('schemeId', '')) for s in matched[:5]],
+                    'lostAnnualBenefit': lost_benefit,
+                    'vulnerabilityScore': vulnerability_score,
+                })
+
+        # Sort by vulnerability score descending
+        invisible_citizens.sort(key=lambda x: x['vulnerabilityScore'], reverse=True)
+
         # Fetch AI insights — invoke insights_generator synchronously (10s timeout)
         ai_insights = []
         try:
@@ -318,6 +366,9 @@ def lambda_handler(event, context):
                 'applications': applications,
                 'alerts': alerts,
                 'insights': ai_insights,
+                'invisibleCitizens': invisible_citizens[:50],
+                'invisibleCitizensCount': len(invisible_citizens),
+                'totalLostBenefit': sum(ic['lostAnnualBenefit'] for ic in invisible_citizens),
             }, cls=DecimalEncoder),
         }
 

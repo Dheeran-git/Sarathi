@@ -16,18 +16,58 @@ const api = axios.create({
   timeout: 30000,
 });
 
-// Request interceptor — send ID Token (required by Cognito User Pool authorizer)
+// AI endpoints that need longer timeouts (Bedrock calls can take 30-90s)
+const AI_ENDPOINTS = ['/explain', '/agent', '/scheme/search-ai', '/scheme/compare',
+  '/application/explain-status', '/application/pre-fill', '/document/verify-ai',
+  '/document/analyze', '/grievance/analyze', '/admin/spotlight',
+  '/panchayat/generate-campaign', '/panchayat/generate-report'];
+
+// Request interceptor — send ID Token + profile-aware context enrichment
 api.interceptors.request.use((config) => {
   const userType = localStorage.getItem('userType');
 
+  // Use ONLY the token matching the current user type — never cascade to other pools
   let token = null;
   if (userType === 'panchayat') token = localStorage.getItem('panchayatIdToken');
   else if (userType === 'admin') token = localStorage.getItem('adminIdToken');
   else token = localStorage.getItem('idToken');
 
-  const finalToken = token || localStorage.getItem('adminIdToken') || localStorage.getItem('panchayatIdToken') || localStorage.getItem('idToken');
+  if (token) config.headers['Authorization'] = token;
 
-  if (finalToken) config.headers['Authorization'] = finalToken;
+  // Increase timeout for AI-heavy endpoints
+  const isAiEndpoint = AI_ENDPOINTS.some(ep => config.url?.includes(ep));
+  if (isAiEndpoint) {
+    config.timeout = 90000; // 90s for Bedrock calls
+  }
+
+  // Profile-aware interceptor: inject citizen context into AI endpoint requests
+  const shouldInjectProfile = isAiEndpoint || ['/twin', '/conflicts'].some(ep => config.url?.includes(ep));
+
+  if (shouldInjectProfile && config.method === 'post' && userType === 'citizen') {
+    try {
+      const storedProfile = localStorage.getItem('sarathi_citizen_profile');
+      if (storedProfile && config.data) {
+        const profile = JSON.parse(storedProfile);
+        const data = typeof config.data === 'string' ? JSON.parse(config.data) : config.data;
+        // Only inject if citizenProfile not already provided
+        if (!data.citizenProfile || Object.keys(data.citizenProfile).length === 0) {
+          data.citizenProfile = {
+            name: profile.name,
+            age: profile.age,
+            gender: profile.gender,
+            income: profile.income || profile.monthlyIncome,
+            category: profile.category,
+            state: profile.state,
+            persona: profile.persona,
+            isWidow: profile.isWidow,
+            disability: profile.disability,
+          };
+          config.data = data;
+        }
+      }
+    } catch { /* ignore parse errors */ }
+  }
+
   return config;
 });
 
@@ -170,12 +210,6 @@ export async function getApplications(userId) {
   return unwrapBody(await api.get(endpoint));
 }
 
-/** GET /panchayat-applications/{panchayatId} — list applications for a specific panchayat */
-export async function getPanchayatApplications(panchayatId) {
-  if (!panchayatId) throw new Error('panchayatId is required');
-  return unwrapBody(await api.get(`/panchayat-applications/${panchayatId}`));
-}
-
 /** POST /apply/{applicationId} — update application status (using POST for better compatibility) */
 export async function updateApplicationStatus(applicationId, status) {
   return unwrapBody(await api.post(`/apply/${applicationId}`, { status }));
@@ -194,11 +228,14 @@ export async function updateScheme(schemeId, schemeData) {
 /* ── AI / Polly services ──────────────────────────────────────────────── */
 
 /** POST /explain */
-export async function explainScheme(scheme) {
+export async function explainScheme(scheme, citizenProfile = null, language = 'en') {
   return unwrapBody(await api.post('/explain', {
     schemeId: scheme.schemeId || scheme.id,
     schemeName: scheme.nameEnglish || scheme.name || '',
-    description: scheme.descriptionMd || scheme.briefDescription || ''
+    description: scheme.descriptionMd || scheme.briefDescription || '',
+    citizenProfile: citizenProfile || {},
+    language,
+    audio: true,
   }));
 }
 
@@ -229,8 +266,88 @@ export async function sendToLex(message, sessionId = 'default', locale = 'en_US'
 }
 
 /** POST /agent */
-export async function invokeAgent(prompt, sessionId, citizenId) {
-  return unwrapBody(await api.post('/agent', { message: prompt, sessionId, citizenId }));
+export async function invokeAgent(prompt, sessionId, citizenId, language = 'en') {
+  return unwrapBody(await api.post('/agent', { message: prompt, sessionId, citizenId, language, includeFollowups: true }));
+}
+
+/* ── AI-Powered Endpoints (Phase 3+) ───────────────────────────────── */
+
+/** POST /scheme/search-ai — natural language scheme search */
+export async function searchSchemesAI(query, citizenProfile = null) {
+  return unwrapBody(await api.post('/scheme/search-ai', { query, citizenProfile: citizenProfile || {} }));
+}
+
+/** POST /application/explain-status — AI status explanation */
+export async function explainApplicationStatus(application) {
+  return unwrapBody(await api.post('/application/explain-status', {
+    applicationId: application.applicationId,
+    status: application.status,
+    schemeName: application.schemeName,
+    createdAt: application.createdAt,
+  }));
+}
+
+/** POST /document/verify-ai — AI verification feedback for document extraction */
+export async function verifyDocumentAI(extractedFields, documentType, citizenProfile = null) {
+  return unwrapBody(await api.post('/document/verify-ai', {
+    extractedFields,
+    documentType,
+    citizenProfile: citizenProfile || {},
+  }));
+}
+
+/** POST /application/pre-fill — AI pre-fill application form */
+export async function preFillApplication(schemeId, citizenProfile, extractedDocs = {}) {
+  return unwrapBody(await api.post('/application/pre-fill', {
+    schemeId,
+    citizenProfile: citizenProfile || {},
+    extractedDocs,
+  }));
+}
+
+/** POST /panchayat/{id}/generate-campaign — AI campaign content */
+export async function generateCampaign(panchayatId, targetGroup = '', messageTheme = '') {
+  return unwrapBody(await api.post(`/panchayat/${panchayatId}/generate-campaign`, { targetGroup, messageTheme }));
+}
+
+/** POST /panchayat/{id}/generate-report — AI performance report */
+export async function generatePerformanceReport(panchayatId, grievanceCount = 0, applicationCount = 0) {
+  return unwrapBody(await api.post(`/panchayat/${panchayatId}/generate-report`, { grievanceCount, applicationCount }));
+}
+
+/** POST /grievance/analyze — AI grievance classification */
+export async function analyzeGrievance(grievanceText, category = '') {
+  return unwrapBody(await api.post('/grievance/analyze', { grievanceText, category }));
+}
+
+/** POST /admin/spotlight — AI admin dashboard spotlight */
+export async function getAdminSpotlight(panchayatStats = []) {
+  return unwrapBody(await api.post('/admin/spotlight', { panchayatStats }));
+}
+
+/** POST /scheme/compare — AI scheme comparison */
+export async function compareSchemes(schemeIds, citizenProfile = null) {
+  return unwrapBody(await api.post('/scheme/compare', { schemeIds, citizenProfile: citizenProfile || {} }));
+}
+
+/* ── Phase 4+6: Advanced AI Endpoints ───────────────────────────── */
+
+/** POST /twin with predictions — predictive digital twin */
+export async function getDigitalTwinPredictive(data, citizenProfile = null) {
+  return unwrapBody(await api.post('/twin', {
+    ...data,
+    citizenProfile: citizenProfile || {},
+    includePredictions: true,
+  }));
+}
+
+/** POST /conflicts with game theory optimization */
+export async function detectConflictsOptimized(data, citizenProfile = null) {
+  return unwrapBody(await api.post('/conflicts', {
+    ...data,
+    citizenProfile: citizenProfile || {},
+    optimize: true,
+  }));
 }
 
 /* ── Panchayat Data CRUD ──────────────────────────────────────────── */

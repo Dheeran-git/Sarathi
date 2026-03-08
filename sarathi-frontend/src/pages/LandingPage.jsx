@@ -476,7 +476,7 @@ function LandingPage() {
           <div className="mt-20 pt-8 border-t border-navy-light/20 flex flex-col md:flex-row justify-between items-center gap-6">
             <p className="font-body text-gray-500 text-sm">© 2026 Sarathi AI Welfare Engine. Official Government Portal.</p>
             <div className="flex gap-8">
-              <Link to="/admin/login" className="font-body text-gray-500 text-sm hover:text-saffron transition-colors">Admin Login</Link>
+              <Link to="/admin" className="font-body text-gray-500 text-sm hover:text-saffron transition-colors">Admin Dashboard</Link>
               <a href="#" className="font-body text-gray-500 text-sm hover:text-white transition-colors">Privacy Policy</a>
               <a href="#" className="font-body text-gray-500 text-sm hover:text-white transition-colors">Terms of Service</a>
             </div>

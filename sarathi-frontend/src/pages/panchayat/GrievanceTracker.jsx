@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { AlertTriangle, Plus, Clock, CheckCircle, ArrowUpCircle } from 'lucide-react';
+import { AlertTriangle, Plus, Clock, CheckCircle, ArrowUpCircle, Sparkles, Loader2, Brain } from 'lucide-react';
 import { usePanchayat } from '../../context/PanchayatContext';
+import { analyzeGrievance } from '../../utils/api';
 
 const STATUS_CFG = {
     open: { bg: 'bg-red-100', text: 'text-red-700', label: 'Open' },
@@ -17,28 +18,91 @@ const CAT_LABELS = {
     document_issue: 'Document Issue',
 };
 
+const SEVERITY_COLORS = {
+    critical: 'bg-red-600 text-white',
+    high: 'bg-red-100 text-red-700',
+    medium: 'bg-amber-100 text-amber-700',
+    low: 'bg-emerald-100 text-emerald-700',
+};
+
 function GrievanceTracker() {
     const { grievances, setGrievances, isLoading } = usePanchayat();
     const [statusFilter, setStatusFilter] = useState('All');
     const [showAdd, setShowAdd] = useState(false);
     const [form, setForm] = useState({ citizenName: '', category: 'benefit_not_received', description: '' });
 
+    // AI Analysis state
+    const [aiAnalyzing, setAiAnalyzing] = useState(null); // grievanceId currently being analyzed
+    const [aiResults, setAiResults] = useState({}); // { [grievanceId]: analysisResult }
+    const [aiError, setAiError] = useState({}); // { [grievanceId]: errorMessage }
+
+    // AI analysis for new grievance form
+    const [newGrievanceAiLoading, setNewGrievanceAiLoading] = useState(false);
+    const [newGrievanceAiResult, setNewGrievanceAiResult] = useState(null);
+    const [newGrievanceAiError, setNewGrievanceAiError] = useState('');
+
     const filtered = useMemo(() => statusFilter === 'All' ? grievances : grievances.filter((g) => g.status === statusFilter), [grievances, statusFilter]);
 
     const handleAdd = () => {
         if (!form.citizenName || !form.description) return;
-        setGrievances((prev) => [{
-            grievanceId: `GRV-${String(prev.length + 1).padStart(3, '0')}`,
+        const newId = `GRV-${String(grievances.length + 1).padStart(3, '0')}`;
+        const newGrievance = {
+            grievanceId: newId,
             ...form, status: 'open', assignedTo: 'panchayat',
             createdAt: new Date().toISOString(),
             slaDeadline: new Date(Date.now() + 7 * 86400000).toISOString(),
             resolutionNote: '',
-        }, ...prev]);
+        };
+
+        // If we have AI analysis for the new grievance, attach severity
+        if (newGrievanceAiResult?.severity) {
+            newGrievance.aiSeverity = newGrievanceAiResult.severity;
+        }
+
+        setGrievances((prev) => [newGrievance, ...prev]);
+
+        // Transfer AI result to the main results map
+        if (newGrievanceAiResult) {
+            setAiResults((prev) => ({ ...prev, [newId]: newGrievanceAiResult }));
+        }
+
         setForm({ citizenName: '', category: 'benefit_not_received', description: '' });
+        setNewGrievanceAiResult(null);
+        setNewGrievanceAiError('');
         setShowAdd(false);
     };
 
     const updateStatus = (id, s) => setGrievances((prev) => prev.map((g) => g.grievanceId === id ? { ...g, status: s } : g));
+
+    const handleAnalyzeNewGrievance = async () => {
+        if (!form.description) return;
+        setNewGrievanceAiLoading(true);
+        setNewGrievanceAiError('');
+        setNewGrievanceAiResult(null);
+        try {
+            const result = await analyzeGrievance(form.description, form.category);
+            setNewGrievanceAiResult(result);
+        } catch (err) {
+            console.error('[GrievanceTracker] AI analysis failed:', err);
+            setNewGrievanceAiError('AI analysis failed. You can still submit the grievance manually.');
+        } finally {
+            setNewGrievanceAiLoading(false);
+        }
+    };
+
+    const handleAnalyzeExisting = async (grievance) => {
+        setAiAnalyzing(grievance.grievanceId);
+        setAiError((prev) => ({ ...prev, [grievance.grievanceId]: '' }));
+        try {
+            const result = await analyzeGrievance(grievance.description, grievance.category);
+            setAiResults((prev) => ({ ...prev, [grievance.grievanceId]: result }));
+        } catch (err) {
+            console.error('[GrievanceTracker] AI analysis failed for', grievance.grievanceId, err);
+            setAiError((prev) => ({ ...prev, [grievance.grievanceId]: 'AI analysis failed. Please try again.' }));
+        } finally {
+            setAiAnalyzing(null);
+        }
+    };
 
     if (isLoading) return <div className="p-8 flex items-center justify-center min-h-[60vh]"><div className="animate-spin w-8 h-8 border-3 border-teal-500 border-t-transparent rounded-full" /></div>;
 
@@ -80,7 +144,78 @@ function GrievanceTracker() {
                     </div>
                     <textarea placeholder="Describe the issue..." value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
                         rows={3} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-body focus:outline-none focus:ring-2 focus:ring-teal-500/30 resize-none" />
-                    <button onClick={handleAdd} className="px-4 py-2 bg-teal-600 text-white text-sm rounded-lg font-body font-medium hover:bg-teal-500">Submit</button>
+
+                    <div className="flex flex-wrap gap-2">
+                        <button onClick={handleAdd} className="px-4 py-2 bg-teal-600 text-white text-sm rounded-lg font-body font-medium hover:bg-teal-500">Submit</button>
+                        <button
+                            onClick={handleAnalyzeNewGrievance}
+                            disabled={!form.description || newGrievanceAiLoading}
+                            className="flex items-center gap-1.5 px-4 py-2 bg-saffron text-white text-sm rounded-lg font-body font-medium hover:bg-saffron/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                            {newGrievanceAiLoading ? (
+                                <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing...</>
+                            ) : (
+                                <><Brain className="w-4 h-4" /> Analyze with AI</>
+                            )}
+                        </button>
+                    </div>
+
+                    {/* AI Error for new grievance */}
+                    {newGrievanceAiError && (
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700 font-body">
+                            {newGrievanceAiError}
+                        </div>
+                    )}
+
+                    {/* AI Result for new grievance */}
+                    {newGrievanceAiResult && (
+                        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                            className="bg-gradient-to-br from-saffron/5 via-off-white to-white rounded-xl border border-saffron/20 p-4 space-y-3">
+                            <div className="flex items-center gap-2">
+                                <Sparkles className="w-4 h-4 text-saffron" />
+                                <h3 className="font-display text-sm text-navy">AI Analysis Preview</h3>
+                            </div>
+
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                {newGrievanceAiResult.severity && (
+                                    <div>
+                                        <p className="text-[10px] uppercase tracking-wide text-slate-400 font-body font-semibold mb-1">Severity</p>
+                                        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium capitalize ${SEVERITY_COLORS[newGrievanceAiResult.severity] || 'bg-slate-100 text-slate-600'}`}>
+                                            {newGrievanceAiResult.severity}
+                                        </span>
+                                    </div>
+                                )}
+                                {newGrievanceAiResult.category && (
+                                    <div>
+                                        <p className="text-[10px] uppercase tracking-wide text-slate-400 font-body font-semibold mb-1">Category</p>
+                                        <p className="text-sm font-body text-slate-700">{newGrievanceAiResult.category}</p>
+                                    </div>
+                                )}
+                                {newGrievanceAiResult.escalationNeeded !== undefined && (
+                                    <div>
+                                        <p className="text-[10px] uppercase tracking-wide text-slate-400 font-body font-semibold mb-1">Escalation</p>
+                                        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${newGrievanceAiResult.escalationNeeded ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                            {newGrievanceAiResult.escalationNeeded ? 'Needed' : 'Not Needed'}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {newGrievanceAiResult.draftResponse && (
+                                <div>
+                                    <p className="text-[10px] uppercase tracking-wide text-slate-400 font-body font-semibold mb-1">Draft Response</p>
+                                    <p className="text-sm font-body text-slate-600 bg-white rounded-lg p-3 border border-slate-100">{newGrievanceAiResult.draftResponse}</p>
+                                </div>
+                            )}
+
+                            {newGrievanceAiResult.internalNotes && (
+                                <div>
+                                    <p className="text-[10px] uppercase tracking-wide text-slate-400 font-body font-semibold mb-1">Internal Notes</p>
+                                    <p className="text-sm font-body text-slate-600 bg-amber-50 rounded-lg p-3 border border-amber-100">{newGrievanceAiResult.internalNotes}</p>
+                                </div>
+                            )}
+                        </motion.div>
+                    )}
                 </motion.div>
             )}
 
@@ -88,20 +223,100 @@ function GrievanceTracker() {
                 {filtered.map((g) => {
                     const sc = STATUS_CFG[g.status] || STATUS_CFG.open;
                     const overdue = g.status !== 'resolved' && new Date(g.slaDeadline) < new Date();
+                    const analysis = aiResults[g.grievanceId];
+                    const analysisError = aiError[g.grievanceId];
+                    const isAnalyzing = aiAnalyzing === g.grievanceId;
+
                     return (
                         <motion.div key={g.grievanceId} layout className={`bg-white rounded-xl border p-4 ${overdue ? 'border-red-300' : 'border-slate-200'}`}>
                             <div className="flex items-start justify-between gap-4">
                                 <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
+                                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                                         <span className="font-mono text-xs text-slate-400">{g.grievanceId}</span>
                                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${sc.bg} ${sc.text}`}>{sc.label}</span>
-                                        {overdue && <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-600">⚠ SLA Breached</span>}
+                                        {overdue && <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-600">SLA Breached</span>}
+                                        {/* AI Severity Badge */}
+                                        {(g.aiSeverity || analysis?.severity) && (
+                                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize flex items-center gap-1 ${SEVERITY_COLORS[(g.aiSeverity || analysis?.severity)] || 'bg-slate-100 text-slate-600'}`}>
+                                                <Sparkles className="w-3 h-3" /> {g.aiSeverity || analysis?.severity}
+                                            </span>
+                                        )}
                                     </div>
                                     <p className="font-body font-medium text-navy text-sm">{g.citizenName}</p>
                                     <p className="text-xs text-slate-500 font-body mt-0.5">{CAT_LABELS[g.category] || g.category} · {g.assignedTo}</p>
                                     <p className="text-sm text-slate-600 font-body mt-2">{g.description}</p>
-                                    {g.resolutionNote && <p className="text-xs text-emerald-600 font-body mt-2 p-2 bg-emerald-50 rounded-md">📝 {g.resolutionNote}</p>}
+                                    {g.resolutionNote && <p className="text-xs text-emerald-600 font-body mt-2 p-2 bg-emerald-50 rounded-md">{g.resolutionNote}</p>}
                                     <p className="text-[10px] text-slate-400 mt-2">Filed: {new Date(g.createdAt).toLocaleDateString('en-IN')} · SLA: {new Date(g.slaDeadline).toLocaleDateString('en-IN')}</p>
+
+                                    {/* AI Analyze button for existing grievances */}
+                                    {!analysis && (
+                                        <button
+                                            onClick={() => handleAnalyzeExisting(g)}
+                                            disabled={isAnalyzing}
+                                            className="mt-3 flex items-center gap-1.5 px-3 py-1.5 bg-saffron/10 border border-saffron/30 text-saffron text-xs rounded-lg font-body font-medium hover:bg-saffron/20 transition-colors disabled:opacity-60"
+                                        >
+                                            {isAnalyzing ? (
+                                                <><Loader2 className="w-3 h-3 animate-spin" /> Analyzing...</>
+                                            ) : (
+                                                <><Brain className="w-3 h-3" /> Analyze with AI</>
+                                            )}
+                                        </button>
+                                    )}
+
+                                    {/* AI Error for existing grievance */}
+                                    {analysisError && (
+                                        <p className="mt-2 text-xs text-red-600 font-body">{analysisError}</p>
+                                    )}
+
+                                    {/* AI Analysis result for existing grievance */}
+                                    {analysis && (
+                                        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                                            className="mt-3 bg-gradient-to-br from-saffron/5 via-off-white to-white rounded-lg border border-saffron/20 p-3 space-y-2">
+                                            <div className="flex items-center gap-1.5">
+                                                <Sparkles className="w-3.5 h-3.5 text-saffron" />
+                                                <span className="text-xs font-display text-navy">AI Classification</span>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                                {analysis.severity && (
+                                                    <div>
+                                                        <p className="text-[10px] uppercase tracking-wide text-slate-400 font-body font-semibold">Severity</p>
+                                                        <span className={`inline-block mt-0.5 px-2 py-0.5 rounded-full text-xs font-medium capitalize ${SEVERITY_COLORS[analysis.severity] || 'bg-slate-100 text-slate-600'}`}>
+                                                            {analysis.severity}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                {analysis.category && (
+                                                    <div>
+                                                        <p className="text-[10px] uppercase tracking-wide text-slate-400 font-body font-semibold">AI Category</p>
+                                                        <p className="text-xs font-body text-slate-700 mt-0.5">{analysis.category}</p>
+                                                    </div>
+                                                )}
+                                                {analysis.escalationNeeded !== undefined && (
+                                                    <div>
+                                                        <p className="text-[10px] uppercase tracking-wide text-slate-400 font-body font-semibold">Escalation</p>
+                                                        <span className={`inline-block mt-0.5 px-2 py-0.5 rounded-full text-xs font-medium ${analysis.escalationNeeded ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                                            {analysis.escalationNeeded ? 'Needed' : 'Not Needed'}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {analysis.draftResponse && (
+                                                <div>
+                                                    <p className="text-[10px] uppercase tracking-wide text-slate-400 font-body font-semibold">Draft Response</p>
+                                                    <p className="text-xs font-body text-slate-600 bg-white rounded p-2 border border-slate-100 mt-0.5">{analysis.draftResponse}</p>
+                                                </div>
+                                            )}
+
+                                            {analysis.internalNotes && (
+                                                <div>
+                                                    <p className="text-[10px] uppercase tracking-wide text-slate-400 font-body font-semibold">Internal Notes</p>
+                                                    <p className="text-xs font-body text-slate-600 bg-amber-50 rounded p-2 border border-amber-100 mt-0.5">{analysis.internalNotes}</p>
+                                                </div>
+                                            )}
+                                        </motion.div>
+                                    )}
                                 </div>
                                 <select value={g.status} onChange={(e) => updateStatus(g.grievanceId, e.target.value)}
                                     className="px-2 py-1 text-xs border border-slate-200 rounded-md bg-white font-body shrink-0">
