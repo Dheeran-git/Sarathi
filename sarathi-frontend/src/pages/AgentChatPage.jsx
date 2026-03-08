@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Loader2, Bot, User, ArrowLeft, Sparkles, MessageSquare, Mic, Volume2, VolumeX, Brain } from 'lucide-react';
-import { invokeAgent } from '../utils/api';
+import { Send, Loader2, Bot, User, ArrowLeft, Sparkles, MessageSquare, Mic, Volume2, VolumeX, Brain, CheckCircle, ClipboardList, FileText } from 'lucide-react';
+import { invokeAgent, submitApplication, fetchAllSchemes } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import { useCitizen } from '../context/CitizenContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useVoiceInput } from '../hooks/useVoiceInput';
 
@@ -166,11 +167,345 @@ function ChatMessage({ message, isLatestAgent, onFollowupClick, onSpeakToggle, t
 }
 
 // ---------------------------------------------------------------------------
+// Detect if the agent's response is asking for application details (FALLBACK)
+// ---------------------------------------------------------------------------
+function detectApplicationIntent(text) {
+  if (!text) return { needsForm: false, isSuccess: false };
+  const lower = text.toLowerCase();
+
+  // Detect successful submission
+  const successPatterns = [
+    'successfully submitted',
+    'reference id is',
+    'application id is',
+    'your reference id',
+    'has been submitted',
+    'application has been recorded',
+    'i have successfully submitted',
+  ];
+  const isSuccess = successPatterns.some(p => lower.includes(p));
+  if (isSuccess) {
+    const idMatch = text.match(/(?:reference\s*(?:id|ID)\s*(?:is)?|application\s*(?:id|ID)\s*(?:is)?)\s*[:\s]?\s*([A-Z0-9-]{6,20})/i);
+    const schemeMatch = text.match(/application\s+for\s+([^.]+?)\./i) || text.match(/submitted.*?for\s+([^.]+?)\./i);
+    return {
+      needsForm: false,
+      isSuccess: true,
+      applicationId: idMatch?.[1]?.trim() || '',
+      schemeName: schemeMatch?.[1]?.trim() || '',
+    };
+  }
+
+  // Detect request for missing details
+  const needsPatterns = [
+    'i need a few more details',
+    'please provide',
+    'before i can submit',
+    'need the following',
+    'provide your aadhaar',
+    'provide your mobile',
+    'provide your bank',
+    'aadhaarlast4',
+    'bankaccountlast4',
+  ];
+  const needsForm = needsPatterns.some(p => lower.includes(p));
+  if (needsForm) {
+    const schemeMatch = text.match(/application for\s+([^.]+?)\./i) || text.match(/submit.*?for\s+([^.]+?)\./i);
+    return {
+      needsForm: true,
+      isSuccess: false,
+      schemeName: schemeMatch?.[1]?.trim() || '',
+    };
+  }
+
+  return { needsForm: false, isSuccess: false };
+}
+
+// ---------------------------------------------------------------------------
+// Detect apply intent from the USER's own message
+// ---------------------------------------------------------------------------
+function detectUserApplyIntent(text) {
+  if (!text) return null;
+  const lower = text.toLowerCase();
+
+  // Patterns that indicate the user wants to apply
+  const applyPatterns = [
+    /apply\s+(?:for|to)\s+(?:this\s+scheme\s*[-–—:]?\s*)?(.+)/i,
+    /submit\s+(?:an?\s+)?application\s+(?:for|to)\s+(.+)/i,
+    /(?:i\s+want\s+to|please)\s+apply\s+(?:for|to)\s+(.+)/i,
+    /apply\s+(?:for\s+)?(?:this\s+scheme\s*[-–—:]?\s*)(.+)/i,
+    /(?:apply|submit)\s+(?:for\s+)?scheme\s*[-–—:]?\s*(.+)/i,
+    /(?:apply|register|enroll).*?(?:for|in|to)\s+(.+?)\s*(?:scheme|yojana)?\s*$/i,
+    /(?:मैं|कृपया|मुझे).*?(?:आवेदन|अप्लाई).*?(?:के\s+लिए|करें|करना)\s*[:-]?\s*(.+)/i,
+  ];
+
+  for (const pattern of applyPatterns) {
+    const match = lower.match(pattern);
+    if (match) {
+      const schemeName = match[1]?.trim().replace(/^(?:the|this|a)\s+/i, '').replace(/\s*scheme\s*$/i, '').trim();
+      if (schemeName && schemeName.length > 2) {
+        return schemeName;
+      }
+    }
+  }
+
+  // Simple keyword check: if message contains "apply" and a scheme-like name
+  if (
+    (lower.includes('apply') || lower.includes('submit application') || lower.includes('आवेदन')) &&
+    (lower.includes('scheme') || lower.includes('yojana') || lower.includes('योजना') || lower.includes(' – ') || lower.includes(' - '))
+  ) {
+    // Try to extract scheme name after common separators
+    const dashMatch = text.match(/[-–—]\s*(.+?)\s*$/i);
+    if (dashMatch) return dashMatch[1].trim();
+    // Try to extract after "for"
+    const forMatch = text.match(/for\s+(.+)/i);
+    if (forMatch) return forMatch[1].replace(/\s*scheme\s*$/i, '').trim();
+  }
+
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Fuzzy match a scheme name against fetched schemes
+// ---------------------------------------------------------------------------
+function fuzzyMatchScheme(query, schemes) {
+  if (!query || !schemes?.length) return null;
+  const q = query.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+  const qWords = q.split(/\s+/);
+
+  let bestMatch = null;
+  let bestScore = 0;
+
+  for (const scheme of schemes) {
+    const name = (scheme.nameEnglish || scheme.name || '').toLowerCase();
+    const nameHi = (scheme.nameHindi || '').toLowerCase();
+    const id = (scheme.schemeId || '').toLowerCase().replace(/-/g, ' ');
+    const searchTarget = `${name} ${nameHi} ${id}`;
+
+    // Exact ID match
+    if (id === q || name === q) return scheme;
+
+    // Word overlap scoring
+    let score = 0;
+    for (const word of qWords) {
+      if (word.length > 2 && searchTarget.includes(word)) score += 1;
+    }
+    // Bonus for substring containment
+    if (searchTarget.includes(q)) score += 3;
+    if (name.includes(q)) score += 5;
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = scheme;
+    }
+  }
+
+  return bestScore >= 1 ? bestMatch : null;
+}
+
+// ---------------------------------------------------------------------------
+// Inline Application Form Card (shown inside chat)
+// ---------------------------------------------------------------------------
+function ApplicationFormCard({ schemeName, citizenProfile, onSubmit, onCancel, isSubmitting, isHi }) {
+  const [formData, setFormData] = useState({
+    mobile: citizenProfile?.mobile || '',
+    aadhaarLast4: citizenProfile?.aadhaarLast4 || '',
+    bankAccountLast4: citizenProfile?.bankAccountLast4 || '',
+  });
+
+  const isValid = formData.mobile.length === 10 && formData.aadhaarLast4.length === 4 && formData.bankAccountLast4.length === 4;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      className="mb-4"
+    >
+      <div className="flex gap-3">
+        <div className="w-8 h-8 rounded-full bg-navy flex items-center justify-center shrink-0">
+          <ClipboardList size={14} className="text-white" />
+        </div>
+        <div className="max-w-[85%] w-full">
+          <div className="bg-white border-2 border-saffron/30 rounded-2xl rounded-tl-sm shadow-md overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-saffron/10 to-orange-50 px-4 py-3 border-b border-saffron/10">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-saffron/15">
+                  <FileText size={14} className="text-saffron" />
+                </div>
+                <div>
+                  <p className="font-body text-sm font-bold text-gray-900">
+                    {isHi ? 'आवेदन विवरण' : 'Application Details'}
+                  </p>
+                  {schemeName && (
+                    <p className="font-body text-xs text-gray-500 truncate">
+                      {schemeName}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Pre-filled info */}
+            {citizenProfile?.name && (
+              <div className="px-4 pt-3 pb-1">
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-100">
+                  <Brain size={12} className="text-emerald-600 shrink-0" />
+                  <p className="font-body text-xs text-emerald-700">
+                    {isHi ? 'प्रोफ़ाइल से:' : 'From profile:'}{' '}
+                    <strong>{citizenProfile.name}</strong>
+                    {citizenProfile.age ? `, ${citizenProfile.age} ${isHi ? 'वर्ष' : 'yrs'}` : ''}
+                    {citizenProfile.state ? `, ${citizenProfile.state}` : ''}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Form fields */}
+            <div className="px-4 py-3 space-y-3">
+              <div>
+                <label className="font-body text-xs font-medium text-gray-600 block mb-1">
+                  {isHi ? 'मोबाइल नंबर' : 'Mobile Number'} *
+                </label>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength={10}
+                  value={formData.mobile}
+                  onChange={(e) => setFormData(p => ({ ...p, mobile: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
+                  placeholder={isHi ? '10 अंकों का नंबर' : '10-digit mobile number'}
+                  className="w-full h-10 px-3 rounded-lg border border-gray-200 font-body text-sm focus:outline-none focus:border-saffron focus:ring-1 focus:ring-saffron/30 transition-colors"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-body text-xs font-medium text-gray-600 block mb-1">
+                    {isHi ? 'आधार (अंतिम 4)' : 'Aadhaar (last 4)'} *
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={formData.aadhaarLast4}
+                    onChange={(e) => setFormData(p => ({ ...p, aadhaarLast4: e.target.value.replace(/\D/g, '').slice(0, 4) }))}
+                    placeholder="XXXX"
+                    className="w-full h-10 px-3 rounded-lg border border-gray-200 font-mono text-sm tracking-widest focus:outline-none focus:border-saffron focus:ring-1 focus:ring-saffron/30 transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="font-body text-xs font-medium text-gray-600 block mb-1">
+                    {isHi ? 'बैंक खाता (अंतिम 4)' : 'Bank A/C (last 4)'} *
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={formData.bankAccountLast4}
+                    onChange={(e) => setFormData(p => ({ ...p, bankAccountLast4: e.target.value.replace(/\D/g, '').slice(0, 4) }))}
+                    placeholder="XXXX"
+                    className="w-full h-10 px-3 rounded-lg border border-gray-200 font-mono text-sm tracking-widest focus:outline-none focus:border-saffron focus:ring-1 focus:ring-saffron/30 transition-colors"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="px-4 pb-4 flex gap-2">
+              <button
+                onClick={() => onSubmit(formData)}
+                disabled={!isValid || isSubmitting}
+                className="flex-1 h-10 flex items-center justify-center gap-2 rounded-lg bg-saffron text-white font-body text-sm font-semibold hover:bg-saffron-light transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+              >
+                {isSubmitting ? (
+                  <><Loader2 size={14} className="animate-spin" /> {isHi ? 'जमा हो रहा...' : 'Submitting...'}</>
+                ) : (
+                  <><CheckCircle size={14} /> {isHi ? 'आवेदन जमा करें' : 'Submit Application'}</>
+                )}
+              </button>
+              <button
+                onClick={onCancel}
+                disabled={isSubmitting}
+                className="h-10 px-4 rounded-lg border border-gray-200 text-gray-500 font-body text-sm hover:bg-gray-50 transition-colors disabled:opacity-40"
+              >
+                {isHi ? 'रद्द' : 'Cancel'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Application Success Card (shown inside chat)
+// ---------------------------------------------------------------------------
+function ApplicationSuccessCard({ applicationId, schemeName, isHi, onTrack }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      className="mb-4"
+    >
+      <div className="flex gap-3">
+        <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center shrink-0">
+          <CheckCircle size={14} className="text-white" />
+        </div>
+        <div className="max-w-[85%] w-full">
+          <div className="bg-white border-2 border-emerald-200 rounded-2xl rounded-tl-sm shadow-md overflow-hidden">
+            <div className="bg-gradient-to-r from-emerald-50 to-green-50 px-4 py-3 border-b border-emerald-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
+                  <CheckCircle size={16} className="text-emerald-600" />
+                </div>
+                <div>
+                  <p className="font-body text-sm font-bold text-emerald-800">
+                    {isHi ? 'आवेदन सफल!' : 'Application Submitted!'}
+                  </p>
+                  {schemeName && (
+                    <p className="font-body text-xs text-emerald-600 truncate">
+                      {schemeName}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="px-4 py-3">
+              {applicationId && (
+                <div className="bg-gray-50 rounded-lg p-2.5 mb-3">
+                  <p className="font-body text-xs text-gray-500">{isHi ? 'आवेदन ID' : 'Application ID'}</p>
+                  <p className="font-mono text-base font-bold text-navy">{applicationId}</p>
+                </div>
+              )}
+              <p className="font-body text-xs text-gray-500 mb-3">
+                {isHi
+                  ? 'आपका आवेदन सफलतापूर्वक जमा हो गया है। आप डैशबोर्ड पर इसकी स्थिति देख सकते हैं।'
+                  : 'Your application has been submitted successfully. You can track its status on your dashboard.'}
+              </p>
+              <button
+                onClick={onTrack}
+                className="w-full h-9 rounded-lg bg-emerald-600 text-white font-body text-xs font-semibold hover:bg-emerald-700 transition-colors flex items-center justify-center gap-1.5"
+              >
+                <ClipboardList size={13} />
+                {isHi ? 'आवेदन ट्रैक करें' : 'Track Application'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main page component
 // ---------------------------------------------------------------------------
 function AgentChatPage() {
   const { user } = useAuth();
   const { language } = useLanguage();
+  const { citizenProfile, refreshApplications } = useCitizen();
+  const navigate = useNavigate();
   const isHi = language === 'hi';
 
   const [messages, setMessages] = useState([]);
@@ -179,6 +514,13 @@ function AgentChatPage() {
   const [sessionId] = useState(() => `session-${Date.now()}`);
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [ttsEnabled, setTtsEnabled] = useState(true);
+
+  // --- Agentic application state ---
+  const [appFormVisible, setAppFormVisible] = useState(false);
+  const [appFormScheme, setAppFormScheme] = useState(null); // full scheme object
+  const [appFormSchemeName, setAppFormSchemeName] = useState('');
+  const [appSubmitting, setAppSubmitting] = useState(false);
+  const [appSuccess, setAppSuccess] = useState(null); // { applicationId, schemeName }
 
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -241,7 +583,46 @@ function AgentChatPage() {
     setInput('');
     setIsLoading(true);
 
-    // Prepend Hindi instruction if language is Hindi
+    // --- Check if the USER wants to apply for a scheme ---
+    const applySchemeName = detectUserApplyIntent(userMsg);
+    if (applySchemeName) {
+      try {
+        // Fetch all schemes and fuzzy-match
+        const allSchemes = await fetchAllSchemes();
+        const matched = fuzzyMatchScheme(applySchemeName, allSchemes);
+
+        if (matched) {
+          // Found the scheme — show profile info + inline form
+          const name = matched.nameEnglish || matched.name || applySchemeName;
+          const profileSummary = citizenProfile?.name
+            ? `${citizenProfile.name}${citizenProfile.age ? `, ${citizenProfile.age} yrs` : ''}${citizenProfile.state ? `, ${citizenProfile.state}` : ''}`
+            : '';
+
+          const agentText = isHi
+            ? `मैंने आपकी प्रोफ़ाइल से विवरण प्राप्त कर लिए हैं${profileSummary ? ` (${profileSummary})` : ''}। ${name} के लिए आवेदन जमा करने हेतु कृपया नीचे अपना मोबाइल नंबर, आधार के अंतिम 4 अंक और बैंक खाते के अंतिम 4 अंक दर्ज करें।`
+            : `I've pulled your details from your profile${profileSummary ? ` (${profileSummary})` : ''}. To submit your application for **${name}**, please enter your mobile number, Aadhaar last 4 digits, and bank account last 4 digits below.`;
+
+          setMessages((prev) => [...prev, {
+            role: 'agent',
+            text: agentText,
+            hasProfileContext: !!citizenProfile?.name,
+            _animate: true,
+          }]);
+
+          setAppFormScheme(matched);
+          setAppFormSchemeName(name);
+          setAppFormVisible(true);
+          setAppSuccess(null);
+          setIsLoading(false);
+          return; // Don't send to Bedrock agent
+        }
+        // Scheme not found — fall through to normal agent call
+      } catch (err) {
+        console.warn('[AgentChat] Scheme lookup failed, falling through to agent:', err);
+      }
+    }
+
+    // --- Normal agent flow ---
     const agentMessage = isHi
       ? `Please respond in Hindi. ${userMsg}`
       : userMsg;
@@ -258,6 +639,18 @@ function AgentChatPage() {
         hasProfileContext: result?.hasProfileContext || false,
         _animate: true,
       }]);
+
+      // --- Fallback: detect agentic application intent from agent response ---
+      const intent = detectApplicationIntent(agentResponse);
+      if (intent.isSuccess) {
+        setAppFormVisible(false);
+        setAppSuccess({ applicationId: intent.applicationId, schemeName: intent.schemeName });
+        refreshApplications?.();
+      } else if (intent.needsForm) {
+        setAppFormSchemeName(intent.schemeName || '');
+        setAppFormVisible(true);
+        setAppSuccess(null);
+      }
     } catch (err) {
       const errMsg = isHi
         ? 'एजेंट से संपर्क नहीं हो पा रहा। कृपया बाद में प्रयास करें।'
@@ -267,6 +660,77 @@ function AgentChatPage() {
       setIsLoading(false);
       setTimeout(() => inputRef.current?.focus(), 100);
     }
+  };
+
+  // --- Handle inline form submission (DIRECT via /apply API) ---
+  const handleAppFormSubmit = async (formData) => {
+    setAppSubmitting(true);
+    setAppFormVisible(false);
+    setIsLoading(true);
+
+    // Show user message in chat
+    setMessages((prev) => [...prev, {
+      role: 'user',
+      text: isHi ? 'मैंने अपने विवरण भर दिए हैं। कृपया मेरा आवेदन जमा करें।' : 'I\'ve filled in my details. Please submit my application.',
+    }]);
+
+    try {
+      const scheme = appFormScheme;
+      const schemeId = scheme?.schemeId || scheme?.id || '';
+      const schemeName = scheme?.nameEnglish || scheme?.name || appFormSchemeName;
+
+      // Submit directly via the same API as ApplyPage
+      const result = await submitApplication({
+        citizenId,
+        panchayatId: citizenProfile?.panchayatId || citizenProfile?.panchayatCode || '',
+        schemeId,
+        schemeName,
+        documentsChecked: [],
+        personalDetails: {
+          name: citizenProfile?.name || '',
+          aadhaarLast4: formData.aadhaarLast4,
+          mobile: formData.mobile,
+          bankAccountLast4: formData.bankAccountLast4,
+        },
+      });
+
+      const applicationId = result?.applicationId || '';
+
+      // Show success message in chat
+      const successText = isHi
+        ? `आपका ${schemeName} के लिए आवेदन सफलतापूर्वक जमा हो गया है! आवेदन ID: ${applicationId}। आप डैशबोर्ड पर इसकी स्थिति देख सकते हैं।`
+        : `Your application for ${schemeName} has been successfully submitted! Application ID: ${applicationId}. You can track its status on your dashboard.`;
+
+      setMessages((prev) => [...prev, {
+        role: 'agent',
+        text: successText,
+        hasProfileContext: true,
+        _animate: true,
+      }]);
+
+      setAppSuccess({ applicationId, schemeName });
+      refreshApplications?.();
+
+    } catch (err) {
+      console.error('[AgentChat] Application submission failed:', err);
+      setMessages((prev) => [...prev, {
+        role: 'agent',
+        text: isHi ? 'आवेदन जमा करने में समस्या हुई। कृपया पुनः प्रयास करें।' : 'There was a problem submitting your application. Please try again.',
+        _animate: true,
+      }]);
+    } finally {
+      setAppSubmitting(false);
+      setIsLoading(false);
+    }
+  };
+
+  const handleAppFormCancel = () => {
+    setAppFormVisible(false);
+    setMessages((prev) => [...prev, {
+      role: 'agent',
+      text: isHi ? 'आवेदन रद्द किया गया। आप बाद में फिर से कोशिश कर सकते हैं।' : 'Application cancelled. You can try again later.',
+      _animate: true,
+    }]);
   };
 
   const handleSubmit = (e) => {
@@ -386,6 +850,28 @@ function AgentChatPage() {
             ))}
           </AnimatePresence>
 
+          {/* Inline Application Form Card */}
+          {appFormVisible && !isLoading && (
+            <ApplicationFormCard
+              schemeName={appFormSchemeName}
+              citizenProfile={citizenProfile}
+              onSubmit={handleAppFormSubmit}
+              onCancel={handleAppFormCancel}
+              isSubmitting={appSubmitting}
+              isHi={isHi}
+            />
+          )}
+
+          {/* Application Success Card */}
+          {appSuccess && (
+            <ApplicationSuccessCard
+              applicationId={appSuccess.applicationId}
+              schemeName={appSuccess.schemeName}
+              isHi={isHi}
+              onTrack={() => navigate('/applications')}
+            />
+          )}
+
           {/* Loading indicator — animated dots */}
           {isLoading && (
             <motion.div
@@ -400,7 +886,7 @@ function AgentChatPage() {
                 <div className="flex items-center gap-2">
                   <AnimatedDots />
                   <span className="font-body text-sm text-gray-500">
-                    {isHi ? 'सोच रहे हैं' : 'Thinking'}
+                    {isHi ? (appSubmitting ? 'आवेदन जमा हो रहा है' : 'सोच रहे हैं') : (appSubmitting ? 'Submitting application' : 'Thinking')}
                   </span>
                 </div>
               </div>

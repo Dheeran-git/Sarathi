@@ -8,7 +8,7 @@ import { useCitizen } from '../context/CitizenContext';
 import { useToast } from '../components/ui/Toast';
 import { useLanguage } from '../context/LanguageContext';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 function ApplyPage() {
     const { schemeId } = useParams();
@@ -152,66 +152,165 @@ function ApplyPage() {
     if (submittedAppId) {
         const handleDownloadAcknowledgement = () => {
             const doc = new jsPDF();
+            const pageW = doc.internal.pageSize.getWidth();
+            const pageH = doc.internal.pageSize.getHeight();
+            const now = new Date();
 
-            // Header
-            doc.setFontSize(20);
-            doc.setTextColor(220, 104, 3); // Saffron
-            doc.text('Sarathi Application Acknowledgement', 15, 20);
+            // ─── Saffron top bar ───
+            doc.setFillColor(220, 104, 3);
+            doc.rect(0, 0, pageW, 8, 'F');
+            // Thin navy line below
+            doc.setFillColor(30, 41, 59);
+            doc.rect(0, 8, pageW, 1.5, 'F');
 
+            // ─── Header ───
+            doc.setFontSize(22);
+            doc.setTextColor(30, 41, 59);
+            doc.setFont('helvetica', 'bold');
+            doc.text('SARATHI', pageW / 2, 22, { align: 'center' });
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(100, 100, 100);
+            doc.text('AI Welfare Engine  •  Government Scheme Application Platform', pageW / 2, 28, { align: 'center' });
+
+            // Horizontal rule
+            doc.setDrawColor(200, 200, 200);
+            doc.setLineWidth(0.3);
+            doc.line(15, 32, pageW - 15, 32);
+
+            // ─── Title ───
+            doc.setFontSize(16);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(30, 41, 59);
+            doc.text('APPLICATION ACKNOWLEDGEMENT', pageW / 2, 42, { align: 'center' });
+
+            // ─── Reference box ───
+            doc.setFillColor(248, 250, 252);
+            doc.setDrawColor(200, 210, 220);
+            doc.roundedRect(15, 47, pageW - 30, 20, 2, 2, 'FD');
+
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(100, 100, 100);
+            doc.text('Application Reference No.', 20, 54);
+            doc.text('Date of Submission', pageW - 20, 54, { align: 'right' });
+
+            doc.setFontSize(13);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(30, 41, 59);
+            doc.text(submittedAppId, 20, 62);
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'normal');
+            doc.text(now.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }), pageW - 20, 62, { align: 'right' });
+
+            // ─── Section 1: Scheme Details ───
+            let y = 76;
+            doc.setFillColor(220, 104, 3);
+            doc.rect(15, y, 3, 8, 'F');
             doc.setFontSize(12);
-            doc.setTextColor(80, 80, 80);
-            doc.text(`Application ID: ${submittedAppId}`, 15, 30);
-            doc.text(`Date: ${new Date().toLocaleDateString()}`, 15, 38);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(30, 41, 59);
+            doc.text('SCHEME DETAILS', 22, y + 6);
+            y += 12;
 
-            // Scheme Details
-            doc.setFontSize(14);
-            doc.setTextColor(30, 41, 59); // Navy
-            doc.text('Scheme Details', 15, 50);
-
-            const schemeData = [
-                ['Scheme Name', scheme.nameEnglish || scheme.name],
+            const schemeRows = [
+                ['Scheme Name', scheme.nameEnglish || scheme.name || 'N/A'],
+                ['Scheme ID', schemeId || 'N/A'],
+                ['Ministry / Dept.', scheme.ministry || scheme.department || 'N/A'],
                 ['Category', scheme.category || 'N/A'],
-                ['Benefit Amount', scheme.annualBenefit ? `Rs. ${scheme.annualBenefit}` : 'N/A']
-            ];
+                ['Annual Benefit', scheme.annualBenefit ? `Rs. ${Number(scheme.annualBenefit).toLocaleString('en-IN')}` : 'N/A'],
+            ].filter(r => r[1] && r[1] !== 'N/A');
 
-            doc.autoTable({
-                startY: 55,
-                body: schemeData,
-                theme: 'grid',
-                headStyles: { fillColor: [241, 245, 249] },
-                styles: { fontSize: 10 }
+            autoTable(doc, {
+                startY: y,
+                body: schemeRows,
+                theme: 'plain',
+                styles: { fontSize: 9.5, cellPadding: { top: 3, bottom: 3, left: 4, right: 4 }, textColor: [50, 50, 50] },
+                columnStyles: {
+                    0: { fontStyle: 'bold', cellWidth: 55, textColor: [80, 80, 80] },
+                    1: { cellWidth: 'auto' },
+                },
+                alternateRowStyles: { fillColor: [248, 250, 252] },
+                margin: { left: 15, right: 15 },
             });
 
-            // Profile Details
-            const finalY = doc.lastAutoTable.finalY || 55;
-            doc.setFontSize(14);
-            doc.text('Applicant Details', 15, finalY + 10);
+            // ─── Section 2: Applicant Details ───
+            y = doc.lastAutoTable.finalY + 8;
+            doc.setFillColor(220, 104, 3);
+            doc.rect(15, y, 3, 8, 'F');
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(30, 41, 59);
+            doc.text('APPLICANT DETAILS', 22, y + 6);
+            y += 12;
 
-            const profileMap = [
-                ['Name', citizenProfile.name || personalDetails.name || 'N/A'],
-                ['Age', citizenProfile.age || 'N/A'],
+            const location = [citizenProfile.village, citizenProfile.district, citizenProfile.state].filter(Boolean).join(', ');
+            const applicantRows = [
+                ['Full Name', citizenProfile.name || personalDetails.name || 'N/A'],
+                ['Age', citizenProfile.age ? `${citizenProfile.age} years` : 'N/A'],
                 ['Gender', citizenProfile.gender || 'N/A'],
-                ['Location', `${citizenProfile.village || ''} ${citizenProfile.district || ''} ${citizenProfile.state || ''}`.trim() || 'N/A'],
-                ['Income (Monthly)', citizenProfile.income ? `Rs. ${citizenProfile.income}` : 'N/A'],
+                ['Location', location || 'N/A'],
+                ['Monthly Income', citizenProfile.income ? `Rs. ${Number(citizenProfile.income).toLocaleString('en-IN')}` : 'N/A'],
                 ['Category', citizenProfile.category || 'N/A'],
                 ['Area Type', citizenProfile.urban === true ? 'Urban' : citizenProfile.urban === false ? 'Rural' : 'N/A'],
                 ['Occupation', citizenProfile.persona || citizenProfile.occupation || 'N/A'],
                 ['Education', citizenProfile.educationLevel || 'N/A'],
-                ['Aadhaar (Last 4)', personalDetails.aadhaarLast4 || 'N/A'],
+                ['Aadhaar (Last 4)', personalDetails.aadhaarLast4 ? `XXXX-XXXX-${personalDetails.aadhaarLast4}` : 'N/A'],
                 ['Mobile', personalDetails.mobile || 'N/A'],
-                ['Bank Account (Last 4)', personalDetails.bankAccountLast4 || 'N/A'],
-            ];
+                ['Bank Account (Last 4)', personalDetails.bankAccountLast4 ? `XXXXXXXX${personalDetails.bankAccountLast4}` : 'N/A'],
+            ].filter(r => r[1] && r[1] !== 'N/A');
 
-            doc.autoTable({
-                startY: finalY + 15,
-                body: profileMap.filter(r => r[1] && r[1] !== 'N/A'),
-                theme: 'grid',
-                styles: { fontSize: 10 }
+            autoTable(doc, {
+                startY: y,
+                body: applicantRows,
+                theme: 'plain',
+                styles: { fontSize: 9.5, cellPadding: { top: 3, bottom: 3, left: 4, right: 4 }, textColor: [50, 50, 50] },
+                columnStyles: {
+                    0: { fontStyle: 'bold', cellWidth: 55, textColor: [80, 80, 80] },
+                    1: { cellWidth: 'auto' },
+                },
+                alternateRowStyles: { fillColor: [248, 250, 252] },
+                margin: { left: 15, right: 15 },
             });
 
+            // ─── Status badge ───
+            y = doc.lastAutoTable.finalY + 10;
+            doc.setFillColor(236, 253, 245);
+            doc.setDrawColor(167, 243, 208);
+            doc.roundedRect(15, y, pageW - 30, 14, 2, 2, 'FD');
             doc.setFontSize(10);
-            doc.setTextColor(150, 150, 150);
-            doc.text('This is a computer-generated acknowledgement.', 15, doc.internal.pageSize.height - 15);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(5, 150, 105);
+            doc.text('STATUS: SUBMITTED   ✓', pageW / 2, y + 9, { align: 'center' });
+
+            // ─── Important note box ───
+            y += 22;
+            doc.setFillColor(254, 252, 232);
+            doc.setDrawColor(253, 224, 71);
+            doc.roundedRect(15, y, pageW - 30, 22, 2, 2, 'FD');
+            doc.setFontSize(8.5);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(146, 64, 14);
+            doc.text('IMPORTANT:', 20, y + 7);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(120, 53, 15);
+            doc.text('Please keep this acknowledgement for your records. Your application will be reviewed by the', 20, y + 13);
+            doc.text('concerned authorities. You can track status using the Application ID on the Sarathi portal.', 20, y + 18);
+
+            // ─── Watermark (diagonal) ───
+            doc.setTextColor(240, 240, 240);
+            doc.setFontSize(50);
+            doc.setFont('helvetica', 'bold');
+            doc.text('SARATHI', pageW / 2, pageH / 2, { align: 'center', angle: 45 });
+
+            // ─── Footer ───
+            doc.setFillColor(30, 41, 59);
+            doc.rect(0, pageH - 14, pageW, 14, 'F');
+            doc.setFontSize(7.5);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(180, 190, 200);
+            doc.text('This is a computer-generated acknowledgement. No signature required.', pageW / 2, pageH - 8, { align: 'center' });
+            doc.text(`Generated on ${now.toLocaleString('en-IN')}  |  Sarathi AI Welfare Engine`, pageW / 2, pageH - 4, { align: 'center' });
 
             doc.save(`Sarathi_Acknowledgement_${submittedAppId}.pdf`);
         };
