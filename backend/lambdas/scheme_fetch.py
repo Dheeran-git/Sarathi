@@ -3,6 +3,7 @@ scheme_fetch — GET /scheme/{schemeId}, GET /scheme/all, POST /scheme/search-ai
 AI-powered scheme search and comparison using Bedrock.
 """
 import json
+import base64
 import os
 import re
 import time
@@ -276,10 +277,187 @@ def handle_compare(event):
         return {'statusCode': 500, 'headers': cors_headers(), 'body': json.dumps({'error': str(e)})}
 
 
+def handle_paginated_schemes(event):
+    """GET /schemes?limit=20&sortBy=...&category=...&nextKey=..."""
+    try:
+        params = event.get('queryStringParameters') or {}
+        limit = int(params.get('limit', 20))
+        sort_by = params.get('sortBy', 'benefit_desc')
+        category = params.get('category', 'all')
+        level = params.get('level', 'all')
+        search_q = params.get('search', '').lower().strip()
+        next_key_encoded = params.get('nextKey', None)
+
+        if search_q:
+            # Fallback for case-insensitive partial search which DynamoDB native queries don't support well
+            all_s = _fetch_all_schemes()
+            filtered = []
+            for s in all_s:
+                if search_q in str(s.get('nameEnglish','')).lower() or search_q in str(s.get('ministry','')).lower() or search_q in str(s.get('state','')).lower():
+                    if category == 'all' or category in str(s.get('categories','')):
+                        if level == 'all' or level in str(s.get('level','')).lower():
+                            filtered.append(s)
+                            
+            if sort_by == 'benefit_desc':
+                filtered.sort(key=lambda x: float(x.get('annualBenefit',0) or 0), reverse=True)
+            elif sort_by == 'name_asc':
+                filtered.sort(key=lambda x: str(x.get('nameEnglish','') or x.get('name','')))
+            
+            try:
+                start_idx = int(next_key_encoded) if next_key_encoded and next_key_encoded.isdigit() else 0
+            except:
+                start_idx = 0
+            
+            paginated_schemes = filtered[start_idx : start_idx + limit]
+            
+            response_body = {
+                "schemes": paginated_schemes,
+                "limit": limit,
+                "nextKey": str(start_idx + limit) if start_idx + limit < len(filtered) else None
+            }
+            
+            headers = cors_headers()
+            headers['Cache-Control'] = 'public, max-age=300'
+            return {'statusCode': 200, 'headers': headers, 'body': json.dumps(response_body, cls=DecimalEncoder)}
+
+
+        # Native DynamoDB Cursor Pagination
+        start_key = None
+        if next_key_encoded:
+            try:
+                start_key = json.loads(base64.b64decode(next_key_encoded).decode('utf-8'))
+            except Exception:
+                pass
+
+        index_name = 'status-benefit-index' if sort_by == 'benefit_desc' else 'status-name-index'
+        scan_forward = False if sort_by == 'benefit_desc' else True 
+        
+        query_kwargs = {
+            'IndexName': index_name,
+            'KeyConditionExpression': boto3.dynamodb.conditions.Key('status').eq('Published'),
+            'ScanIndexForward': scan_forward,
+            'Limit': limit
+        }
+        
+        filter_exprs = []
+        if category != 'all':
+            filter_exprs.append(boto3.dynamodb.conditions.Attr('categories').contains(category))
+        if level != 'all':
+            filter_exprs.append(boto3.dynamodb.conditions.Attr('level').contains(level))
+            
+        if filter_exprs:
+            if len(filter_exprs) > 1:
+                query_kwargs['FilterExpression'] = filter_exprs[0] & filter_exprs[1]
+            else:
+                query_kwargs['FilterExpression'] = filter_exprs[0]
+
+        query_kwargs['ProjectionExpression'] = "schemeId, nameEnglish, categories, #lvl, ministry, annualBenefit"
+        query_kwargs.setdefault('ExpressionAttributeNames', {})['#lvl'] = "level"
+
+        if start_key and isinstance(start_key, dict):
+            query_kwargs['ExclusiveStartKey'] = start_key
+            
+        try:
+            response = table.query(**query_kwargs)
+            # Optimize JSON serialization by converting Decimal to native python types
+            raw_items = response.get('Items', [])
+            paginated_schemes = []
+            for item in raw_items:
+                formatted_item = {}
+                for k, v in item.items():
+                    if isinstance(v, decimal.Decimal):
+                        formatted_item[k] = int(v) if v % 1 == 0 else float(v)
+                    else:
+                        formatted_item[k] = v
+                paginated_schemes.append(formatted_item)
+                
+            last_evaluated_key = response.get('LastEvaluatedKey', None)
+        except Exception as query_err:
+            # Fallback to SCAN if GSIs are still building or missing
+            print(f"[WARN] GSI Query failed (building?): {query_err}. Falling back to Scan.")
+            all_s = _fetch_all_schemes()
+            filtered = []
+            for s in all_s:
+                if category == 'all' or category in str(s.get('categories','')):
+                    if level == 'all' or level in str(s.get('level','')).lower():
+                        filtered.append(s)
+            
+            if sort_by == 'benefit_desc':
+                filtered.sort(key=lambda x: float(x.get('annualBenefit',0) or 0), reverse=True)
+            elif sort_by == 'name_asc':
+                filtered.sort(key=lambda x: str(x.get('nameEnglish','') or x.get('name','')))
+                
+            try:
+                start_idx = int(next_key_encoded) if next_key_encoded and next_key_encoded.isdigit() else 0
+            except:
+                start_idx = 0
+            
+            paginated_schemes = filtered[start_idx : start_idx + limit]
+            last_evaluated_key = str(start_idx + limit) if start_idx + limit < len(filtered) else None
+        
+        # If last_evaluated_key is a string (from fallback scan), just return it. If dict (from query), b64 encode it.
+        if isinstance(last_evaluated_key, str):
+            next_key_b64 = last_evaluated_key
+        else:
+            next_key_b64 = base64.b64encode(json.dumps(last_evaluated_key, cls=DecimalEncoder).encode('utf-8')).decode('utf-8') if last_evaluated_key else None
+
+        response_body = {
+            "schemes": paginated_schemes,
+            "limit": limit,
+            "nextKey": next_key_b64
+        }
+
+        headers = cors_headers()
+        headers['Cache-Control'] = 'public, max-age=300'
+        
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': json.dumps(response_body, cls=DecimalEncoder)
+        }
+    except Exception as e:
+        return {'statusCode': 500, 'headers': cors_headers(), 'body': json.dumps({'error': str(e)})}
+
+
+def handle_categories(event):
+    """GET /scheme-categories (or /scheme/categories)"""
+    try:
+        all_s = _fetch_all_schemes()
+        counts = {}
+        for s in all_s:
+            cats = s.get('categories', [])
+            if isinstance(cats, list):
+                for c in cats:
+                    counts[c] = counts.get(c, 0) + 1
+            elif isinstance(cats, str):
+                for c in cats.split(','):
+                    c = c.strip()
+                    if c:
+                        counts[c] = counts.get(c, 0) + 1
+
+        headers = cors_headers()
+        headers['Cache-Control'] = 'public, max-age=3600' # Aggressive 1 hour cache
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': json.dumps({'categories': counts})
+        }
+    except Exception as e:
+        return {'statusCode': 500, 'headers': cors_headers(), 'body': json.dumps({'error': str(e)})}
+
+
 def lambda_handler(event, context):
     try:
         method = event.get('httpMethod', 'GET')
         path = event.get('path', '') or event.get('resource', '')
+
+        # GET /scheme/all (Paginated)
+        if method == 'GET' and 'scheme/all' in path:
+            return handle_paginated_schemes(event)
+            
+        # GET /scheme-categories
+        if method == 'GET' and 'categories' in path:
+            return handle_categories(event)
 
         # POST /scheme/search-ai
         if method == 'POST' and 'search-ai' in path:
@@ -307,32 +485,7 @@ def lambda_handler(event, context):
                 'body': json.dumps({'error': 'schemeId is required'})
             }
 
-        if scheme_id.lower() == 'all':
-            items = _fetch_all_schemes()
 
-            # Return lightweight data for listing
-            listing = []
-            for item in items:
-                listing.append({
-                    'schemeId': item.get('schemeId', ''),
-                    'nameEnglish': item.get('nameEnglish', ''),
-                    'shortTitle': item.get('shortTitle', ''),
-                    'level': item.get('level', ''),
-                    'type': item.get('type', ''),
-                    'state': item.get('state', []),
-                    'ministry': item.get('ministry', ''),
-                    'categories': item.get('categories', []),
-                    'tags': item.get('tags', []),
-                    'briefDescription': str(item.get('briefDescription', ''))[:200],
-                    'applyUrl': item.get('applyUrl', ''),
-                    'annualBenefit': item.get('annualBenefit', 0),
-                })
-
-            return {
-                'statusCode': 200,
-                'headers': cors_headers(),
-                'body': json.dumps(listing, cls=DecimalEncoder)
-            }
 
         response = table.get_item(Key={'schemeId': scheme_id})
         item = response.get('Item')
