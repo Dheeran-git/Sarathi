@@ -1,127 +1,109 @@
-import { useState, useMemo, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Search, Loader2, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Search, Loader2, AlertCircle, FileText, CheckCircle2 } from 'lucide-react';
 import SchemeCard from '../components/ui/SchemeCard';
 import EmptyState from '../components/ui/EmptyState';
-import { fetchAllSchemes } from '../utils/api';
+import { fetchPaginatedSchemes, searchSchemesAI } from '../utils/api';
 import { useCitizen } from '../context/CitizenContext';
+import { VirtuosoGrid } from 'react-virtuoso';
 
-
-const PAGE_SIZE = 20;
 
 const SORT_OPTIONS = [
   { value: 'benefit_desc', label: 'Benefit (High → Low)' },
-  { value: 'name_asc',     label: 'Name (A → Z)' },
-  { value: 'category',     label: 'Category' },
+  { value: 'name_asc', label: 'Name (A → Z)' }
 ];
 
 function SchemesPage() {
   const { eligibleSchemes } = useCitizen();
-  const [allSchemes, setAllSchemes] = useState([]);
+
+  // Data State
+  const [displaySchemes, setDisplaySchemes] = useState([]);
+  const [aiAnalysisResult, setAiAnalysisResult] = useState('');
+  const [nextKey, setNextKey] = useState(null);
+  const [hasMore, setHasMore] = useState(true);
+
+  // UI State
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
+  const [isAiSearch, setIsAiSearch] = useState(false);
+
+  // Filter State
   const [category, setCategory] = useState('all');
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('benefit_desc');
-  const [currentPage, setCurrentPage] = useState(1);
+  const [level, setLevel] = useState('all');
 
   const eligibleIds = useMemo(() => new Set(eligibleSchemes.map((s) => s.id || s.schemeId)), [eligibleSchemes]);
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
+  // Load Categories (Mocked until dynamically pulled or derived if needed)
+  const categoryCounts = { 'all': 0 }; // Temporarily ignoring dynamic category counts for speed
+
+  const loadSchemes = async (isLoadMore = false) => {
+    if (isLoadMore) {
+      if (!hasMore || loadingMore) return;
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+      setDisplaySchemes([]);
+      setNextKey(null);
+      setHasMore(true);
+      setAiAnalysisResult('');
+      setIsAiSearch(false);
+    }
     setError('');
-    fetchAllSchemes()
-      .then((data) => {
-        if (!cancelled) setAllSchemes(Array.isArray(data) ? data : []);
-      })
-      .catch((err) => {
-        console.error("fetchAllSchemes failed:", err);
-        if (!cancelled) setError('Failed to load schemes. Please try again.');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, []);
 
-  // D3: Reset page on filter/sort change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [category, search, sortBy]);
+    try {
+      if (search.trim().length > 3 && search.toLowerCase().includes('help')) {
+        // Fake an AI Search trigger if the word "help" is there
+        setIsAiSearch(true);
+        const aiData = await searchSchemesAI(search);
+        setDisplaySchemes(aiData.schemes || []);
+        setAiAnalysisResult(aiData.analysis || 'Based on your query, here are the most relevant schemes selected by our AI.');
+        setHasMore(false);
+      } else {
+        const data = await fetchPaginatedSchemes(
+          20,
+          sortBy,
+          category,
+          level,
+          search,
+          isLoadMore ? nextKey : null
+        );
 
-  const [level, setLevel] = useState('all'); // 'all', 'state', 'central'
+        setDisplaySchemes(prev => isLoadMore ? [...prev, ...(data.schemes || [])] : (data.schemes || []));
 
-  // Dynamic tags/categories extraction
-  const dynamicCategories = useMemo(() => {
-    const cats = new Set();
-    for (const s of allSchemes) {
-       let source = s.categories || s.tags || [];
-       if (typeof source === 'string') source = source.split(',');
-       for (const c of source) {
-           const cleanly = String(c).trim();
-           if (cleanly && cleanly.length > 2) cats.add(cleanly);
-       }
-    }
-    const arr = Array.from(cats).sort();
-    return arr;
-  }, [allSchemes]);
-
-  // Category counts mapping
-  const categoryCounts = useMemo(() => {
-    const counts = { all: allSchemes.length };
-    for (const s of allSchemes) {
-      let source = s.categories || s.tags || [];
-      if (typeof source === 'string') source = source.split(',');
-      for (const c of source) {
-          const cleanly = String(c).trim();
-          if (cleanly) counts[cleanly] = (counts[cleanly] || 0) + 1;
+        if (data.nextKey) {
+          setNextKey(data.nextKey);
+          setHasMore(true);
+        } else {
+          setHasMore(false);
+          setNextKey(null);
+        }
       }
+    } catch (err) {
+      console.error("fetch schemes failed:", err);
+      setError('Failed to load schemes from database. Please try again.');
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
     }
-    return counts;
-  }, [allSchemes]);
+  };
 
-  const filtered = useMemo(() => {
-    let results = allSchemes;
-    if (level !== 'all') {
-        const tgt = level.toLowerCase();
-        results = results.filter(s => (s.level || '').toLowerCase().includes(tgt));
-    }
-    if (category !== 'all') {
-        results = results.filter(s => {
-            let source = s.categories || s.tags || [];
-            if (typeof source === 'string') source = source.split(',');
-            return source.some(c => String(c).trim() === category);
-        });
-    }
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      results = results.filter(
-        (s) =>
-          (s.nameEnglish || s.name || '').toLowerCase().includes(q) ||
-          (s.ministry || '').toLowerCase().includes(q) || 
-          (s.state || '').toLowerCase().includes(q)
-      );
-    }
-    return results;
-  }, [allSchemes, category, search, level]);
+  // Debounce regular search inputs and filter changes
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      loadSchemes(false);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [category, search, sortBy, level]);
 
-  // D3: Sort
-  const sortedFiltered = useMemo(() => {
-    const arr = [...filtered];
-    if (sortBy === 'benefit_desc') {
-      arr.sort((a, b) => (b.annualBenefit || 0) - (a.annualBenefit || 0));
-    } else if (sortBy === 'name_asc') {
-      arr.sort((a, b) => (a.nameEnglish || a.name || '').localeCompare(b.nameEnglish || b.name || ''));
-    } else if (sortBy === 'category') {
-      arr.sort((a, b) => (a.category || '').localeCompare(b.category || ''));
-    }
-    return arr;
-  }, [filtered, sortBy]);
 
-  // D3: Pagination
-  const totalPages = Math.ceil(sortedFiltered.length / PAGE_SIZE);
-  const paginated = sortedFiltered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const ItemContainer = ({ children, ...props }) => (
+    <div {...props} className="h-full w-full">
+      {children}
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-off-white">
@@ -136,7 +118,7 @@ function SchemesPage() {
             Government Schemes
           </motion.h1>
           <p className="font-body text-sm text-gray-300 mt-1">
-            {loading ? 'Loading schemes...' : `${allSchemes.length} schemes available • ${eligibleSchemes.length} matched to your profile`}
+            {loading && !loadingMore ? 'Crunching catalog...' : `Millions of rupees in benefits • AI matched to your profile`}
           </p>
         </div>
       </div>
@@ -147,17 +129,18 @@ function SchemesPage() {
           <div className="relative flex-1 min-w-[260px]">
             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
+              type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search scheme name or ministry..."
+              placeholder="Search scheme name, ministry, or ask AI (e.g., 'help me with farming')"
               className="w-full h-11 pl-10 pr-4 rounded-xl border border-gray-300 bg-white font-body text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-saffron focus:ring-2 focus:ring-saffron/20 transition-colors"
             />
           </div>
-          {/* D3: Sort dropdown */}
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="h-11 px-3 rounded-xl border border-gray-300 bg-white font-body text-sm text-gray-700 focus:outline-none focus:border-saffron focus:ring-2 focus:ring-saffron/20 transition-colors cursor-pointer"
+            disabled={isAiSearch}
+            className="h-11 px-3 rounded-xl border border-gray-300 bg-white font-body text-sm text-gray-700 focus:outline-none focus:border-saffron focus:ring-2 focus:ring-saffron/20 transition-colors cursor-pointer disabled:opacity-50"
           >
             {SORT_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
@@ -167,129 +150,108 @@ function SchemesPage() {
 
         {/* Filters Row: Level + Categories */}
         <div className="flex flex-col gap-4 mb-6">
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              <span className="text-sm font-medium text-gray-500 uppercase tracking-widest shrink-0 mr-2">Level</span>
-              {['all', 'central', 'state'].map((lvl) => (
-                <button
-                  key={lvl}
-                  onClick={() => setLevel(lvl)}
-                  className={`capitalize shrink-0 px-4 py-1.5 rounded-full font-body text-sm font-medium transition-all duration-200 ${
-                    level === lvl
-                      ? 'bg-saffron text-white shadow-sm'
-                      : 'bg-white text-gray-700 border border-gray-200 hover:border-gray-400'
-                  }`}
-                >
-                  {lvl}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              <span className="text-sm font-medium text-gray-500 uppercase tracking-widest shrink-0 mr-2">Category</span>
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            <span className="text-sm font-medium text-gray-500 uppercase tracking-widest shrink-0 mr-2">Jurisdiction</span>
+            {['all', 'central', 'state'].map((lvl) => (
               <button
-                key="all"
-                onClick={() => setCategory('all')}
-                className={`shrink-0 flex items-center gap-1.5 px-4 py-1.5 rounded-full font-body text-sm font-medium transition-all duration-200 ${
-                  category === 'all'
+                key={lvl}
+                onClick={() => setLevel(lvl)}
+                disabled={isAiSearch}
+                className={`capitalize shrink-0 px-4 py-1.5 rounded-full font-body text-sm font-medium transition-all duration-200 disabled:opacity-50 ${level === lvl
+                    ? 'bg-saffron text-white shadow-sm'
+                    : 'bg-white text-gray-700 border border-gray-200 hover:border-gray-400'
+                  }`}
+              >
+                {lvl}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            <span className="text-sm font-medium text-gray-500 uppercase tracking-widest shrink-0 mr-2">Sectors</span>
+            {['all', 'Agriculture', 'Education', 'Health', 'Business', 'Housing'].map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setCategory(cat)}
+                disabled={isAiSearch}
+                className={`shrink-0 flex items-center gap-1.5 px-4 py-1.5 rounded-full font-body text-sm font-medium transition-all duration-200 disabled:opacity-50 ${category === cat
                     ? 'bg-navy text-white shadow-sm'
                     : 'bg-white text-gray-700 border border-gray-200 hover:border-gray-400'
-                }`}
+                  }`}
               >
-                All
-                {!loading && categoryCounts['all'] > 0 && (
-                  <span className={`text-[10px] font-mono ${category === 'all' ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'} px-1.5 py-0.5 rounded-full`}>
-                    {categoryCounts['all']}
-                  </span>
-                )}
+                {cat}
               </button>
-              {dynamicCategories.map((cat) => {
-                const count = categoryCounts[cat] || 0;
-                return (
-                  <button
-                    key={cat}
-                    onClick={() => setCategory(cat)}
-                    className={`shrink-0 flex items-center gap-1.5 px-4 py-1.5 rounded-full font-body text-sm font-medium transition-all duration-200 ${
-                      category === cat
-                        ? 'bg-navy text-white shadow-sm'
-                        : 'bg-white text-gray-700 border border-gray-200 hover:border-gray-400'
-                    }`}
-                  >
-                    {cat}
-                    {!loading && count > 0 && (
-                      <span className={`text-[10px] font-mono ${category === cat ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'} px-1.5 py-0.5 rounded-full`}>
-                        {count}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+            ))}
+          </div>
         </div>
 
-        {/* States */}
-        {loading && (
-          <div className="flex items-center justify-center py-24">
-            <Loader2 size={32} className="animate-spin text-saffron" />
+        {/* Logic Results Block */}
+        {loading && !loadingMore && (
+          <div className="flex flex-col items-center justify-center py-24 gap-4">
+            <Loader2 size={36} className="animate-spin text-saffron" />
+            <p className="font-body text-gray-500 text-sm animate-pulse">Querying Sarathi Knowledge Base...</p>
           </div>
         )}
 
         {!loading && error && (
-          <div className="flex items-center gap-3 p-4 rounded-xl bg-danger/10 border border-danger/20 text-danger font-body text-sm mb-6">
+          <div className="flex items-center gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 font-body text-sm mb-6">
             <AlertCircle size={18} />
             {error}
           </div>
         )}
 
-        {!loading && !error && paginated.length > 0 && (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {paginated.map((scheme, i) => (
-                <motion.div
-                  key={scheme.schemeId || scheme.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.03, duration: 0.3 }}
-                >
+        {!loading && isAiSearch && aiAnalysisResult && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            className="mb-8 bg-saffron/10 border border-saffron/30 rounded-2xl p-6"
+          >
+            <h3 className="flex items-center gap-2 font-display font-bold text-navy mb-2"><CheckCircle2 className="text-saffron" size={20} /> AI Semantic Match Complete</h3>
+            <p className="font-body text-gray-800 leading-relaxed">{aiAnalysisResult}</p>
+          </motion.div>
+        )}
+
+        {!loading && !error && displaySchemes.length > 0 && (
+          <div className="w-full">
+            <VirtuosoGrid
+              style={{ width: '100%', height: 'calc(100vh - 350px)' }}
+              data={displaySchemes}
+              endReached={() => loadSchemes(true)}
+              overscan={400}
+              listClassName="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-12"
+              itemClassName="h-full"
+              itemContent={(index, scheme) => (
+                <ItemContainer>
                   <SchemeCard
                     scheme={{ ...scheme, id: scheme.schemeId || scheme.id }}
                     isEligible={eligibleIds.has(scheme.schemeId || scheme.id)}
                   />
-                </motion.div>
-              ))}
-            </div>
-
-            {/* D3: Pagination controls */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-4 mt-8">
-                <button
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="flex items-center gap-1 h-9 px-4 rounded-lg border border-gray-200 bg-white font-body text-sm text-gray-600 hover:border-saffron/50 hover:text-saffron disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                >
-                  <ChevronLeft size={16} /> Prev
-                </button>
-                <span className="font-body text-sm text-gray-500">
-                  Page {currentPage} of {totalPages}
-                  <span className="text-gray-400 ml-1">({sortedFiltered.length} schemes)</span>
-                </span>
-                <button
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="flex items-center gap-1 h-9 px-4 rounded-lg border border-gray-200 bg-white font-body text-sm text-gray-600 hover:border-saffron/50 hover:text-saffron disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                >
-                  Next <ChevronRight size={16} />
-                </button>
-              </div>
-            )}
-          </>
+                </ItemContainer>
+              )}
+              components={{
+                Footer: () => (
+                  <div className="py-8 flex justify-center w-full col-span-full">
+                    {loadingMore ? (
+                      <div className="flex items-center gap-2 text-saffron font-body text-sm font-medium">
+                        <Loader2 size={16} className="animate-spin" /> Loading more schemes...
+                      </div>
+                    ) : !hasMore ? (
+                      <div className="flex items-center gap-2 text-gray-400 font-body text-sm">
+                        <FileText size={16} /> End of catalog
+                      </div>
+                    ) : null}
+                  </div>
+                )
+              }}
+            />
+          </div>
         )}
 
-        {!loading && !error && sortedFiltered.length === 0 && (
+        {!loading && !error && displaySchemes.length === 0 && (
           <EmptyState
             title="No Schemes Found"
-            subtitle="Try a different category or search term."
-            ctaLabel="Show All"
-            onCtaClick={() => { setCategory('all'); setSearch(''); }}
+            subtitle="Try adjusting your filters or expanding your search."
+            ctaLabel="Clear All Filters"
+            onCtaClick={() => { setCategory('all'); setSearch(''); setLevel('all'); }}
           />
         )}
       </div>

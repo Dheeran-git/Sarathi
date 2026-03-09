@@ -111,6 +111,31 @@ export async function fetchAllSchemes() {
   return Array.isArray(data) ? data : [];
 }
 
+/** GET /scheme/all (Paginated) */
+export const fetchPaginatedSchemes = async (limit = 20, sortBy = 'default', category = 'all', level = 'all', search = '', nextKey = null) => {
+  try {
+    const params = new URLSearchParams({ limit, sortBy, category, level });
+    if (search) params.append('search', search);
+    if (nextKey) params.append('nextKey', nextKey);
+
+    const res = await api.get(`/scheme/all?${params.toString()}`);
+    return unwrapBody(res);
+  } catch (err) {
+    console.error('fetchPaginatedSchemes Error:', err);
+    throw err;
+  }
+};
+
+/** POST /scheme/search */
+export const searchSchemesAI = async (query) => {
+  try {
+    const res = await api.post('/scheme/search', { query });
+    return unwrapBody(res);
+  } catch (err) {
+    throw err;
+  }
+};
+
 /** GET /panchayat/{panchayatId} */
 export async function getPanchayatStats(panchayatId) {
   if (!panchayatId) throw new Error('panchayatId is required');

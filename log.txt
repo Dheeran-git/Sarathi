@@ -1,0 +1,5 @@
+31a01c3 testing deployment
+7eaec16 seeded proper actual schemes, fixed the data consistencies, fixed the bedrock issues across various places in the website, refined the eligibilty of schemes, refined the chat questions to collect the user data
+6c3326c merge friend's changes + add package-lock.json
+9d48b10 Merge branch 'test-friend-version'
+5bcd603 schemes fetched, collected and stored as .json

@@ -5,6 +5,7 @@ import { ArrowRight, Home, Heart, Wheat, GraduationCap, Baby, Briefcase, FileTex
 import { animateCounter } from '../utils/formatters';
 import { t } from '../utils/translations';
 import { useLanguage } from '../context/LanguageContext';
+import { fetchPaginatedSchemes } from '../utils/api';
 
 /* ── Framer helpers ──────────────────────────────────────────────────────── */
 const fadeUp = (delay = 0) => ({
@@ -187,6 +188,12 @@ function PersonaCard({ name, detail, quote, outcome }) {
 function LandingPage() {
   const { language } = useLanguage();
   const T = (key) => t(key, language);
+
+  useEffect(() => {
+    // Prefetch first page of schemes silently to prime the browser cache
+    // using the new pagination-ready cursor API natively built for DynamoDB
+    fetchPaginatedSchemes(20, 'benefit_desc', 'all', 'all', '', null).catch(() => { });
+  }, []);
 
   return (
     <div className="overflow-hidden">
