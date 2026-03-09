@@ -30,6 +30,8 @@ const FIELD_LABELS = {
   mgnregaJobCardNumber: 'Job Card Number',
   panchayatName: 'Panchayat',
   village: 'Village',
+  mobile: 'Mobile Number',
+  bankAccountLast4: 'Bank Account Last 4',
 };
 
 function ConfidenceBadge({ score }) {

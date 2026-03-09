@@ -363,6 +363,12 @@ def handle_pre_fill(event):
         pre_filled['state'] = citizen_profile['state']
     if citizen_profile.get('category'):
         pre_filled['category'] = citizen_profile['category']
+    if citizen_profile.get('mobile'):
+        pre_filled['mobile'] = citizen_profile['mobile']
+    if citizen_profile.get('aadhaarLast4'):
+        pre_filled['aadhaarLast4'] = citizen_profile['aadhaarLast4']
+    if citizen_profile.get('bankAccountLast4'):
+        pre_filled['bankAccountLast4'] = citizen_profile['bankAccountLast4']
 
     # Overlay extracted document data (higher confidence)
     for doc_type, fields in extracted_docs.items():

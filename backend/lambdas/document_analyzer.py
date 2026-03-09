@@ -139,6 +139,15 @@ def _parse_aadhaar(lines, text, entities, pii_entities):
             confidences['aadhaarLast4'] = round(line['confidence'])
             break
 
+    # Mobile number (10-digit Indian mobile starting with 6-9)
+    mobile_pattern = re.compile(r'\b[6-9]\d{9}\b')
+    for line in lines:
+        m = mobile_pattern.search(line['text'])
+        if m:
+            fields['mobile'] = m.group(0)
+            confidences['mobile'] = round(line['confidence'])
+            break
+
     # Address — LOCATION entities
     location_entities = [e for e in entities if e.get('Type') == 'LOCATION']
     if location_entities:
@@ -255,12 +264,59 @@ def _parse_job_card(lines, text, entities, pii_entities):
     return fields, confidences
 
 
+def _parse_bank_statement(lines, text, entities, pii_entities):
+    """Map bank statement / passbook fields."""
+    fields = {}
+    confidences = {}
+
+    # Account holder name — first PERSON entity
+    person_entities = [e for e in entities if e.get('Type') == 'PERSON']
+    if person_entities:
+        fields['name'] = person_entities[0]['Text']
+        confidences['name'] = round(person_entities[0].get('Score', 0) * 100)
+
+    # Bank account number — last 4 digits
+    # Match patterns like "A/C No: 12345678901234" or "Account Number 12345678901234"
+    acct_pattern = re.compile(r'(?:a/?c\s*(?:no\.?|number)?|account\s*(?:no\.?|number)?)[:\s]*(\d{9,18})', re.IGNORECASE)
+    acct_standalone = re.compile(r'\b(\d{9,18})\b')
+    for line in lines:
+        m = acct_pattern.search(line['text'])
+        if m:
+            fields['bankAccountLast4'] = m.group(1)[-4:]
+            confidences['bankAccountLast4'] = round(line['confidence'])
+            break
+    # Fallback: look for long digit sequences near "account" keyword
+    if 'bankAccountLast4' not in fields:
+        for i, line in enumerate(lines):
+            if 'account' in line['text'].lower() or 'a/c' in line['text'].lower():
+                # Check this line and next line for account number
+                for check_line in lines[i:i+2]:
+                    m = acct_standalone.search(check_line['text'])
+                    if m:
+                        fields['bankAccountLast4'] = m.group(1)[-4:]
+                        confidences['bankAccountLast4'] = round(check_line['confidence'])
+                        break
+                if 'bankAccountLast4' in fields:
+                    break
+
+    # Mobile number
+    mobile_pattern = re.compile(r'\b[6-9]\d{9}\b')
+    for line in lines:
+        m = mobile_pattern.search(line['text'])
+        if m:
+            fields['mobile'] = m.group(0)
+            confidences['mobile'] = round(line['confidence'])
+            break
+
+    return fields, confidences
+
+
 DOCUMENT_PARSERS = {
     'aadhaar': _parse_aadhaar,
     'income_cert': _parse_income_cert,
     'ration_card': _parse_ration_card,
     'job_card': _parse_job_card,
-    'bank_statement': lambda lines, text, ents, pii: ({}, {}),
+    'bank_statement': _parse_bank_statement,
 }
 
 
@@ -342,6 +398,9 @@ def _auto_update_citizen_profile(citizen_id, extracted_fields, document_type):
         'familySize': 'familySize',
         'village': 'village',
         'address': 'address',
+        'aadhaarLast4': 'aadhaarLast4',
+        'mobile': 'mobile',
+        'bankAccountLast4': 'bankAccountLast4',
     }
     for extract_key, profile_key in field_mapping.items():
         if extract_key in extracted_fields and extracted_fields[extract_key]:

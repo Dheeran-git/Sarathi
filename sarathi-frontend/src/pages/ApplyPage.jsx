@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, ExternalLink, FileText, CheckCircle, Loader2, ClipboardList, Download, Upload, Sparkles } from 'lucide-react';
 import { fetchScheme, submitApplication, preFillApplication } from '../utils/api';
@@ -25,9 +25,9 @@ function ApplyPage() {
     const [checkedDocs, setCheckedDocs] = useState({});
     const [personalDetails, setPersonalDetails] = useState({
         name: citizenProfile?.name || '',
-        aadhaarLast4: '',
-        mobile: '',
-        bankAccountLast4: '',
+        aadhaarLast4: citizenProfile?.aadhaarLast4 || '',
+        mobile: citizenProfile?.mobile || '',
+        bankAccountLast4: citizenProfile?.bankAccountLast4 || '',
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submittedAppId, setSubmittedAppId] = useState(null);
@@ -43,6 +43,16 @@ function ApplyPage() {
             .catch(() => { })
             .finally(() => setLoading(false));
     }, [schemeId]);
+
+    // Auto-trigger AI auto-fill when scheme loads and profile exists
+    const autoFillTriggeredRef = useRef(false);
+    useEffect(() => {
+        if (scheme && citizenProfile && !autoFillDone && !autoFillTriggeredRef.current) {
+            autoFillTriggeredRef.current = true;
+            handleAutoFill();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [scheme, citizenProfile]);
 
     const handleAutoFill = async () => {
         setIsAutoFilling(true);
