@@ -1,11 +1,22 @@
 import React from 'react';
 import AdminSidebar from './components/ui/AdminSidebar';
 import { useAuth } from './context/AuthContext';
-import { Outlet } from 'react-router-dom';
+import { Outlet, Navigate } from 'react-router-dom';
 
 function AdminLayout() {
-    // const { isAdmin } = useAuth();
-    // if (!isAdmin) return null; // Safety check disabled for testing
+    const { isAdmin, isLoading } = useAuth();
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-navy">
+                <div className="w-10 h-10 border-4 border-saffron border-t-transparent rounded-full animate-spin" />
+            </div>
+        );
+    }
+
+    if (!isAdmin) {
+        return <Navigate to="/admin/login" replace />;
+    }
 
     return (
         <div className="flex bg-off-white min-h-screen">

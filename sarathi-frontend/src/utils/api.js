@@ -151,6 +151,14 @@ export async function fetchAllSchemes() {
   return Array.isArray(data) ? data : [];
 }
 
+/** GET /scheme/all?limit=20&sortBy=...&category=...&nextKey=... */
+export async function fetchPaginatedSchemes(limit = 20, sortBy = 'benefit_desc', category = 'all', level = 'all', search = '', nextKey = null) {
+  const params = new URLSearchParams({ limit, sortBy, category, level });
+  if (search) params.append('search', search);
+  if (nextKey) params.append('nextKey', nextKey);
+  return unwrapBody(await api.get(`/scheme/all?${params.toString()}`));
+}
+
 /** GET /panchayat/{panchayatId} */
 export async function getPanchayatStats(panchayatId) {
   if (!panchayatId) throw new Error('panchayatId is required');

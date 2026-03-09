@@ -35,12 +35,13 @@ const PanchayatVerifyPage = lazy(() => import('./pages/PanchayatVerifyPage'));
 const PanchayatForgotPasswordPage = lazy(() => import('./pages/PanchayatForgotPasswordPage'));
 
 // Admin pages
-// Admin auth pages removed (direct access enabled)
+const AdminLoginPage = lazy(() => import('./pages/AdminLoginPage'));
+const AdminSignupPage = lazy(() => import('./pages/AdminSignupPage'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const AdminApplicantsPage = lazy(() => import('./pages/AdminApplicantsPage'));
 const AdminAnalyticsPage = lazy(() => import('./pages/AdminAnalyticsPage'));
+const AdminSettingsPage = lazy(() => import('./pages/AdminSettingsPage'));
 const SchemeEditor = lazy(() => import('./pages/SchemeEditor'));
-// admin forgot password removed (not in source)
 
 // Panchayat Portal Pages
 const PanchayatCitizenRegistry = lazy(() => import('./pages/panchayat/PanchayatCitizenRegistry'));
@@ -129,7 +130,7 @@ function App() {
                   <Route path="/admin/applicants" element={<PageTransition><AdminApplicantsPage /></PageTransition>} />
                   <Route path="/admin/schemes/new" element={<PageTransition><SchemeEditor /></PageTransition>} />
                   <Route path="/admin/analytics" element={<PageTransition><AdminAnalyticsPage /></PageTransition>} />
-                  <Route path="/admin/settings" element={<PageTransition><div className="p-8"><h1 className="text-3xl font-display text-navy text-center mt-20">Settings <span className="text-saffron">(Coming Soon)</span></h1></div></PageTransition>} />
+                  <Route path="/admin/settings" element={<PageTransition><AdminSettingsPage /></PageTransition>} />
                 </Route>
 
                 {/* Citizen auth */}
@@ -145,8 +146,8 @@ function App() {
                 <Route path="/panchayat/forgot-password" element={<PageTransition><PanchayatForgotPasswordPage /></PageTransition>} />
 
                 {/* Admin auth */}
-                {/* Admin auth routes removed */}
-                {/* Admin forgot password removed */}
+                <Route path="/admin/login" element={<PageTransition><AdminLoginPage /></PageTransition>} />
+                <Route path="/admin/signup" element={<PageTransition><AdminSignupPage /></PageTransition>} />
 
                 {/* Redirects for removed/moved routes */}
                 <Route path="/smart-assistant" element={<Navigate to="/agent" replace />} />

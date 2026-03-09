@@ -1,29 +1,40 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Loader2, AlertCircle, ChevronLeft, ChevronRight, Sparkles, Zap } from 'lucide-react';
+import { Search, Loader2, AlertCircle, Sparkles, Zap } from 'lucide-react';
+import { VirtuosoGrid } from 'react-virtuoso';
 import SchemeCard from '../components/ui/SchemeCard';
 import EmptyState from '../components/ui/EmptyState';
-import { fetchAllSchemes, searchSchemesAI } from '../utils/api';
+import { searchSchemesAI, fetchPaginatedSchemes } from '../utils/api';
 import { useCitizen } from '../context/CitizenContext';
-
 
 const PAGE_SIZE = 20;
 
 const SORT_OPTIONS = [
   { value: 'benefit_desc', label: 'Benefit (High \u2192 Low)' },
-  { value: 'name_asc', label: 'Name (A \u2192 Z)' },
-  { value: 'category', label: 'Category' },
+  { value: 'name_asc', label: 'Name (A \u2192 Z)' }
 ];
+
+const CATEGORIES = [
+  'Agriculture', 'Education', 'Health', 'Housing', 'Women', 'Startup',
+  'Pension', 'Disability', 'Minority', 'Youth', 'Skill Development'
+].sort();
 
 function SchemesPage() {
   const { eligibleSchemes, citizenProfile } = useCitizen();
-  const [allSchemes, setAllSchemes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
+
   const [category, setCategory] = useState('all');
+  const [level, setLevel] = useState('all');
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [sortBy, setSortBy] = useState('benefit_desc');
-  const [currentPage, setCurrentPage] = useState(1);
+
+  // Infinite Scroll State
+  const [displaySchemes, setDisplaySchemes] = useState([]);
+  const [nextKey, setNextKey] = useState(null);
+  const [hasMore, setHasMore] = useState(true);
 
   // AI search state
   const [aiSearchEnabled, setAiSearchEnabled] = useState(false);
@@ -32,34 +43,81 @@ function SchemesPage() {
   const [aiError, setAiError] = useState('');
   const aiDebounceRef = useRef(null);
 
+  // Intersection Observer Ref
+  const observerRef = useRef();
+
   const eligibleIds = useMemo(() => new Set(eligibleSchemes.map((s) => s.id || s.schemeId)), [eligibleSchemes]);
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Server-Side Initial Fetch Hook
+  useEffect(() => {
+    if (aiSearchEnabled && search.trim()) return;
+
     let cancelled = false;
     setLoading(true);
     setError('');
-    fetchAllSchemes()
+
+    // Reset list when filters change
+    fetchPaginatedSchemes(PAGE_SIZE, sortBy, category, level, debouncedSearch, null)
       .then((data) => {
-        if (!cancelled) setAllSchemes(Array.isArray(data) ? data : []);
+        if (!cancelled) {
+          setDisplaySchemes(data.schemes || []);
+          setNextKey(data.nextKey || null);
+          setHasMore(!!data.nextKey);
+        }
       })
       .catch((err) => {
-        console.error("fetchAllSchemes failed:", err);
+        console.error("fetchPaginatedSchemes failed:", err);
         if (!cancelled) setError('Failed to load schemes. Please try again.');
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
+
     return () => { cancelled = true; };
-  }, []);
+  }, [sortBy, category, level, debouncedSearch, aiSearchEnabled]);
 
-  // D3: Reset page on filter/sort change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [category, search, sortBy]);
+  // Load More Function for Infinite Scroll
+  const loadMoreSchemes = useCallback(() => {
+    if (loadingMore || !hasMore || (aiSearchEnabled && search.trim())) return;
 
-  const [level, setLevel] = useState('all'); // 'all', 'state', 'central'
+    setLoadingMore(true);
+    fetchPaginatedSchemes(PAGE_SIZE, sortBy, category, level, debouncedSearch, nextKey)
+      .then((data) => {
+        setDisplaySchemes(prev => [...prev, ...(data.schemes || [])]);
+        setNextKey(data.nextKey || null);
+        setHasMore(!!data.nextKey);
+      })
+      .catch((err) => {
+        console.error("Failed to load more schemes:", err);
+      })
+      .finally(() => {
+        setLoadingMore(false);
+      });
+  }, [loadingMore, hasMore, aiSearchEnabled, search, sortBy, category, level, debouncedSearch, nextKey]);
 
-  // Debounced AI search
+  // Infinite Scroll Observer Setup
+  const lastElementRef = useCallback(node => {
+    if (loading || loadingMore) return;
+    if (observerRef.current) observerRef.current.disconnect();
+
+    observerRef.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore) { // isShowingAIResults is handled implicitly by loadMoreSchemes condition
+        loadMoreSchemes();
+      }
+    });
+
+    if (node) observerRef.current.observe(node);
+  }, [loading, loadingMore, hasMore, loadMoreSchemes]);
+
+
+  // AI Search Hook
   const performAISearch = useCallback((query) => {
     if (!query.trim()) {
       setAiResults(null);
@@ -83,13 +141,10 @@ function SchemesPage() {
       });
   }, [citizenProfile]);
 
-  // Effect to debounce AI search calls
   useEffect(() => {
     if (!aiSearchEnabled) return;
 
-    if (aiDebounceRef.current) {
-      clearTimeout(aiDebounceRef.current);
-    }
+    if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current);
 
     if (!search.trim()) {
       setAiResults(null);
@@ -98,31 +153,29 @@ function SchemesPage() {
       return;
     }
 
-    // Show loading indicator immediately for responsiveness
     setAiLoading(true);
-
     aiDebounceRef.current = setTimeout(() => {
       performAISearch(search);
     }, 500);
 
     return () => {
-      if (aiDebounceRef.current) {
-        clearTimeout(aiDebounceRef.current);
-      }
+      if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current);
     };
   }, [search, aiSearchEnabled, performAISearch]);
 
-  // Clear AI state when toggling off
   const handleToggleAI = () => {
     setAiSearchEnabled((prev) => {
       const next = !prev;
       if (!next) {
-        // Turning off AI search — clear AI state
         setAiResults(null);
         setAiLoading(false);
         setAiError('');
+        // Restore non-AI state clean slate
+        setDisplaySchemes([]);
+        setNextKey(null);
+        setHasMore(true);
+        setLoading(true);
       } else if (search.trim()) {
-        // Turning on AI search with existing query — trigger search
         setAiLoading(true);
         if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current);
         aiDebounceRef.current = setTimeout(() => {
@@ -133,81 +186,8 @@ function SchemesPage() {
     });
   };
 
-  // Dynamic tags/categories extraction
-  const dynamicCategories = useMemo(() => {
-    const cats = new Set();
-    for (const s of allSchemes) {
-      let source = s.categories || s.tags || [];
-      if (typeof source === 'string') source = source.split(',');
-      for (const c of source) {
-        const cleanly = String(c).trim();
-        if (cleanly && cleanly.length > 2) cats.add(cleanly);
-      }
-    }
-    const arr = Array.from(cats).sort();
-    return arr;
-  }, [allSchemes]);
-
-  // Category counts mapping
-  const categoryCounts = useMemo(() => {
-    const counts = { all: allSchemes.length };
-    for (const s of allSchemes) {
-      let source = s.categories || s.tags || [];
-      if (typeof source === 'string') source = source.split(',');
-      for (const c of source) {
-        const cleanly = String(c).trim();
-        if (cleanly) counts[cleanly] = (counts[cleanly] || 0) + 1;
-      }
-    }
-    return counts;
-  }, [allSchemes]);
-
-  const filtered = useMemo(() => {
-    let results = allSchemes;
-    if (level !== 'all') {
-      const tgt = level.toLowerCase();
-      results = results.filter(s => String(s.level || '').toLowerCase().includes(tgt));
-    }
-    if (category !== 'all') {
-      results = results.filter(s => {
-        let source = s.categories || s.tags || [];
-        if (typeof source === 'string') source = source.split(',');
-        return source.some(c => String(c).trim() === category);
-      });
-    }
-    if (search.trim() && !aiSearchEnabled) {
-      const q = search.toLowerCase();
-      results = results.filter(
-        (s) =>
-          String(s.nameEnglish || s.name || '').toLowerCase().includes(q) ||
-          String(s.ministry || '').toLowerCase().includes(q) ||
-          String(s.state || '').toLowerCase().includes(q)
-      );
-    }
-    return results;
-  }, [allSchemes, category, search, level, aiSearchEnabled]);
-
-  // D3: Sort
-  const sortedFiltered = useMemo(() => {
-    const arr = [...filtered];
-    if (sortBy === 'benefit_desc') {
-      arr.sort((a, b) => (b.annualBenefit || 0) - (a.annualBenefit || 0));
-    } else if (sortBy === 'name_asc') {
-      arr.sort((a, b) => (a.nameEnglish || a.name || '').localeCompare(b.nameEnglish || b.name || ''));
-    } else if (sortBy === 'category') {
-      arr.sort((a, b) => (a.category || '').localeCompare(b.category || ''));
-    }
-    return arr;
-  }, [filtered, sortBy]);
-
-  // Determine which list to display: AI results or traditional filtered results
   const isShowingAIResults = aiSearchEnabled && search.trim() && aiResults && aiResults.results && !aiLoading;
-
-  const displaySchemes = isShowingAIResults ? aiResults.results : sortedFiltered;
-
-  // D3: Pagination
-  const totalPages = Math.ceil(displaySchemes.length / PAGE_SIZE);
-  const paginated = displaySchemes.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const currentViewData = isShowingAIResults ? aiResults.results : displaySchemes;
 
   return (
     <div className="min-h-screen bg-off-white">
@@ -222,7 +202,7 @@ function SchemesPage() {
             Government Schemes
           </motion.h1>
           <p className="font-body text-sm text-gray-300 mt-1">
-            {loading ? 'Loading schemes...' : `${allSchemes.length} schemes available \u2022 ${eligibleSchemes.length} matched to your profile`}
+            {loading && !loadingMore ? 'Fetching schemes...' : `Thousands of schemes available \u2022 ${eligibleSchemes.length} precisely matched to your profile`}
           </p>
         </div>
       </div>
@@ -242,11 +222,11 @@ function SchemesPage() {
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={aiSearchEnabled ? 'Ask naturally... e.g. "schemes for elderly widows"' : 'Search scheme name or ministry...'}
                 className={`w-full h-11 pl-10 pr-4 rounded-xl border bg-white font-body text-sm text-gray-900 placeholder-gray-400 focus:outline-none transition-colors ${aiSearchEnabled
-                    ? 'border-saffron/50 focus:border-saffron focus:ring-2 focus:ring-saffron/20'
-                    : 'border-gray-300 focus:border-saffron focus:ring-2 focus:ring-saffron/20'
+                  ? 'border-saffron/50 focus:border-saffron focus:ring-2 focus:ring-saffron/20'
+                  : 'border-gray-300 focus:border-saffron focus:ring-2 focus:ring-saffron/20'
                   }`}
               />
-              {aiSearchEnabled && aiLoading && (
+              {(loading || (aiSearchEnabled && aiLoading)) && (
                 <Loader2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-saffron" />
               )}
             </div>
@@ -255,15 +235,14 @@ function SchemesPage() {
               onClick={handleToggleAI}
               title={aiSearchEnabled ? 'Switch to regular search' : 'Switch to AI-powered search'}
               className={`shrink-0 flex items-center gap-1.5 h-11 px-3.5 rounded-xl font-body text-sm font-medium transition-all duration-300 ${aiSearchEnabled
-                  ? 'bg-saffron text-white shadow-saffron hover:bg-saffron-light'
-                  : 'bg-white text-gray-600 border border-gray-300 hover:border-saffron hover:text-saffron'
+                ? 'bg-saffron text-white shadow-saffron hover:bg-saffron-light'
+                : 'bg-white text-gray-600 border border-gray-300 hover:border-saffron hover:text-saffron'
                 }`}
             >
               <Sparkles size={16} />
               <span className="hidden sm:inline">AI</span>
             </button>
           </div>
-          {/* D3: Sort dropdown — hidden during AI search mode (AI determines relevance) */}
           {!isShowingAIResults && (
             <select
               value={sortBy}
@@ -287,7 +266,7 @@ function SchemesPage() {
           </div>
         )}
 
-        {/* Filters Row: Level + Categories — shown only in non-AI mode */}
+        {/* Filters Row: Level + Categories */}
         {!isShowingAIResults && (
           <div className="flex flex-col gap-4 mb-6">
             <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
@@ -297,8 +276,8 @@ function SchemesPage() {
                   key={lvl}
                   onClick={() => setLevel(lvl)}
                   className={`capitalize shrink-0 px-4 py-1.5 rounded-full font-body text-sm font-medium transition-all duration-200 ${level === lvl
-                      ? 'bg-saffron text-white shadow-sm'
-                      : 'bg-white text-gray-700 border border-gray-200 hover:border-gray-400'
+                    ? 'bg-saffron text-white shadow-sm'
+                    : 'bg-white text-gray-700 border border-gray-200 hover:border-gray-400'
                     }`}
                 >
                   {lvl}
@@ -312,37 +291,24 @@ function SchemesPage() {
                 key="all"
                 onClick={() => setCategory('all')}
                 className={`shrink-0 flex items-center gap-1.5 px-4 py-1.5 rounded-full font-body text-sm font-medium transition-all duration-200 ${category === 'all'
-                    ? 'bg-navy text-white shadow-sm'
-                    : 'bg-white text-gray-700 border border-gray-200 hover:border-gray-400'
+                  ? 'bg-navy text-white shadow-sm'
+                  : 'bg-white text-gray-700 border border-gray-200 hover:border-gray-400'
                   }`}
               >
                 All
-                {!loading && categoryCounts['all'] > 0 && (
-                  <span className={`text-[10px] font-mono ${category === 'all' ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'} px-1.5 py-0.5 rounded-full`}>
-                    {categoryCounts['all']}
-                  </span>
-                )}
               </button>
-              {dynamicCategories.map((cat) => {
-                const count = categoryCounts[cat] || 0;
-                return (
-                  <button
-                    key={cat}
-                    onClick={() => setCategory(cat)}
-                    className={`shrink-0 flex items-center gap-1.5 px-4 py-1.5 rounded-full font-body text-sm font-medium transition-all duration-200 ${category === cat
-                        ? 'bg-navy text-white shadow-sm'
-                        : 'bg-white text-gray-700 border border-gray-200 hover:border-gray-400'
-                      }`}
-                  >
-                    {cat}
-                    {!loading && count > 0 && (
-                      <span className={`text-[10px] font-mono ${category === cat ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'} px-1.5 py-0.5 rounded-full`}>
-                        {count}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+              {CATEGORIES.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setCategory(cat)}
+                  className={`shrink-0 flex items-center gap-1.5 px-4 py-1.5 rounded-full font-body text-sm font-medium transition-all duration-200 ${category === cat
+                    ? 'bg-navy text-white shadow-sm'
+                    : 'bg-white text-gray-700 border border-gray-200 hover:border-gray-400'
+                    }`}
+                >
+                  {cat}
+                </button>
+              ))}
             </div>
           </div>
         )}
@@ -359,6 +325,7 @@ function SchemesPage() {
             <button
               onClick={() => {
                 setSearch('');
+                setDebouncedSearch('');
                 setAiResults(null);
               }}
               className="font-body text-xs text-saffron hover:text-saffron-light transition-colors"
@@ -368,13 +335,11 @@ function SchemesPage() {
           </div>
         )}
 
-        {/* States */}
-        {(loading || (aiSearchEnabled && aiLoading && search.trim())) && (
+        {/* Loading Spinner for full page replacement */}
+        {loading && currentViewData.length === 0 && (
           <div className="flex flex-col items-center justify-center py-24 gap-3">
             <Loader2 size={32} className="animate-spin text-saffron" />
-            {aiSearchEnabled && aiLoading && search.trim() && !loading && (
-              <p className="font-body text-sm text-gray-500">AI is finding the best schemes for you...</p>
-            )}
+            <p className="font-body text-sm text-gray-500">Loading catalog...</p>
           </div>
         )}
 
@@ -392,74 +357,76 @@ function SchemesPage() {
           </div>
         )}
 
-        {!loading && !(aiSearchEnabled && aiLoading && search.trim()) && !error && paginated.length > 0 && (
+        {currentViewData.length > 0 && (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {paginated.map((scheme, i) => {
-                const schemeId = scheme.schemeId || scheme.id;
-                return (
-                  <motion.div
-                    key={schemeId}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.03, duration: 0.3 }}
-                  >
-                    <div className="relative h-full">
-                      {/* AI reason badge */}
-                      {isShowingAIResults && scheme.aiReason && (
-                        <div className="absolute -top-2 left-3 right-3 z-10">
-                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-saffron/10 border border-saffron/25 backdrop-blur-sm">
-                            <Sparkles size={11} className="text-saffron shrink-0" />
-                            <span className="font-body text-[11px] text-saffron-dark leading-tight line-clamp-1">
-                              {scheme.aiReason}
-                            </span>
+            <div className="w-full h-[80vh] mb-6">
+              <VirtuosoGrid
+                style={{ height: '100%', width: '100%' }}
+                totalCount={currentViewData.length}
+                data={currentViewData}
+                listClassName="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4"
+                itemClassName="flex flex-col h-full"
+                itemContent={(i, scheme) => {
+                  const schemeId = scheme.schemeId || scheme.id;
+                  const isLastElement = i === currentViewData.length - 1;
+
+                  return (
+                    <motion.div
+                      ref={isLastElement ? lastElementRef : null}
+                      key={schemeId}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: Math.min((i % PAGE_SIZE) * 0.03, 0.4), duration: 0.3 }}
+                      className="h-full flex-1"
+                    >
+                      <div className="relative h-full flex flex-col">
+                        {isShowingAIResults && scheme.aiReason && (
+                          <div className="absolute -top-2 left-3 right-3 z-10">
+                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-saffron/10 border border-saffron/25 backdrop-blur-sm">
+                              <Sparkles size={11} className="text-saffron shrink-0" />
+                              <span className="font-body text-[11px] text-saffron-dark leading-tight line-clamp-1">
+                                {scheme.aiReason}
+                              </span>
+                            </div>
                           </div>
+                        )}
+                        <div className={`flex-1 ${isShowingAIResults && scheme.aiReason ? 'pt-3' : ''}`}>
+                          <SchemeCard
+                            scheme={{ ...scheme, id: schemeId }}
+                            isEligible={eligibleIds.has(schemeId)}
+                          />
                         </div>
-                      )}
-                      <div className={isShowingAIResults && scheme.aiReason ? 'pt-3' : ''}>
-                        <SchemeCard
-                          scheme={{ ...scheme, id: schemeId }}
-                          isEligible={eligibleIds.has(schemeId)}
-                        />
                       </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
+                    </motion.div>
+                  );
+                }}
+              />
             </div>
 
-            {/* D3: Pagination controls */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-4 mt-8">
-                <button
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="flex items-center gap-1 h-9 px-4 rounded-lg border border-gray-200 bg-white font-body text-sm text-gray-600 hover:border-saffron/50 hover:text-saffron disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                >
-                  <ChevronLeft size={16} /> Prev
-                </button>
-                <span className="font-body text-sm text-gray-500">
-                  Page {currentPage} of {totalPages}
-                  <span className="text-gray-400 ml-1">({displaySchemes.length} schemes)</span>
-                </span>
-                <button
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="flex items-center gap-1 h-9 px-4 rounded-lg border border-gray-200 bg-white font-body text-sm text-gray-600 hover:border-saffron/50 hover:text-saffron disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                >
-                  Next <ChevronRight size={16} />
-                </button>
+            {/* Infinite Scroll Loader */}
+            {!isShowingAIResults && loadingMore && hasMore && (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 size={24} className="animate-spin text-saffron" />
+              </div>
+            )}
+
+            {/* End of results message */}
+            {!isShowingAIResults && !hasMore && currentViewData.length > 0 && (
+              <div className="text-center py-10 font-body text-sm text-gray-400">
+                You've reached the end of the catalog.
               </div>
             )}
           </>
         )}
 
-        {!loading && !(aiSearchEnabled && aiLoading && search.trim()) && !error && displaySchemes.length === 0 && (
+        {!loading && currentViewData.length === 0 && !error && (
           <EmptyState
             title={isShowingAIResults ? 'No AI Matches Found' : 'No Schemes Found'}
             subtitle={isShowingAIResults ? 'Try rephrasing your query or switch to regular search.' : 'Try a different category or search term.'}
-            ctaLabel={isShowingAIResults ? 'Clear Search' : 'Show All'}
-            onCtaClick={() => { setCategory('all'); setSearch(''); setAiResults(null); }}
+            ctaLabel={isShowingAIResults ? 'Clear Search' : 'Clear Filters'}
+            onCtaClick={() => {
+              setCategory('all'); setLevel('all'); setSearch(''); setDebouncedSearch(''); setAiResults(null);
+            }}
           />
         )}
       </div>

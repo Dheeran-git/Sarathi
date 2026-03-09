@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/authService';
 
@@ -37,6 +38,17 @@ function AdminLoginPage() {
             <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-20">
                 <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-saffron rounded-full filter blur-[100px] animate-pulse" />
                 <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-red-600 rounded-full filter blur-[120px] animate-pulse" />
+            </div>
+
+            {/* Back to Home Button */}
+            <div className="absolute top-6 left-6 z-20">
+                <Link
+                    to="/"
+                    className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors bg-navy-mid/50 hover:bg-navy-light/50 px-4 py-2 rounded-xl backdrop-blur-sm border border-navy-light/30"
+                >
+                    <ArrowLeft size={18} />
+                    <span className="font-body text-sm font-medium">Back to Home</span>
+                </Link>
             </div>
 
             <motion.div
