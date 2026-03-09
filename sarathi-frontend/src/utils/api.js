@@ -145,10 +145,19 @@ export async function fetchScheme(schemeId) {
   return unwrapBody(await api.get(`/scheme/${schemeId}`));
 }
 
-/** GET /scheme/all */
-export async function fetchAllSchemes() {
+/** GET /scheme/all — cached for 5 minutes to avoid redundant calls */
+let _schemesCache = null;
+let _schemesCacheTs = 0;
+const SCHEMES_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+export async function fetchAllSchemes({ forceRefresh = false } = {}) {
+  if (!forceRefresh && _schemesCache && Date.now() - _schemesCacheTs < SCHEMES_CACHE_TTL) {
+    return _schemesCache;
+  }
   const data = unwrapBody(await api.get('/scheme/all'));
-  return Array.isArray(data) ? data : [];
+  _schemesCache = Array.isArray(data) ? data : [];
+  _schemesCacheTs = Date.now();
+  return _schemesCache;
 }
 
 /** GET /panchayat/{panchayatId} */

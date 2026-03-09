@@ -15,8 +15,19 @@
     "isWidow": "any",
     "categories": "SC,ST,OBC,General",
     "applyUrl": "https://pmkisan.gov.in",
-    "documentsRequired": ["आधार कार्ड", "बैंक खाता विवरण", "भूमि अभिलेख", "निवास प्रमाण पत्र"],
-    "documentsRequiredEn": ["Aadhaar Card", "Bank Account Details", "Land Records", "Residence Certificate"]
+    "documentsRequired": [
+      "आधार कार्ड",
+      "बैंक खाता विवरण",
+      "भूमि अभिलेख",
+      "निवास प्रमाण पत्र"
+    ],
+    "documentsRequiredEn": [
+      "Aadhaar Card",
+      "Bank Account Details",
+      "Land Records",
+      "Residence Certificate"
+    ],
+    "status": "Published"
   },
   {
     "schemeId": "pmay-g",
@@ -34,8 +45,21 @@
     "isWidow": "any",
     "categories": "SC,ST,OBC,General",
     "applyUrl": "https://pmayg.nic.in",
-    "documentsRequired": ["आधार कार्ड", "बैंक खाता विवरण", "BPL प्रमाण पत्र", "आय प्रमाण पत्र", "निवास प्रमाण पत्र"],
-    "documentsRequiredEn": ["Aadhaar Card", "Bank Account Details", "BPL Certificate", "Income Certificate", "Residence Certificate"]
+    "documentsRequired": [
+      "आधार कार्ड",
+      "बैंक खाता विवरण",
+      "BPL प्रमाण पत्र",
+      "आय प्रमाण पत्र",
+      "निवास प्रमाण पत्र"
+    ],
+    "documentsRequiredEn": [
+      "Aadhaar Card",
+      "Bank Account Details",
+      "BPL Certificate",
+      "Income Certificate",
+      "Residence Certificate"
+    ],
+    "status": "Published"
   },
   {
     "schemeId": "ayushman-bharat",
@@ -53,8 +77,19 @@
     "isWidow": "any",
     "categories": "SC,ST,OBC,General",
     "applyUrl": "https://pmjay.gov.in",
-    "documentsRequired": ["आधार कार्ड", "राशन कार्ड", "आय प्रमाण पत्र", "निवास प्रमाण पत्र"],
-    "documentsRequiredEn": ["Aadhaar Card", "Ration Card", "Income Certificate", "Residence Certificate"]
+    "documentsRequired": [
+      "आधार कार्ड",
+      "राशन कार्ड",
+      "आय प्रमाण पत्र",
+      "निवास प्रमाण पत्र"
+    ],
+    "documentsRequiredEn": [
+      "Aadhaar Card",
+      "Ration Card",
+      "Income Certificate",
+      "Residence Certificate"
+    ],
+    "status": "Published"
   },
   {
     "schemeId": "pm-ujjwala",
@@ -72,8 +107,19 @@
     "isWidow": "any",
     "categories": "SC,ST,OBC,General",
     "applyUrl": "https://pmujjwalayojana.com",
-    "documentsRequired": ["आधार कार्ड", "BPL राशन कार्ड", "बैंक खाता विवरण", "निवास प्रमाण पत्र"],
-    "documentsRequiredEn": ["Aadhaar Card", "BPL Ration Card", "Bank Account Details", "Residence Certificate"]
+    "documentsRequired": [
+      "आधार कार्ड",
+      "BPL राशन कार्ड",
+      "बैंक खाता विवरण",
+      "निवास प्रमाण पत्र"
+    ],
+    "documentsRequiredEn": [
+      "Aadhaar Card",
+      "BPL Ration Card",
+      "Bank Account Details",
+      "Residence Certificate"
+    ],
+    "status": "Published"
   },
   {
     "schemeId": "mgnregs",
@@ -91,8 +137,19 @@
     "isWidow": "any",
     "categories": "SC,ST,OBC,General",
     "applyUrl": "https://nrega.nic.in",
-    "documentsRequired": ["आधार कार्ड", "जॉब कार्ड आवेदन", "निवास प्रमाण पत्र", "बैंक खाता विवरण"],
-    "documentsRequiredEn": ["Aadhaar Card", "Job Card Application", "Residence Certificate", "Bank Account Details"]
+    "documentsRequired": [
+      "आधार कार्ड",
+      "जॉब कार्ड आवेदन",
+      "निवास प्रमाण पत्र",
+      "बैंक खाता विवरण"
+    ],
+    "documentsRequiredEn": [
+      "Aadhaar Card",
+      "Job Card Application",
+      "Residence Certificate",
+      "Bank Account Details"
+    ],
+    "status": "Published"
   },
   {
     "schemeId": "widow-pension",
@@ -110,8 +167,21 @@
     "isWidow": "true",
     "categories": "SC,ST,OBC,General",
     "applyUrl": "https://nsap.nic.in",
-    "documentsRequired": ["आधार कार्ड", "पति का मृत्यु प्रमाण पत्र", "बैंक खाता विवरण", "आय प्रमाण पत्र", "निवास प्रमाण पत्र"],
-    "documentsRequiredEn": ["Aadhaar Card", "Husband's Death Certificate", "Bank Account Details", "Income Certificate", "Residence Certificate"]
+    "documentsRequired": [
+      "आधार कार्ड",
+      "पति का मृत्यु प्रमाण पत्र",
+      "बैंक खाता विवरण",
+      "आय प्रमाण पत्र",
+      "निवास प्रमाण पत्र"
+    ],
+    "documentsRequiredEn": [
+      "Aadhaar Card",
+      "Husband's Death Certificate",
+      "Bank Account Details",
+      "Income Certificate",
+      "Residence Certificate"
+    ],
+    "status": "Published"
   },
   {
     "schemeId": "nsp-scholarship",
@@ -129,8 +199,21 @@
     "isWidow": "any",
     "categories": "SC,ST,OBC,General",
     "applyUrl": "https://scholarships.gov.in",
-    "documentsRequired": ["आधार कार्ड", "अंकतालिका", "विद्यालय/महाविद्यालय प्रमाण पत्र", "जन्म प्रमाण पत्र", "आय प्रमाण पत्र"],
-    "documentsRequiredEn": ["Aadhaar Card", "Marksheet", "School/College Certificate", "Birth Certificate", "Income Certificate"]
+    "documentsRequired": [
+      "आधार कार्ड",
+      "अंकतालिका",
+      "विद्यालय/महाविद्यालय प्रमाण पत्र",
+      "जन्म प्रमाण पत्र",
+      "आय प्रमाण पत्र"
+    ],
+    "documentsRequiredEn": [
+      "Aadhaar Card",
+      "Marksheet",
+      "School/College Certificate",
+      "Birth Certificate",
+      "Income Certificate"
+    ],
+    "status": "Published"
   },
   {
     "schemeId": "beti-bachao",
@@ -148,8 +231,19 @@
     "isWidow": "any",
     "categories": "SC,ST,OBC,General",
     "applyUrl": "https://wcd.nic.in",
-    "documentsRequired": ["आधार कार्ड", "जन्म प्रमाण पत्र", "निवास प्रमाण पत्र", "विद्यालय नामांकन प्रमाण"],
-    "documentsRequiredEn": ["Aadhaar Card", "Birth Certificate", "Residence Certificate", "School Enrollment Proof"]
+    "documentsRequired": [
+      "आधार कार्ड",
+      "जन्म प्रमाण पत्र",
+      "निवास प्रमाण पत्र",
+      "विद्यालय नामांकन प्रमाण"
+    ],
+    "documentsRequiredEn": [
+      "Aadhaar Card",
+      "Birth Certificate",
+      "Residence Certificate",
+      "School Enrollment Proof"
+    ],
+    "status": "Published"
   },
   {
     "schemeId": "pm-matru",
@@ -167,8 +261,19 @@
     "isWidow": "any",
     "categories": "SC,ST,OBC,General",
     "applyUrl": "https://pmmvy.wcd.gov.in",
-    "documentsRequired": ["आधार कार्ड", "गर्भावस्था प्रमाण", "बैंक खाता विवरण", "निवास प्रमाण पत्र"],
-    "documentsRequiredEn": ["Aadhaar Card", "Pregnancy Certificate", "Bank Account Details", "Residence Certificate"]
+    "documentsRequired": [
+      "आधार कार्ड",
+      "गर्भावस्था प्रमाण",
+      "बैंक खाता विवरण",
+      "निवास प्रमाण पत्र"
+    ],
+    "documentsRequiredEn": [
+      "Aadhaar Card",
+      "Pregnancy Certificate",
+      "Bank Account Details",
+      "Residence Certificate"
+    ],
+    "status": "Published"
   },
   {
     "schemeId": "pmegp",
@@ -186,8 +291,21 @@
     "isWidow": "any",
     "categories": "SC,ST,OBC,General",
     "applyUrl": "https://www.kviconline.gov.in",
-    "documentsRequired": ["आधार कार्ड", "जाति प्रमाण पत्र", "शैक्षिक योग्यता प्रमाण", "बैंक खाता विवरण", "परियोजना रिपोर्ट"],
-    "documentsRequiredEn": ["Aadhaar Card", "Caste Certificate", "Educational Qualification Proof", "Bank Account Details", "Project Report"]
+    "documentsRequired": [
+      "आधार कार्ड",
+      "जाति प्रमाण पत्र",
+      "शैक्षिक योग्यता प्रमाण",
+      "बैंक खाता विवरण",
+      "परियोजना रिपोर्ट"
+    ],
+    "documentsRequiredEn": [
+      "Aadhaar Card",
+      "Caste Certificate",
+      "Educational Qualification Proof",
+      "Bank Account Details",
+      "Project Report"
+    ],
+    "status": "Published"
   },
   {
     "schemeId": "nrlm-shg",
@@ -205,8 +323,19 @@
     "isWidow": "any",
     "categories": "SC,ST,OBC,General",
     "applyUrl": "https://aajeevika.gov.in",
-    "documentsRequired": ["आधार कार्ड", "SHG सदस्यता प्रमाण", "बैंक खाता विवरण", "निवास प्रमाण पत्र"],
-    "documentsRequiredEn": ["Aadhaar Card", "SHG Membership Certificate", "Bank Account Details", "Residence Certificate"]
+    "documentsRequired": [
+      "आधार कार्ड",
+      "SHG सदस्यता प्रमाण",
+      "बैंक खाता विवरण",
+      "निवास प्रमाण पत्र"
+    ],
+    "documentsRequiredEn": [
+      "Aadhaar Card",
+      "SHG Membership Certificate",
+      "Bank Account Details",
+      "Residence Certificate"
+    ],
+    "status": "Published"
   },
   {
     "schemeId": "pmjjby",
@@ -224,8 +353,19 @@
     "isWidow": "any",
     "categories": "SC,ST,OBC,General",
     "applyUrl": "https://jansuraksha.gov.in",
-    "documentsRequired": ["आधार कार्ड", "बैंक पासबुक", "बैंक खाता विवरण", "निवास प्रमाण पत्र"],
-    "documentsRequiredEn": ["Aadhaar Card", "Bank Passbook", "Bank Account Details", "Residence Certificate"]
+    "documentsRequired": [
+      "आधार कार्ड",
+      "बैंक पासबुक",
+      "बैंक खाता विवरण",
+      "निवास प्रमाण पत्र"
+    ],
+    "documentsRequiredEn": [
+      "Aadhaar Card",
+      "Bank Passbook",
+      "Bank Account Details",
+      "Residence Certificate"
+    ],
+    "status": "Published"
   },
   {
     "schemeId": "atal-pension",
@@ -243,8 +383,19 @@
     "isWidow": "any",
     "categories": "SC,ST,OBC,General",
     "applyUrl": "https://npscra.nsdl.co.in",
-    "documentsRequired": ["आधार कार्ड", "बैंक पासबुक", "बैंक खाता विवरण", "मोबाइल नंबर"],
-    "documentsRequiredEn": ["Aadhaar Card", "Bank Passbook", "Bank Account Details", "Mobile Number"]
+    "documentsRequired": [
+      "आधार कार्ड",
+      "बैंक पासबुक",
+      "बैंक खाता विवरण",
+      "मोबाइल नंबर"
+    ],
+    "documentsRequiredEn": [
+      "Aadhaar Card",
+      "Bank Passbook",
+      "Bank Account Details",
+      "Mobile Number"
+    ],
+    "status": "Published"
   },
   {
     "schemeId": "jan-dhan",
@@ -262,8 +413,17 @@
     "isWidow": "any",
     "categories": "SC,ST,OBC,General",
     "applyUrl": "https://pmjdy.gov.in",
-    "documentsRequired": ["आधार कार्ड", "निवास प्रमाण पत्र", "पासपोर्ट साइज फोटो"],
-    "documentsRequiredEn": ["Aadhaar Card", "Residence Certificate", "Passport Size Photo"]
+    "documentsRequired": [
+      "आधार कार्ड",
+      "निवास प्रमाण पत्र",
+      "पासपोर्ट साइज फोटो"
+    ],
+    "documentsRequiredEn": [
+      "Aadhaar Card",
+      "Residence Certificate",
+      "Passport Size Photo"
+    ],
+    "status": "Published"
   },
   {
     "schemeId": "sukanya",
@@ -281,8 +441,19 @@
     "isWidow": "any",
     "categories": "SC,ST,OBC,General",
     "applyUrl": "https://www.indiapost.gov.in",
-    "documentsRequired": ["बालिका का जन्म प्रमाण पत्र", "माता-पिता का आधार कार्ड", "निवास प्रमाण पत्र", "पासपोर्ट साइज फोटो"],
-    "documentsRequiredEn": ["Girl Child Birth Certificate", "Parent's Aadhaar Card", "Residence Certificate", "Passport Size Photo"]
+    "documentsRequired": [
+      "बालिका का जन्म प्रमाण पत्र",
+      "माता-पिता का आधार कार्ड",
+      "निवास प्रमाण पत्र",
+      "पासपोर्ट साइज फोटो"
+    ],
+    "documentsRequiredEn": [
+      "Girl Child Birth Certificate",
+      "Parent's Aadhaar Card",
+      "Residence Certificate",
+      "Passport Size Photo"
+    ],
+    "status": "Published"
   },
   {
     "schemeId": "nfbs",
@@ -300,8 +471,21 @@
     "isWidow": "any",
     "categories": "SC,ST,OBC,General",
     "applyUrl": "https://nsap.nic.in",
-    "documentsRequired": ["आधार कार्ड", "मृत्यु प्रमाण पत्र", "आय प्रमाण पत्र", "बैंक खाता विवरण", "निवास प्रमाण पत्र"],
-    "documentsRequiredEn": ["Aadhaar Card", "Death Certificate", "Income Certificate", "Bank Account Details", "Residence Certificate"]
+    "documentsRequired": [
+      "आधार कार्ड",
+      "मृत्यु प्रमाण पत्र",
+      "आय प्रमाण पत्र",
+      "बैंक खाता विवरण",
+      "निवास प्रमाण पत्र"
+    ],
+    "documentsRequiredEn": [
+      "Aadhaar Card",
+      "Death Certificate",
+      "Income Certificate",
+      "Bank Account Details",
+      "Residence Certificate"
+    ],
+    "status": "Published"
   },
   {
     "schemeId": "vayoshri",
@@ -319,8 +503,21 @@
     "isWidow": "any",
     "categories": "SC,ST,OBC,General",
     "applyUrl": "https://www.alimco.in",
-    "documentsRequired": ["आधार कार्ड", "आयु प्रमाण पत्र", "आय प्रमाण पत्र", "BPL प्रमाण पत्र", "विकलांगता प्रमाण पत्र (यदि लागू हो)"],
-    "documentsRequiredEn": ["Aadhaar Card", "Age Certificate", "Income Certificate", "BPL Certificate", "Disability Certificate (if applicable)"]
+    "documentsRequired": [
+      "आधार कार्ड",
+      "आयु प्रमाण पत्र",
+      "आय प्रमाण पत्र",
+      "BPL प्रमाण पत्र",
+      "विकलांगता प्रमाण पत्र (यदि लागू हो)"
+    ],
+    "documentsRequiredEn": [
+      "Aadhaar Card",
+      "Age Certificate",
+      "Income Certificate",
+      "BPL Certificate",
+      "Disability Certificate (if applicable)"
+    ],
+    "status": "Published"
   },
   {
     "schemeId": "old-age-pension",
@@ -338,7 +535,20 @@
     "isWidow": "any",
     "categories": "SC,ST,OBC,General",
     "applyUrl": "https://nsap.nic.in",
-    "documentsRequired": ["आधार कार्ड", "आयु प्रमाण पत्र", "आय प्रमाण पत्र", "BPL प्रमाण पत्र", "बैंक खाता विवरण"],
-    "documentsRequiredEn": ["Aadhaar Card", "Age Certificate", "Income Certificate", "BPL Certificate", "Bank Account Details"]
+    "documentsRequired": [
+      "आधार कार्ड",
+      "आयु प्रमाण पत्र",
+      "आय प्रमाण पत्र",
+      "BPL प्रमाण पत्र",
+      "बैंक खाता विवरण"
+    ],
+    "documentsRequiredEn": [
+      "Aadhaar Card",
+      "Age Certificate",
+      "Income Certificate",
+      "BPL Certificate",
+      "Bank Account Details"
+    ],
+    "status": "Published"
   }
 ]

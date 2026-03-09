@@ -94,7 +94,9 @@ def _fetch_all_schemes():
     while 'LastEvaluatedKey' in response:
         response = table.scan(ExclusiveStartKey=response['LastEvaluatedKey'])
         items.extend(response.get('Items', []))
-    return [item for item in items if item.get('status') == 'Published']
+    # Include items with status='Published' OR no status field (legacy seed data).
+    # Only exclude items with an explicit non-published status (e.g., 'Draft').
+    return [item for item in items if item.get('status', 'Published') != 'Draft']
 
 
 def handle_ai_search(event):

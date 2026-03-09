@@ -370,10 +370,30 @@ function SchemesPage() {
 
         {/* States */}
         {(loading || (aiSearchEnabled && aiLoading && search.trim())) && (
-          <div className="flex flex-col items-center justify-center py-24 gap-3">
-            <Loader2 size={32} className="animate-spin text-saffron" />
+          <div className="space-y-6">
             {aiSearchEnabled && aiLoading && search.trim() && !loading && (
-              <p className="font-body text-sm text-gray-500">AI is finding the best schemes for you...</p>
+              <div className="flex flex-col items-center justify-center py-12 gap-3">
+                <Loader2 size={32} className="animate-spin text-saffron" />
+                <p className="font-body text-sm text-gray-500">AI is finding the best schemes for you...</p>
+              </div>
+            )}
+            
+            {loading && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="h-[280px] rounded-2xl bg-white border border-gray-100 p-6 shadow-sm animate-pulse flex flex-col justify-between">
+                    <div>
+                      <div className="w-12 h-12 bg-gray-200 rounded-xl mb-4"></div>
+                      <div className="h-5 bg-gray-200 rounded w-3/4 mb-3"></div>
+                      <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+                      <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+                    </div>
+                    <div className="mt-6 pt-4 border-t border-gray-100">
+                      <div className="h-10 bg-gray-200 rounded-xl w-full"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         )}
